@@ -1,0 +1,56 @@
+<!--/*
+  กล่อง "ขั้นต่อไป" ในหน้าคำร้องของเจ้าหน้าที่ ทั้งสองเฟส — เช็กลิสต์จาก NextStepGuide
+  step:    NextStepGuide.Step (null = ไม่แสดงกล่อง แต่คงที่ไว้ให้อัปเดตสดใส่กลับได้)
+  docBase: URL ของหน้าเอกสาร ต่อด้วยเลข document type
+  #nextStepRegion อยู่เสมอ — request_live.js แทนที่ทั้งก้อนเมื่อคำร้องเปลี่ยน
+*/-->
+<div th:fragment="box(step, docBase)" id="nextStepRegion" data-live-region>
+  <div th:if="${step != null}" class="detail-section next-step" id="nextStep">
+    <div class="detail-section-header">
+      <h5>
+        <i class="fas fa-list-check text-primary"></i>
+        ขั้นต่อไป: <span th:text="${step.title}">ตรวจสอบเอกสาร</span>
+        <span class="next-step-count" th:if="${step.total > 0}">([[${step.doneCount}]]/[[${step.total}]])</span>
+      </h5>
+    </div>
+    <div class="detail-section-body">
+      <ul class="next-step-list mb-0" th:unless="${#lists.isEmpty(step.items)}">
+        <li th:each="item, it : ${step.items}" th:class="|ns-${#strings.toLowerCase(item.state.name())}|"
+            th:attr="data-step-key=${it.index + ':' + item.text}">
+          <i class="ns-icon fas" th:classappend="${item.state.name() == 'DONE'} ? 'fa-circle-check'
+                : (${item.state.name() == 'CURRENT'} ? 'fa-circle-arrow-right'
+                : (${item.state.name() == 'WAITING'} ? 'fa-hourglass-half' : 'fa-circle'))"
+             th:title="${item.state.name() == 'DONE'} ? 'เสร็จแล้ว' : (${item.state.name() == 'CURRENT'} ? 'ทำข้อนี้ต่อ'
+                : (${item.state.name() == 'WAITING'} ? 'รอผู้อื่น' : (${item.state.name() == 'TODO'} ? 'ต้องทำ' : 'ยังไม่ถึง')))"></i>
+          <a th:if="${item.documentType != null}" th:href="${docBase} + ${item.documentType}" th:text="${item.text}">งาน</a>
+          <span th:unless="${item.documentType != null}" th:text="${item.text}">งาน</span>
+        </li>
+      </ul>
+      <p class="text-secondary mb-0" th:if="${#lists.isEmpty(step.items)}">ไม่มีงานค้างของเจ้าหน้าที่ในขั้นนี้</p>
+      <p class="small text-secondary mt-2 mb-0" th:if="${step.hint != null}">
+        <i class="fas fa-circle-info me-1"></i><span th:text="${step.hint}">หมายเหตุ</span>
+      </p>
+    </div>
+  </div>
+  <style>
+    .detail-section.next-step { border-left: 4px solid var(--bs-primary); }
+    .next-step-count { font-size: .85em; font-weight: 400; color: var(--bs-secondary-color); }
+    .next-step-list { list-style: none; padding-left: 0; }
+    .next-step-list li { display: flex; gap: .5rem; align-items: baseline; padding: .3rem .5rem; border-radius: 6px; }
+    .next-step-list li + li { margin-top: .15rem; }
+    .next-step-list .ns-icon { flex: 0 0 auto; width: 1.1em; text-align: center; }
+    .next-step-list .ns-done { color: var(--bs-secondary-color); }
+    .next-step-list .ns-done a, .next-step-list .ns-done span { text-decoration: line-through; color: inherit; }
+    .next-step-list .ns-done .ns-icon { color: var(--bs-success); }
+    .next-step-list .ns-current { background: var(--bs-primary-bg-subtle); font-weight: 600; }
+    .next-step-list .ns-current .ns-icon, .next-step-list .ns-todo .ns-icon { color: var(--bs-primary); }
+    .next-step-list .ns-todo .ns-icon { font-size: .6em; }
+    .next-step-list .ns-waiting .ns-icon { color: var(--bs-warning); }
+    .next-step-list .ns-upcoming { opacity: .55; }
+    .next-step-list .ns-upcoming .ns-icon { font-size: .6em; color: var(--bs-secondary-color); }
+    /* อัปเดตสด: ข้อที่เพิ่งถึงคิวกระพริบให้เห็น */
+    @keyframes nsFlash { from { box-shadow: 0 0 0 4px rgba(var(--bs-primary-rgb), .45); } to { box-shadow: 0 0 0 0 rgba(var(--bs-primary-rgb), 0); } }
+    .next-step-list .ns-flash { animation: nsFlash 1.6s ease-out 2; }
+    @media (prefers-reduced-motion: reduce) { .next-step-list .ns-flash { animation: none; outline: 2px solid var(--bs-primary); } }
+  </style>
+</div>

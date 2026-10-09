@@ -229,6 +229,7 @@ public class AcademicRequestService {
         history.setChangedBy(changedBy);
         history.setNote(note);
         historyRepository.save(history);
+        changed(requestId);
 
         if (returnedToApplicant) {
             // Flow ข้อ 2 → ข้อ 1: เอกสารจะถูกแก้ ลายเซ็นที่ให้ไว้กับเนื้อหาเดิมจึงใช้ไม่ได้อีก
@@ -391,6 +392,7 @@ public class AcademicRequestService {
         doc.setDocumentLabel(label);
         doc.setIsDraft(false);
         AcademicDocument savedDoc = documentRepository.save(doc);
+        changed(request.getId());
 
         if (documentType == 9 && jsonData != null && !jsonData.isBlank()) {
             try {
@@ -858,6 +860,15 @@ public class AcademicRequestService {
             doc.setRevisionNote(trimmed);
         }
         documentRepository.saveAll(docs);
+        changed(requestId);
+    }
+
+    /** หน้าคำร้องที่เปิดค้างอยู่อัปเดตสด — แจ้งหลัง commit ({@code RequestLiveUpdates}) */
+    private void changed(Long requestId) {
+        if (events != null && requestId != null) {
+            events.publishEvent(new com.ecom.academic.live.RequestChangedEvent(
+                    com.ecom.academic.model.SignatureModule.ACADEMIC, requestId));
+        }
     }
 
     /**

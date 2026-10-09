@@ -146,6 +146,18 @@ public class PositionAdminController {
 
     // ================== Request Detail ==================
 
+    /** อัปเดตสดของหน้าคำร้อง — แจ้งเมื่อคำร้องเปลี่ยน หน้าไปดึงส่วนที่แสดงใหม่เอง (request_live.js) */
+    @GetMapping(value = "/request/{id}/live", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter live(@PathVariable Long id,
+            jakarta.servlet.http.HttpServletResponse response) {
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache");
+        return liveUpdates.subscribe(SignatureModule.POSITION, id);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.academic.live.RequestLiveUpdates liveUpdates;
+
     @GetMapping("/request/{id}")
     public String requestDetail(@PathVariable Long id, Model model) {
         PositionRequest request = positionService.findById(id)
@@ -212,6 +224,14 @@ public class PositionAdminController {
         model.addAttribute("editHistory", positionService.getEditHistory(id));
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
         addCouncilTimeline(model, request);
+        // กล่อง "ขั้นต่อไป" — งานที่เจ้าหน้าที่ต้องทำตอนนี้ เรียงก่อนหลัง จากสถานะและป้ายของเอกสารชุดเดียวกับรายการเอกสาร
+        model.addAttribute("nextStep", com.ecom.academic.service.NextStepGuide.position(request.getCurrentStatus(),
+                docRows, docProgress, positionService.documentsAwaitingResign(id),
+                new com.ecom.academic.service.NextStepGuide.CouncilDates(
+                        CouncilTimeline.sendDeadline(request),
+                        CouncilTimeline.appealDeadline(request),
+                        CouncilTimeline.appealProblem(request, positionService.getStatusHistory(id),
+                                java.time.LocalDate.now()))));
         model.addAttribute("civilServant", positionService.isCivilServant(request));
 
         // Attachments
@@ -370,6 +390,13 @@ public class PositionAdminController {
         model.addAttribute("documentLabel", positionService.getDocLabel(type));
         model.addAttribute("existingData", existingData);
         model.addAttribute("autoFilledData", autoFilledData);
+        if (type == 8 && !autoFilledData.containsKey("name_admin")) {
+            // ผู้บันทึก: ตั้งต้นเป็นเจ้าหน้าที่ที่เปิดกรอกอยู่ — เลือกคนอื่นได้ และชื่อที่บันทึกไว้แล้วชนะ
+            String officer = com.ecom.academic.service.Doc8AutoFill.officerName(getUser(principal));
+            if (officer != null && !officer.isBlank()) {
+                autoFilledData.put("name_admin", officer);
+            }
+        }
         model.addAttribute("docData", autoFilledData);
         // เอกสารของผู้ยื่นแอดมินดูได้อย่างเดียว ยกเว้นช่องของตัวเอง — สคริปต์ร่วมปิดช่องที่เหลือ
         // ให้เห็นชัด ตัวที่บังคับใช้จริงคือ DocumentFieldOwnership.merge ตอนบันทึก
@@ -418,7 +445,8 @@ public class PositionAdminController {
         boolean lockedForSigning = signatureWorkflow.isDocumentLocked(SignatureModule.POSITION, id, type);
         model.addAttribute("lockedForSigning", lockedForSigning);
         // ช่องที่ระบบดึงมา — อ่านอย่างเดียว (saveDocument กับ auto-draft เขียนทับซ้ำอีกชั้น)
-        model.addAttribute("lockedFields", lockedForSigning ? Map.of() : autoFillHelper.lockedFields(request, type));
+        model.addAttribute("lockedFields", lockedForSigning ? Map.of()
+                : autoFillHelper.lockedFields(request, type));
         model.addAttribute("signingComplete", lockedForSigning
                 && signatureWorkflow.isSigningComplete(SignatureModule.POSITION, id, type));
         // Role-specific lists so each signer dropdown offers the right people.

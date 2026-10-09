@@ -43,7 +43,7 @@ public final class Doc7AutoFill {
             List.of("eval_skilled", "eval_highly_skilled", "eval_expert"));
 
     /** ช่องผลงานในเอกสารที่ 1 แยกตามตำแหน่งที่ขอ — ดู PositionRequestService.workCopies */
-    private static final Map<String, String> RANK_PREFIX = Map.of(
+    static final Map<String, String> RANK_PREFIX = Map.of(
             "ผู้ช่วยศาสตราจารย์", "asst",
             "รองศาสตราจารย์", "assoc",
             "ศาสตราจารย์", "prof");
@@ -188,7 +188,7 @@ public final class Doc7AutoFill {
     }
 
     /** แถว {prefix}_N ที่มีค่า เรียงตาม N → {N: ค่า} */
-    private static Map<Integer, String> rows(Map<String, String> data, String prefix) {
+    static Map<Integer, String> rows(Map<String, String> data, String prefix) {
         Pattern row = Pattern.compile("^" + Pattern.quote(prefix) + "_(\\d+)$");
         Map<Integer, String> found = new TreeMap<>();
         for (Map.Entry<String, String> e : data.entrySet()) {

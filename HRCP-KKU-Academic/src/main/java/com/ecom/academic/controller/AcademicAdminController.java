@@ -444,6 +444,18 @@ public class AcademicAdminController {
         return "academic/admin/requests";
     }
 
+    /** อัปเดตสดของหน้าคำร้อง — แจ้งเมื่อคำร้องเปลี่ยน หน้าไปดึงส่วนที่แสดงใหม่เอง (request_live.js) */
+    @GetMapping(value = "/request/{id}/live", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter live(@PathVariable Long id,
+            jakarta.servlet.http.HttpServletResponse response) {
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache");
+        return liveUpdates.subscribe(SignatureModule.ACADEMIC, id);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.academic.live.RequestLiveUpdates liveUpdates;
+
     @GetMapping("/request/{id}")
     public String viewRequest(@PathVariable Long id, Model model) {
         AcademicRequest request = requestService.findById(id)
@@ -496,11 +508,15 @@ public class AcademicAdminController {
         model.addAttribute("revisionRounds", revisionService.byRound(id));
 
         // สีและป้ายของกล่องเอกสาร — ใช้กติกาเดียวกับทุกหน้า ดู DocumentProgress
-        model.addAttribute("docProgress", documentProgress.of(SignatureModule.ACADEMIC, id,
-                DOC_LABELS.keySet(), documents.stream()
+        Map<Integer, com.ecom.academic.service.DocumentProgress.Stage> docProgress = documentProgress.of(
+                SignatureModule.ACADEMIC, id, DOC_LABELS.keySet(), documents.stream()
                         .map(d -> new com.ecom.academic.service.DocumentProgress.Row(d.getDocumentType(),
                                 Boolean.TRUE.equals(d.getIsDraft()), d.getJsonData()))
-                        .toList()));
+                        .toList());
+        model.addAttribute("docProgress", docProgress);
+        // กล่อง "ขั้นต่อไป" — งานที่เจ้าหน้าที่ต้องทำตอนนี้ เรียงก่อนหลัง
+        model.addAttribute("nextStep", com.ecom.academic.service.NextStepGuide.academic(request.getCurrentStatus(),
+                DOC_LABELS, docProgress, requestService.appealDeadline(id)));
 
         Map<Integer, Long> docTypeToId = documents.stream()
                 .collect(Collectors.toMap(AcademicDocument::getDocumentType, AcademicDocument::getId, (existing, replacement) -> existing));

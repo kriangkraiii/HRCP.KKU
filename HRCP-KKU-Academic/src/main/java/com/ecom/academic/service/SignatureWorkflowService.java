@@ -1978,7 +1978,15 @@ public class SignatureWorkflowService {
         } catch (Exception e) {
             log.warn("Failed to write signature audit event {}: {}", type, e.toString());
         }
+        // ทุกเหตุการณ์ของซอง (ส่ง ลงนาม ส่งต่อ ยกเลิก ปิดซอง) ผ่านจุดนี้ — หน้าคำร้องที่เปิดอยู่อัปเดตสด
+        if (liveEvents != null && envelope != null) {
+            liveEvents.publishEvent(new com.ecom.academic.live.RequestChangedEvent(
+                    envelope.getModule(), envelope.getRequestId()));
+        }
     }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher liveEvents;
 
     /** SHA-256, hex encoded — the integrity check over frozen content. */
     public static String sha256(String value) {

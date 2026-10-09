@@ -79,6 +79,9 @@ public final class DocumentCompleteness {
                             "academic_paper_status", "research_status",
                             "paper_title_1", "research_title_1",
                             "academic_paper_count", "research_count"),
+                    8, Set.of(
+                            // เอกสารประกอบการประเมินผลการสอน ... เรื่อง (ถ้ามี)
+                            "subject"),
                     9, Set.of(
                             // ช. อื่นๆ ในส่วนการมีส่วนร่วม
                             "role_des7",
@@ -100,6 +103,8 @@ public final class DocumentCompleteness {
                             "international_speaker_last_5_years_"),
                     4, Set.of("paper_title_", "research_title_"),
                     6, Set.of("des_research", "impactfacttor", "data"),
+                    // รายชื่อผู้ทรงคุณวุฒิ: สูงสุด 10 คน อย่างน้อย 1 คน
+                    8, Set.of("name", "majorcom", "major_expert", "Information"),
                     9, Set.of("coauthor_name_")));
 
     /**

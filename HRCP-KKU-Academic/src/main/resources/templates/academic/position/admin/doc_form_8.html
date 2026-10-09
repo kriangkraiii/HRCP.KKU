@@ -20,7 +20,7 @@
 
                 <div th:if="${lockedFields != null and !lockedFields.isEmpty()}" class="alert alert-info d-flex align-items-start mb-4">
                     <i class="fas fa-lock me-2 mt-1"></i>
-                    <div>ช่องที่มีไอคอน <i class="fas fa-lock small"></i> ระบบดึงมาจากข้อมูลของผู้ยื่น (โปรไฟล์ เอกสารที่ 1 และผลประเมินการสอน) จึงแก้ไขไม่ได้
+                    <div>ช่องที่มีไอคอน <i class="fas fa-lock small"></i> ระบบดึงมาจากข้อมูลของผู้ยื่น (โปรไฟล์ เอกสารที่ 1, 5 และผลประเมินการสอน) จึงแก้ไขไม่ได้
                         — ถ้าข้อมูลไม่ถูกต้อง ให้ส่งกลับให้ผู้ยื่นแก้ที่เอกสารต้นทาง</div>
                 </div>
 
@@ -112,20 +112,21 @@
                     <div class="card-body">
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label">จำนวนงานวิจัย</label>
+                                <label class="form-label">จำนวนผลงานวิจัย</label>
                                 <input type="number" name="research_count" class="form-control" min="0" id="researchCountField">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">จำนวนรายการวิจัยชุดที่ 1</label>
+                                <label class="form-label">จำนวนตำรา</label>
                                 <input type="text" name="research1_count" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">รายละเอียดวิจัยชุด 1</label>
-                                <input type="text" name="research1_des" class="form-control">
+                                <label class="form-label">ชื่อตำรา</label>
+                                <textarea name="research1_des" class="form-control" rows="2"></textarea>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">จำนวนรายการวิจัยชุดที่ 2</label>
+                                <label class="form-label">จำนวนบทความทางวิชาการ</label>
                                 <input type="text" name="research2_count" class="form-control">
+                                <div class="form-text">ค่าตั้งต้นจากเอกสารที่ 4 นับเฉพาะบทความที่เป็นส่วนหนึ่งของการศึกษาเพื่อรับปริญญา — แก้หรือเพิ่มได้</div>
                             </div>
                         </div>
 
@@ -339,18 +340,25 @@
                 };
             }
 
+            /** ช่องสถานะผู้ขอในผลงาน: ค่าที่ส่งไปกับฟอร์มอยู่ใน hidden (☑/☐) ช่องติ๊กมีไว้ให้เห็นและกดเท่านั้น */
+            function authorCell(col, name, value) {
+                const checked = value === '☑';
+                return `<td class="text-center"><input type="hidden" name="${name}" data-col="${col}" value="${checked ? '☑' : '☐'}">`
+                    + `<input type="checkbox" class="form-check-input" data-author ${checked ? 'checked' : ''}></td>`;
+            }
+
             function createResearchRow(idx, data) {
                 const fn = getFieldNames(idx);
                 const label = idx === 0 ? 'หลัก' : idx;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${label}</td>
-                    <td><input type="text" name="${fn.des}" class="form-control form-control-sm" value="${escHtml(data?.des || '')}"></td>
-                    <td><input type="text" name="${fn.first}" class="form-control form-control-sm" value="${escHtml(data?.first || '')}"></td>
-                    <td><input type="text" name="${fn.corres}" class="form-control form-control-sm" value="${escHtml(data?.corres || '')}"></td>
-                    <td><input type="text" name="${fn.essen}" class="form-control form-control-sm" value="${escHtml(data?.essen || '')}"></td>
-                    <td><input type="text" name="${fn.impact}" class="form-control form-control-sm" value="${escHtml(data?.impact || '')}"></td>
-                    <td><input type="text" name="${fn.db}" class="form-control form-control-sm" value="${escHtml(data?.db || '')}"></td>
+                    <td><input type="text" name="${fn.des}" data-col="des" class="form-control form-control-sm" value="${escHtml(data?.des || '')}"></td>
+                    ${authorCell('first', fn.first, data?.first)}
+                    ${authorCell('corres', fn.corres, data?.corres)}
+                    ${authorCell('essen', fn.essen, data?.essen)}
+                    <td><input type="text" name="${fn.impact}" data-col="impact" class="form-control form-control-sm" value="${escHtml(data?.impact || '')}"></td>
+                    <td><input type="text" name="${fn.db}" data-col="db" class="form-control form-control-sm" value="${escHtml(data?.db || '')}"></td>
                     <td>${idx > 0 ? '<button type="button" class="btn btn-sm btn-outline-danger" data-call="removeResearchRow" data-call-arg="self"><i class="fas fa-trash"></i></button>' : ''}</td>`;
                 return tr;
             }
@@ -376,14 +384,8 @@
                 researchRowCount = rows.length;
                 rows.forEach((tr, i) => {
                     const fn = getFieldNames(i);
-                    const inputs = tr.querySelectorAll('input');
                     tr.querySelector('td').textContent = i === 0 ? 'หลัก' : i;
-                    if (inputs[0]) inputs[0].name = fn.des;
-                    if (inputs[1]) inputs[1].name = fn.first;
-                    if (inputs[2]) inputs[2].name = fn.corres;
-                    if (inputs[3]) inputs[3].name = fn.essen;
-                    if (inputs[4]) inputs[4].name = fn.impact;
-                    if (inputs[5]) inputs[5].name = fn.db;
+                    tr.querySelectorAll('[data-col]').forEach(input => { input.name = fn[input.dataset.col]; });
                     // Update delete button visibility
                     const lastTd = tr.querySelector('td:last-child');
                     if (i === 0) lastTd.innerHTML = '';
@@ -395,10 +397,17 @@
 
             function updateResearchCount() {
                 const countField = document.getElementById('researchCountField');
-                if (countField) countField.value = document.querySelectorAll('#researchTbody tr').length;
+                if (countField && !countField.readOnly) countField.value = document.querySelectorAll('#researchTbody tr').length;
             }
 
             document.addEventListener('DOMContentLoaded', function() {
+                // ช่องติ๊กสถานะผู้ขอ → hidden ที่อยู่ข้างกัน (ฟังที่ tbody ก่อนบันทึกอัตโนมัติของฟอร์มจะอ่านค่า)
+                document.getElementById('researchTbody').addEventListener('change', function (e) {
+                    if (e.target.matches('[data-author]')) {
+                        e.target.previousElementSibling.value = e.target.checked ? '☑' : '☐';
+                    }
+                });
+
                 const existingData = /*[[${existingData}]]*/ null;
                 const doc6Raw = /*[[${doc6Data}]]*/ null;
                 let data = null;
@@ -414,7 +423,8 @@
                     if (data.des_research || data.research_des1) hasExistingResearch = true;
                 }
 
-                if (hasExistingResearch && data) {
+                const doc6HasWorks = !!doc6 && Object.keys(doc6).some(k => /^des_research\d+$/.test(k) && doc6[k]);
+                if (hasExistingResearch && data && !doc6HasWorks) {
                     // Load from doc 8's own saved data
                     // Main row (idx 0)
                     addResearchRow({ des: data.des_research || '', first: data.firstauthor || '',
@@ -442,9 +452,9 @@
                         // Map doc 6 fields → doc 8 fields
                         addResearchRow({
                             des: doc6[`des_research${i}`] || '',
-                            first: doc6[`chk_firstauthor${i}`] === '☑' ? '☑' : '',
-                            corres: doc6[`chk_Corres${i}`] === '☑' ? '☑' : '',
-                            essen: doc6[`essen${i}`] === '☑' ? '☑' : '',
+                            first: doc6[`chk_firstauthor${i}`],
+                            corres: doc6[`chk_Corres${i}`],
+                            essen: doc6[`essen${i}`],
                             impact: doc6[`impactfacttor${i}`] || '',
                             db: doc6[`data${i}`] || ''
                         });
@@ -481,6 +491,20 @@
                     const el = form.querySelector(`[name="${name}"]`);
                     if (!el) return;
                     el.value = value;
+                    // แถวผลงานจากเอกสารที่ 6 ลบไม่ได้ ไม่อย่างนั้นแถวถัดไปจะเลื่อนมาแทนที่ — และเพิ่มแถวเองไม่ได้
+                    // เพราะผลงานที่เสนอต้องตรงกับที่ผู้ยื่นรับรองไว้ในเอกสารที่ 6
+                    const researchRow = el.closest('#researchTbody tr');
+                    if (researchRow) {
+                        researchRow.querySelector('[data-call="removeResearchRow"]')?.remove();
+                        form.querySelector('[data-call="addResearchRow"]')?.classList.add('d-none');
+                    }
+                    const tick = el.nextElementSibling?.matches('[data-author]') ? el.nextElementSibling : null;
+                    if (tick) {
+                        tick.checked = value === '☑';
+                        tick.disabled = true;
+                        tick.title = 'ดึงจากเอกสารที่ 5 ของผู้ยื่น แก้ไขไม่ได้';
+                        return;
+                    }
                     if (el.tagName === 'SELECT') {
                         el.disabled = true; // ไม่ถูกส่งไปกับฟอร์ม — เซิร์ฟเวอร์ใส่ค่าที่ถูกต้องให้ตอนบันทึก
                     } else {

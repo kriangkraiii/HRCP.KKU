@@ -205,6 +205,11 @@ public class DocumentDataAutoFillHelper {
             }
         }
 
+        // 2c. Doc 8 starting values the officer may change (Doc8AutoFill.defaults) — step 3 beats them.
+        if (docType == 8 && request != null && request.getDocuments() != null) {
+            data.putAll(Doc8AutoFill.defaults(parseAllPositionDocs(request.getDocuments()).get(4)));
+        }
+
         Map<String, String> saved = Map.of();
         if (existingJson != null && !existingJson.isBlank()) {
             try {
@@ -284,7 +289,7 @@ public class DocumentDataAutoFillHelper {
                 ? Map.of() : parseAllPositionDocs(request.getDocuments());
         EvaluationSummary evaluation = request.getLinkedEvaluation() == null
                 ? null : academicRequestService.summarize(request.getLinkedEvaluation());
-        return Doc8AutoFill.derive(request, docs.get(1), evaluation);
+        return Doc8AutoFill.derive(request, docs.get(1), docs.get(6), evaluation);
     }
 
     private Map<String, String> doc7Derived(PositionRequest request) {

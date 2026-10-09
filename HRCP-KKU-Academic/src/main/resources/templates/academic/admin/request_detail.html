@@ -53,8 +53,15 @@
           th:text="${request.currentStatus.thaiLabel}"></span>
       </div>
 
+      <!--/* อัปเดตสด (request_live.js): ช่องที่มี data-live-region ถูกแทนที่เมื่อคำร้องเปลี่ยน
+           สถานะเปลี่ยนแล้ว ช่องอัปเดตสถานะไม่ถูกแทนที่ (อาจกำลังพิมพ์) — ขึ้นแถบให้รีเฟรชแทน */-->
+      <div id="liveRoot" hidden
+           th:attr="data-live-url=@{'/admin/academic/request/' + ${request.id} + '/live'},
+                    data-status=${request.currentStatus.name()},
+                    data-status-label=${request.currentStatus.thaiLabel}"></div>
+
       <!--/* Progress Tracker */-->
-      <div class="detail-progress">
+      <div class="detail-progress" id="progressTracker" data-live-region>
         <!--/* เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ — กติกาเดียวกับหน้าผู้ยื่น (RequestStatus.stepStateAt) */-->
         <div class="detail-progress-steps" th:with="cur=${request.currentStatus}">
           <th:block th:each="step, iterStat : ${progressSteps}">
@@ -116,6 +123,9 @@
       <div class="row">
         <!--/* Left Column: Status + Attachments + History */-->
         <div class="col-md-5">
+          <!--/* ขั้นต่อไป — งานที่ต้องทำตอนนี้ เรียงก่อนหลัง (NextStepGuide) */-->
+          <div th:replace="~{academic/_next_step :: box(${nextStep}, '/admin/academic/request/' + ${request.id} + '/document/')}"></div>
+
           <!--/* Status Update */-->
           <div class="detail-section">
             <div class="detail-section-header">
@@ -455,7 +465,7 @@
                 <i class="fas fa-file-archive"></i> ดาวน์โหลดทั้งหมด (ZIP)
               </a>
             </div>
-            <div class="detail-section-body">
+            <div class="detail-section-body" id="docListRegion" data-live-region>
               <!--/* สี ป้าย และเส้นข้างแถวไฟล์ มาจาก DocumentProgress ที่เดียว — เขียวเมื่อจบจริงเท่านั้น */-->
               <div th:each="entry : ${docLabels}" th:with="stage=${docProgress.get(entry.key)}">
                 <div class="doc-grid-item" th:classappend="${stage.cardClass}">
@@ -593,6 +603,7 @@
     </div>
 
     <script src="/js/time_picker_24.js"></script>
+    <script src="/js/request_live.js?v=1"></script>
     <script>
       document
         .getElementById("statusSelect")
@@ -672,12 +683,11 @@
         });
       })();
 
-      document.querySelectorAll(".btn-pdf-print").forEach((btn) => {
-        btn.addEventListener("click", function () {
-          const requestId = this.dataset.requestId;
-          const docId = this.dataset.docId;
-          window.location.href = `/admin/academic/request/${requestId}/download/${docId}?format=pdf`;
-        });
+      // ผูกที่ document — รายการเอกสารถูกแทนที่ทั้งก้อนเมื่ออัปเดตสด (request_live.js) ปุ่มใหม่ต้องกดได้ด้วย
+      document.addEventListener("click", function (e) {
+        const btn = e.target.closest(".btn-pdf-print");
+        if (!btn) return;
+        window.location.href = `/admin/academic/request/${btn.dataset.requestId}/download/${btn.dataset.docId}?format=pdf`;
       });
 
       // History tab switching

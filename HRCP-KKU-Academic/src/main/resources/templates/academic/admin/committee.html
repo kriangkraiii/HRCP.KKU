@@ -143,12 +143,14 @@
                                             th:data-email="${m.email}"
                                             th:data-phone="${m.phoneNumber}"
                                             th:data-type="${m.committeeType.name()}"
-                                            onclick="openEditModal(this)"
+                                            data-call="openEditModal" data-call-arg="self"
                                             title="แก้ไขข้อมูล">
                                         <i class="fas fa-pen-to-square"></i>
                                     </button>
                                     <button type="button" class="btn btn-outline-danger"
-                                            th:onclick="'confirmDelete(' + ${m.id} + ', \'' + ${#strings.escapeJavaScript(m.fullName)} + '\')'"
+                                            th:data-id="${m.id}"
+                                            th:data-name="${m.fullName}"
+                                            data-call="confirmDeleteRow" data-call-arg="self"
                                             title="ลบข้อมูล">
                                         <i class="fas fa-trash-can"></i>
                                     </button>
@@ -419,6 +421,11 @@
             document.getElementById('editType').value = btn.dataset.type || '';
 
             new bootstrap.Modal(document.getElementById('editCommitteeModal')).show();
+        }
+
+        /** ปุ่มลบในตาราง — id กับชื่ออยู่ใน data-* (CSP ไม่ให้ใช้ onclick และ Thymeleaf ไม่ให้ใส่ข้อความใน th:onclick) */
+        function confirmDeleteRow(btn) {
+            confirmDelete(btn.dataset.id, btn.dataset.name);
         }
 
         function confirmDelete(id, name) {

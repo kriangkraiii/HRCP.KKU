@@ -1219,6 +1219,17 @@ public class PositionRequestService {
         h.setChangedBy(changedBy);
         h.setNote(note);
         statusHistoryRepository.save(h);
+        changed(request.getId());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher liveEvents;
+
+    /** หน้าคำร้องที่เปิดค้างอยู่อัปเดตสด — แจ้งหลัง commit ({@code RequestLiveUpdates}) */
+    private void changed(Long requestId) {
+        if (liveEvents != null && requestId != null) {
+            liveEvents.publishEvent(new com.ecom.academic.live.RequestChangedEvent(SignatureModule.POSITION, requestId));
+        }
     }
 
     /** @return status changes, most recent first */
@@ -1329,6 +1340,7 @@ public class PositionRequestService {
         doc.setIsDraft(false);
         doc.setFilledBy(filledBy);
         PositionDocument saved = documentRepository.save(doc);
+        changed(request.getId());
 
         // Sync doc 2 fields back to request
         if (documentType == 2 && jsonData != null) {
@@ -1370,6 +1382,7 @@ public class PositionRequestService {
         doc.setIsDraft(true);
         doc.setFilledBy(filledBy);
         PositionDocument saved = documentRepository.save(doc);
+        changed(request.getId());
 
         // Sync doc 2 fields back to request
         if (documentType == 2 && jsonData != null) {
@@ -1909,6 +1922,7 @@ public class PositionRequestService {
             doc.setRevisionNote(trimmed);
         }
         documentRepository.saveAll(docs);
+        changed(requestId);
     }
 
     public List<Integer> getCompletedDocTypes(Long requestId) {

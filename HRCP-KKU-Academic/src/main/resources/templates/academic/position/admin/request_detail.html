@@ -267,8 +267,15 @@
           </div>
         </div>
 
+        <!--/* อัปเดตสด (request_live.js): ช่องที่มี data-live-region ถูกแทนที่เมื่อคำร้องเปลี่ยน
+             สถานะเปลี่ยนแล้ว ช่องอัปเดตสถานะไม่ถูกแทนที่ (อาจกำลังพิมพ์) — ขึ้นแถบให้รีเฟรชแทน */-->
+        <div id="liveRoot" hidden
+             th:attr="data-live-url=@{'/admin/position/request/' + ${request.id} + '/live'},
+                      data-status=${request.currentStatus.name()},
+                      data-status-label=${request.currentStatus.thaiLabel}"></div>
+
         <!--/* Progress Tracker */-->
-        <div class="detail-progress">
+        <div class="detail-progress" id="progressTracker" data-live-region>
           <div class="detail-progress-steps" th:with="pIdx=${request.currentStatus.progressIndex()}">
             <th:block th:each="step, iterStat : ${progressSteps}">
               <!--/* ส่งแก้ไขถอยมาที่ขั้นตรวจสอบเอกสาร — ระบายสีและเขียนว่าส่งแก้ไข ไม่ให้ดูเหมือนกำลังตรวจตามปกติ */-->
@@ -313,6 +320,9 @@
         <div class="row">
           <!--/* Left Column */-->
           <div class="col-md-5">
+            <!--/* ขั้นต่อไป — งานที่ต้องทำตอนนี้ เรียงก่อนหลัง (NextStepGuide) */-->
+            <div th:replace="~{academic/_next_step :: box(${nextStep}, '/admin/position/request/' + ${request.id} + '/document/')}"></div>
+
             <!--/* Status Update */-->
             <div class="detail-section">
               <div class="detail-section-header">
@@ -754,7 +764,7 @@
                   <i class="fas fa-file-archive"></i> ดาวน์โหลดทั้งหมด (ZIP)
                 </a>
               </div>
-              <div class="detail-section-body">
+              <div class="detail-section-body" id="docListRegion" data-live-region>
                 <!--/* สีและป้ายมาจาก DocumentProgress ที่เดียว — เขียวเมื่อจบจริงเท่านั้น */-->
                 <th:block th:each="entry : ${docRows}"
                   th:with="stage=${docProgress.get(entry.key)}, docNo=${@positionRequestService.docNo(entry.key)},
@@ -851,13 +861,13 @@
         .doc-grid-item.work-copy-item { margin-left: 1.5rem; }
         /* กาง/ยุบทันที — แถวมี padding/margin/border ที่ไม่ไหลตามความสูง และ transition ของ .doc-grid-item
            ทับ transition ของ Bootstrap ทำให้แต่ละแถวกระตุกทีละแถว */
-        .doc-grid-item.work-copy-item.collapsing { transition: none; }
-        .work-copy-toggle[aria-expanded="true"] .when-collapsed,
+        .doc-grid-item.work-copy-item.collapsing { transition: none; }        .work-copy-toggle[aria-expanded="true"] .when-collapsed,
         .work-copy-toggle[aria-expanded="false"] .when-expanded { display: none; }
         .work-copy-toggle .fa-chevron-down { transition: transform .2s; }
         .work-copy-toggle[aria-expanded="true"] .fa-chevron-down { transform: rotate(180deg); }
       </style>
 
+      <script src="/js/request_live.js?v=1"></script>
       <script>
         // History tab switching (pure JS, no Bootstrap pills)
         document
@@ -880,17 +890,12 @@
           });
 
         // PDF download — ใช้ server-side conversion ผ่าน LibreOffice (เหมือนฝั่งประเมินผลการสอน)
-        document.querySelectorAll(".btn-pdf-print").forEach(function (btn) {
-          btn.addEventListener("click", function () {
-            var requestId = this.dataset.requestId;
-            var docType = this.dataset.docType;
-            window.location.href =
-              "/admin/position/request/" +
-              requestId +
-              "/document/" +
-              docType +
-              "/download?format=pdf";
-          });
+        // ผูกที่ document — รายการเอกสารถูกแทนที่ทั้งก้อนเมื่ออัปเดตสด (request_live.js) ปุ่มใหม่ต้องกดได้ด้วย
+        document.addEventListener("click", function (e) {
+          var btn = e.target.closest(".btn-pdf-print");
+          if (!btn) return;
+          window.location.href =
+            "/admin/position/request/" + btn.dataset.requestId + "/document/" + btn.dataset.docType + "/download?format=pdf";
         });
 
         // ช่องวันที่ของสถานะ (มติกรรมการประจำวิทยาลัยฯ / มติสภามหาวิทยาลัย) และเหตุผลขอทบทวน
