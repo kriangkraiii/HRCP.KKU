@@ -219,7 +219,7 @@ class DocumentDataAutoFillHelperTest {
         assertEquals("เจ้าหน้าที่ผู้ตรวจ", data.get("hr_officer_name"));
         assertEquals("☑", data.get("boss_eval_10_sets"));
 
-        Map<String, String> locked = helper.doc7LockedFields(request);
+        Map<String, String> locked = helper.lockedFields(request, 7);
         assertTrue(locked.containsKey("email"));
         assertTrue(!locked.containsKey("total_stories") && !locked.containsKey("hr_officer_name"));
         assertTrue(!locked.containsKey("is_req_03") && !locked.containsKey("teaching_eval_1_set"),
@@ -234,7 +234,7 @@ class DocumentDataAutoFillHelperTest {
         request.setTargetPosition("รองศาสตราจารย์");
         request.setDocuments(new ArrayList<>());
 
-        String pinned = autoFillHelper.pinDoc7LockedFieldsInJson(request,
+        String pinned = autoFillHelper.pinLockedFieldsInJson(request, 7,
                 "{\"applicant_firstname\":\"แก้ชื่อ\",\"is_teach_asst\":\"☑\",\"reason_if_none\":\"หมายเหตุ\"}");
         Map<String, String> data = new com.fasterxml.jackson.databind.ObjectMapper().readValue(pinned,
                 new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});

@@ -418,8 +418,7 @@ public class PositionAdminController {
         boolean lockedForSigning = signatureWorkflow.isDocumentLocked(SignatureModule.POSITION, id, type);
         model.addAttribute("lockedForSigning", lockedForSigning);
         // ช่องที่ระบบดึงมา — อ่านอย่างเดียว (saveDocument กับ auto-draft เขียนทับซ้ำอีกชั้น)
-        model.addAttribute("lockedFields", type == 7 && !lockedForSigning
-                ? autoFillHelper.doc7LockedFields(request) : Map.of());
+        model.addAttribute("lockedFields", lockedForSigning ? Map.of() : autoFillHelper.lockedFields(request, type));
         model.addAttribute("signingComplete", lockedForSigning
                 && signatureWorkflow.isSigningComplete(SignatureModule.POSITION, id, type));
         // Role-specific lists so each signer dropdown offers the right people.
@@ -535,10 +534,11 @@ public class PositionAdminController {
             // ส่วนเอกสารของแอดมินเองรวมกับของเดิม เพื่อให้ช่องติ๊กที่ไม่ได้ติ๊กไม่ถูกล้างทิ้ง
             formData = DocumentFieldOwnership.merge(SignatureModule.POSITION, type, true, formData,
                     positionService.getLatestDocumentData(id, type));
-            if (type == 7) {
-                // ช่องที่ระบบดึงมาแก้จากหน้าเว็บไม่ได้ — ค่าที่ส่งมาทางอื่นก็ไม่มีผล
+            // ช่องที่ระบบดึงมา (เอกสารที่ 7, 8) แก้จากหน้าเว็บไม่ได้ — ค่าที่ส่งมาทางอื่นก็ไม่มีผล
+            Map<String, String> lockedFields = autoFillHelper.lockedFields(request, type);
+            if (!lockedFields.isEmpty()) {
                 formData = new java.util.LinkedHashMap<>(formData);
-                formData.putAll(autoFillHelper.doc7LockedFields(request));
+                formData.putAll(lockedFields);
             }
 
             String jsonData = objectMapper.writeValueAsString(formData);

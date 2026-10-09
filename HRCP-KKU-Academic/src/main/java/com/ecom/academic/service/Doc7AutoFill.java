@@ -55,7 +55,7 @@ public final class Doc7AutoFill {
     private static final Pattern YEAR = Pattern.compile("(\\d{4})");
     private static final Pattern NUMERIC_DATE = Pattern.compile("(\\d{1,2})\\s*[/.-]\\s*(\\d{1,2})\\s*[/.-]\\s*(\\d{4})");
     private static final Pattern NAMED_DATE = Pattern.compile("(\\d{1,2})\\s+(\\S+(?:\\s?\\S\\.)?)\\s+(\\d{4})");
-    private static final String[] THAI_MONTHS = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม",
+    static final String[] THAI_MONTHS = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม",
             "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
     private static final String[] THAI_MONTH_ABBR = { "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.",
             "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค." };

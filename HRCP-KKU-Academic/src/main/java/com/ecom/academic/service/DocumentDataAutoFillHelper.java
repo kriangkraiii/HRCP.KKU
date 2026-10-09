@@ -238,17 +238,33 @@ public class DocumentDataAutoFillHelper {
             }
         }
 
+        // 5. Doc 8 (summary for the experts) likewise — see Doc8AutoFill. Everything it
+        // derives is locked; whatever the system does not know stays for the officer.
+        if (docType == 8 && request != null) {
+            data.putAll(doc8Derived(request));
+        }
+
         return data;
     }
 
-    /** Doc 7 fields the officer may not change — the save paths write these back over whatever was sent. */
-    public Map<String, String> doc7LockedFields(PositionRequest request) {
-        return request == null ? Map.of() : Doc7AutoFill.locked(doc7Derived(request));
+    /**
+     * Fields of an officer-filled document (7, 8) that the officer may not change — the
+     * save paths write these back over whatever was sent. Empty for every other document.
+     */
+    public Map<String, String> lockedFields(PositionRequest request, int docType) {
+        if (request == null) {
+            return Map.of();
+        }
+        return switch (docType) {
+            case 7 -> Doc7AutoFill.locked(doc7Derived(request));
+            case 8 -> doc8Derived(request);
+            default -> Map.of();
+        };
     }
 
-    /** JSON-in/JSON-out variant of {@link #doc7LockedFields} for the auto-draft endpoint. */
-    public String pinDoc7LockedFieldsInJson(PositionRequest request, String jsonData) {
-        Map<String, String> locked = doc7LockedFields(request);
+    /** JSON-in/JSON-out variant of {@link #lockedFields} for the auto-draft endpoint. */
+    public String pinLockedFieldsInJson(PositionRequest request, int docType, String jsonData) {
+        Map<String, String> locked = lockedFields(request, docType);
         if (locked.isEmpty() || jsonData == null) {
             return jsonData;
         }
@@ -258,9 +274,17 @@ public class DocumentDataAutoFillHelper {
             data.putAll(locked);
             return objectMapper.writeValueAsString(data);
         } catch (Exception e) {
-            log.warn("Could not pin locked doc 7 fields into draft JSON: {}", e.getMessage());
+            log.warn("Could not pin locked doc {} fields into draft JSON: {}", docType, e.getMessage());
             return null;
         }
+    }
+
+    private Map<String, String> doc8Derived(PositionRequest request) {
+        Map<Integer, Map<String, String>> docs = request.getDocuments() == null
+                ? Map.of() : parseAllPositionDocs(request.getDocuments());
+        EvaluationSummary evaluation = request.getLinkedEvaluation() == null
+                ? null : academicRequestService.summarize(request.getLinkedEvaluation());
+        return Doc8AutoFill.derive(request, docs.get(1), evaluation);
     }
 
     private Map<String, String> doc7Derived(PositionRequest request) {

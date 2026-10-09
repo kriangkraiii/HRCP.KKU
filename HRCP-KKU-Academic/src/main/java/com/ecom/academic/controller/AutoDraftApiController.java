@@ -283,9 +283,9 @@ public class AutoDraftApiController {
                 String locked = positionService.pinLockedFieldsInJson(request, docType, jsonData);
                 if (locked != null)
                     jsonData = locked;
-            } else if (docType == 7) {
-                // ช่องที่ระบบดึงมาในเอกสารที่ 7 เจ้าหน้าที่แก้ไม่ได้ — ปุ่มส่งลงนามบันทึกผ่านทางนี้
-                String locked = autoFillHelper.pinDoc7LockedFieldsInJson(request, jsonData);
+            } else if (docType == 7 || docType == 8) {
+                // ช่องที่ระบบดึงมาในเอกสารที่ 7, 8 เจ้าหน้าที่แก้ไม่ได้ — ปุ่มส่งลงนามบันทึกผ่านทางนี้
+                String locked = autoFillHelper.pinLockedFieldsInJson(request, docType, jsonData);
                 if (locked != null)
                     jsonData = locked;
             }

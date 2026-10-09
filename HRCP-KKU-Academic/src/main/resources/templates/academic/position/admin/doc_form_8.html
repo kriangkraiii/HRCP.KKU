@@ -18,6 +18,12 @@
             <div th:replace="~{academic/_admin_field_lock :: banner('position', ${request.id}, ${documentType})}"></div>
             <form th:action="'/admin/position/request/' + ${request.id} + '/document/8'" method="post" id="doc8Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/8'">
 
+                <div th:if="${lockedFields != null and !lockedFields.isEmpty()}" class="alert alert-info d-flex align-items-start mb-4">
+                    <i class="fas fa-lock me-2 mt-1"></i>
+                    <div>ช่องที่มีไอคอน <i class="fas fa-lock small"></i> ระบบดึงมาจากข้อมูลของผู้ยื่น (โปรไฟล์ เอกสารที่ 1 และผลประเมินการสอน) จึงแก้ไขไม่ได้
+                        — ถ้าข้อมูลไม่ถูกต้อง ให้ส่งกลับให้ผู้ยื่นแก้ที่เอกสารต้นทาง</div>
+                </div>
+
                 <!--/* ข้อมูลผู้ยื่น */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้ยื่นคำร้อง</h5></div>
@@ -28,15 +34,15 @@
                                 <input type="text" name="applicant_name" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">ตำแหน่งปัจจุบัน</label>
+                                <label class="form-label">เคยได้รับแต่งตั้งให้ดำรงตำแหน่ง</label>
                                 <input type="text" name="current_position" class="form-control">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">ตำแหน่งผู้ยื่น</label>
+                                <label class="form-label">ตำแหน่งปัจจุบัน</label>
                                 <input type="text" name="applicant_position" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">สาขาปัจจุบัน</label>
+                                <label class="form-label">ในสาขาวิชา (ตำแหน่งที่เคยได้รับ)</label>
                                 <input type="text" name="current_major" class="form-control">
                             </div>
                             <div class="col-md-4">
@@ -63,27 +69,27 @@
                                 <input type="text" name="major_code" class="form-control">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">รหัสหมวดวิชา</label>
+                                <label class="form-label">รหัสวิชา (เอกสารประกอบการสอน)</label>
                                 <input type="text" name="docsubject_code" class="form-control">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">วิชาที่สอน (ชื่อวิชา)</label>
+                                <label class="form-label">รายวิชา</label>
                                 <input type="text" name="subject_name" class="form-control">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">รหัสวิชา</label>
+                                <label class="form-label">เรื่อง (ถ้ามี)</label>
                                 <input type="text" name="subject" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">วันที่</label>
-                                <input type="text" name="date" class="form-control">
+                                <label class="form-label">วันที่ได้รับแต่งตั้งเป็นอาจารย์</label>
+                                <input type="text" name="date" class="form-control" data-no-today>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">วันที่ได้รับคำร้อง</label>
                                 <input type="text" name="receivedrequest_date" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">วันที่ดำรงตำแหน่งปัจจุบัน</label>
+                                <label class="form-label">วันที่ได้รับแต่งตั้ง (ตำแหน่งที่เคยได้รับ)</label>
                                 <input type="text" name="currentpositiondate" class="form-control">
                             </div>
                         </div>
@@ -253,23 +259,23 @@
                                 <input type="text" name="count_meet" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">เดือนที่ประชุม</label>
+                                <label class="form-label">อายุราชการ (เดือน)</label>
                                 <input type="text" name="count_month" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">ปีที่ประชุม</label>
+                                <label class="form-label">อายุราชการ (ปี)</label>
                                 <input type="text" name="count_year" class="form-control">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">วันที่ประชุม</label>
-                                <input type="text" name="date_meet" class="form-control">
+                                <input type="text" name="date_meet" class="form-control" data-no-today>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">ภาค/สาขาวิชาที่ประชุม</label>
+                                <label class="form-label">คณะ</label>
                                 <input type="text" name="department_meet" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">สาขาที่ประชุม</label>
+                                <label class="form-label">สังกัดสายวิชา</label>
                                 <input type="text" name="major_meet" class="form-control">
                             </div>
                         </div>
@@ -449,18 +455,46 @@
                     addResearchRow();
                 }
 
-                // Fill non-research fields from existing data
-                if (data) {
-                    for (const [key, value] of Object.entries(data)) {
+                // Fill non-research fields: saved values on top of what DocumentDataAutoFillHelper
+                // pulled from the applicant's documents (Doc8AutoFill). Once sent for signing,
+                // show only what was saved — the screen must match the signed copy.
+                // แยกบรรทัด: Thymeleaf กลืนข้อความหลัง /*[[...]]*/ ไปจนสุดบรรทัดเป็น "ค่าตัวอย่าง"
+                const lockedForSigning = /*[[${lockedForSigning}]]*/ false;
+                const docData = /*[[${docData}]]*/ null;
+                const fields = lockedForSigning ? data : docData;
+                const form = document.getElementById('doc8Form');
+                if (fields) {
+                    for (const [key, value] of Object.entries(fields)) {
                         // Skip research fields (already handled above)
                         if (key === 'des_research' || key.startsWith('research_des') ||
                             key.startsWith('firstauthor') || key.startsWith('corresautho') ||
                             key.startsWith('essencontributor') || key.startsWith('impact_factor') ||
                             key.match(/^database\d*$/)) continue;
-                        const el = document.querySelector(`[name="${key}"]`);
-                        if (el) el.value = value;
+                        const el = form.querySelector(`[name="${key}"]`);
+                        if (el && value) el.value = value;
                     }
                 }
+
+                // ช่องที่ระบบดึงมา (DocumentDataAutoFillHelper.lockedFields) — อ่านอย่างเดียว เซิร์ฟเวอร์เขียนทับตอนบันทึกอยู่แล้ว
+                const locked = /*[[${lockedFields}]]*/ null;
+                Object.entries(locked || {}).forEach(([name, value]) => {
+                    const el = form.querySelector(`[name="${name}"]`);
+                    if (!el) return;
+                    el.value = value;
+                    if (el.tagName === 'SELECT') {
+                        el.disabled = true; // ไม่ถูกส่งไปกับฟอร์ม — เซิร์ฟเวอร์ใส่ค่าที่ถูกต้องให้ตอนบันทึก
+                    } else {
+                        el.readOnly = true;
+                        el.classList.add('bg-light');
+                        // ตัวเลือกวันที่ที่ thai_date_autofill.js ใส่ไว้ข้างช่อง
+                        if (el.nextElementSibling?.type === 'date') el.nextElementSibling.remove();
+                    }
+                    el.title = 'ดึงจากข้อมูลในระบบ แก้ไขไม่ได้';
+                    const label = el.closest('[class*="col-"]')?.querySelector(':scope > .form-label');
+                    if (label && !label.querySelector('.fa-lock')) {
+                        label.insertAdjacentHTML('beforeend', ' <i class="fas fa-lock text-secondary small"></i>');
+                    }
+                });
             });
         </script>
 

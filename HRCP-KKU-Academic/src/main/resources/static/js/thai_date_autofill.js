@@ -174,7 +174,8 @@
             // และห้ามเขียนทับด้วยวันปัจจุบัน
             if (input.readOnly || input.disabled) return;
 
-            var skipAutoFill = shouldSkipAutofill(input.name);
+            // data-no-today: ช่องวันที่ที่ชื่อทั่วไป (เช่น "date") แต่เป็นวันเฉพาะ ไม่ใช่วันนี้
+            var skipAutoFill = shouldSkipAutofill(input.name) || input.hasAttribute('data-no-today');
 
             // ถ้าไม่อยู่ใน NO_AUTOFILL → ใส่วันปัจจุบัน (ถ้ายังว่าง)
             if (!skipAutoFill && (!input.value || input.value.trim() === '')) {
