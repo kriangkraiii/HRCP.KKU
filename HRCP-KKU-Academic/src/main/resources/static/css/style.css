@@ -1951,6 +1951,11 @@ body.modal-open .sidebar-toggle {
   font-weight: 600;
 }
 
+.progress-step.revise .step-label {
+  color: var(--color-warning, #f57f17);
+  font-weight: 600;
+}
+
 /* ===== Document Cards ===== */
 .doc-card {
   border-left: 4px solid var(--color-primary-medium);

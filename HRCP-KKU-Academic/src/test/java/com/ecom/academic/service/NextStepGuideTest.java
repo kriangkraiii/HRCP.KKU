@@ -63,15 +63,13 @@ class NextStepGuideTest {
     }
 
     @Test
-    @DisplayName("เฟส 2 ส่งแก้ไข: เอกสารที่รอผู้ยื่นขึ้นก่อน (รอผู้อื่น) งานส่งต่อของเจ้าหน้าที่ได้ไฮไลท์")
+    @DisplayName("เฟส 2 ส่งแก้ไข: เอกสารที่รอผู้ยื่นขึ้นเฉพาะรายการที่ส่งกลับ")
     void positionRevision() {
         Step step = NextStepGuide.position(PositionRequestStatus.REVISION_REQUESTED, rows(1, 4),
                 Map.of(1, Stage.AWAITING_SIGNATURE, 4, Stage.AWAITING_FORWARD), List.of(1), CouncilDates.NONE);
 
         assertThat(step.items()).extracting(Item::text, Item::state).containsExactly(
-                tuple("รอผู้ยื่นแก้ไขและลงนามใหม่ — เอกสารที่ 1 ชื่อ1", State.WAITING),
-                tuple("ตรวจแล้วส่งต่อลงนาม — เอกสารที่ 1 ชื่อ1", State.WAITING),
-                tuple("ตรวจแล้วส่งต่อลงนาม — เอกสารที่ 4 ชื่อ4", State.CURRENT));
+                tuple("รอผู้ยื่นแก้ไขและลงนามใหม่ — เอกสารที่ 1 ชื่อ1", State.WAITING));
     }
 
     @Test

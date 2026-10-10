@@ -401,6 +401,14 @@ public class PositionApplicantController {
         model.addAttribute("unsignedSigDocs", unsignedSigDocs);
         // เอกสารที่เจ้าหน้าที่ส่งกลับมาให้แก้และยังไม่ได้ลงนามใหม่ — ลงนามแล้วเอกสารถูกล็อก จึงหลุดจากรายการเอง
         model.addAttribute("sentBackDocs", positionService.sentBackDocuments(request));
+        Map<Integer, Boolean> editableDocsMap = new HashMap<>();
+        for (Integer docType : applicantDocTypes) {
+            editableDocsMap.put(docType, positionService.canApplicantEditDocument(request, docType));
+        }
+        for (Integer docType : docLabels.keySet()) {
+            editableDocsMap.putIfAbsent(docType, positionService.canApplicantEditDocument(request, docType));
+        }
+        model.addAttribute("editableDocsMap", editableDocsMap);
         model.addAttribute("applicantSignaturesComplete", applicantSignaturesComplete);
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
 

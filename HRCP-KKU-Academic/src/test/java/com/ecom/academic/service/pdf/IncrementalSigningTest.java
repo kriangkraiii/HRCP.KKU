@@ -317,4 +317,40 @@ class IncrementalSigningTest {
         java.nio.file.Files.createDirectories(java.nio.file.Path.of("target", "incremental"));
         java.nio.file.Files.write(java.nio.file.Path.of("target", "incremental", "doc2-remarks.pdf"), filled);
     }
+
+    @Test
+    @DisplayName("แบบ ก.พ.ว. มข. ๐๓ (เอกสารที่ 1 เฟส 2): ช่องวันที่ของประธานคณะอนุกรรมการฯ (s3_sign_date) ต้องถูกตรวจพบและมีพิกัดใน layout")
+    void phase2Doc1ReservesChairSignDate() throws Exception {
+        BasePdfBuilder.Renderer renderer = new BasePdfBuilder.Renderer() {
+            @Override
+            public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures) throws IOException {
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("applicant_name", "นายสมชาย ใจดี");
+                data.put("target_position", "ผู้ช่วยศาสตราจารย์");
+                data.putAll(overrides);
+                String fullJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(data);
+                return GEN.generateSignedP2Docx(1, fullJson, pictures.stream()
+                        .map(p -> new StampedSignature(p.anchorPlaceholder(), p.png(), p.width(), p.height())).toList());
+            }
+
+            @Override
+            public byte[] toPdf(byte[] docx) throws IOException {
+                return GEN.convertDocxToPdf(docx);
+            }
+        };
+
+        var base = new BasePdfBuilder().build(renderer,
+                List.of(new BasePdfBuilder.TextSpec("sign_date", IncrementalSigningService.reserveFor("sign_date")),
+                        new BasePdfBuilder.TextSpec("head_sign_date", IncrementalSigningService.reserveFor("head_sign_date")),
+                        new BasePdfBuilder.TextSpec("dean_sign_date", IncrementalSigningService.reserveFor("dean_sign_date")),
+                        new BasePdfBuilder.TextSpec("s3_sign_date", IncrementalSigningService.reserveFor("s3_sign_date"))),
+                List.of(new BasePdfBuilder.SlotSpec("applicant", "applicant_name", List.of("sign_date")),
+                        new BasePdfBuilder.SlotSpec("head", "department_head_name", List.of("head_sign_date")),
+                        new BasePdfBuilder.SlotSpec("dean", "dean_name", List.of("dean_sign_date")),
+                        new BasePdfBuilder.SlotSpec("committee_chair", "s3_chair_name", List.of("s3_sign_date"))));
+
+        assertThat(base.layout().texts()).extracting(BasePdfBuilder.Box::field)
+                .contains("s3_sign_date");
+    }
 }
+

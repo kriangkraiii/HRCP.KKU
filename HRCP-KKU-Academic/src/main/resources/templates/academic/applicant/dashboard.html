@@ -335,21 +335,18 @@
                         </th:block>
 
                         <!--/* Position Progress Tracker */-->
-                        <div class="timeline-v2 u-mb-var-space-md">
+                        <div class="timeline-v2 u-mb-var-space-md" th:with="pIdx=${posReq.currentStatus.progressIndex()}">
                             <th:block th:each="step, stepStat : ${positionProgressSteps}">
                                 <div class="timeline-v2-step"
-                                     th:classappend="${posReq.currentStatus.ordinal() == step.ordinal()} ? 't-active' :
-                                         (${posReq.currentStatus.ordinal() > step.ordinal()} ? 't-completed' : '')">
-                                    <div class="timeline-v2-icon"
-                                         th:data-bg="${posReq.currentStatus.ordinal() >= step.ordinal() ? step.color : null}"
-                                         th:data-border="${posReq.currentStatus.ordinal() >= step.ordinal() ? step.color : null}"
-                                         th:classappend="${posReq.currentStatus.ordinal() >= step.ordinal()} ? 'text-white' : ''">
-                                        <i class="fas u-fs-07rem" th:classappend="${step.icon}"></i>
+                                     th:with="revising=${posReq.currentStatus.name() == 'REVISION_REQUESTED' and step.name() == 'DOCUMENT_VERIFICATION'}"
+                                     th:classappend="${revising} ? 't-revise' :
+                                         (${pIdx > stepStat.index} ? 't-completed' :
+                                         (${pIdx == stepStat.index} ? (${stepStat.last} ? 't-completed t-final' : 't-active') : ''))">
+                                    <div class="timeline-v2-icon">
+                                        <i class="fas u-fs-07rem" th:classappend="${revising} ? 'fa-circle-exclamation' : ${step.icon}"></i>
                                     </div>
                                     <div class="timeline-v2-label"
-                                         th:data-fg="${posReq.currentStatus.ordinal() >= step.ordinal() ? step.color : null}"
-                                         th:classappend="${posReq.currentStatus.ordinal() >= step.ordinal()} ? 'fw-semibold' : ''"
-                                         th:text="${step.thaiLabel}"></div>
+                                         th:text="${revising} ? ${posReq.currentStatus.thaiLabel} : ${step.thaiLabel}"></div>
                                 </div>
                             </th:block>
                         </div>

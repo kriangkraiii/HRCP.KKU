@@ -488,8 +488,10 @@ public class DocumentGenerationService {
                                     raw = plainTick(raw);
                                 }
                                 // แปลงเลขก่อน escape เสมอ มิฉะนั้นจะไปโดนตัวเลขใน entity
-                                // หรือใน markup ที่ escapeXml แทรกเข้ามาเอง
-                                if (thaiNumeralTemplate && raw != null) {
+                                // หรือใน markup ที่ escapeXml แทรกเข้ามาเอง — ยกเว้น overlay token (@@OVL_...@@)
+                                // ของ BasePdfBuilder มิฉะนั้นชื่อฟิลด์ที่มีเลข (เช่น s3_sign_date)
+                                // จะถูกแปลงเลข 3 เป็น ๓ ทำให้ BasePdfBuilder ค้นหา token ไม่เจอ
+                                if (thaiNumeralTemplate && raw != null && !raw.startsWith("@@OVL_")) {
                                     raw = ThaiDateUtil.toThaiDigits(raw);
                                 }
                                 String value = (raw == null || raw.isBlank())

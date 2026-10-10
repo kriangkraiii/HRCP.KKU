@@ -128,9 +128,10 @@ public final class NextStepGuide {
         if (status == PositionRequestStatus.REVISION_REQUESTED) {
             awaitingResign.forEach(t -> items.add(
                     new Item("รอผู้ยื่นแก้ไขและลงนามใหม่ — " + docs.name(t), t, State.WAITING)));
+        } else {
+            // ขั้นแรกหลังรับคำร้องเห็นทั้งชุด (ที่เสร็จแล้วติ๊กไว้) ขั้นหลังจากนั้นเห็นเฉพาะที่ยังค้าง
+            items.addAll(docs.chores(status == PositionRequestStatus.DOCUMENT_RECEIVED));
         }
-        // ขั้นแรกหลังรับคำร้องเห็นทั้งชุด (ที่เสร็จแล้วติ๊กไว้) ขั้นหลังจากนั้นเห็นเฉพาะที่ยังค้าง
-        items.addAll(docs.chores(status == PositionRequestStatus.DOCUMENT_RECEIVED));
         String sendBack = "ที่ประชุมให้แก้ไข → กด “ส่งกลับแก้ไข” ในเอกสารที่ต้องแก้";
 
         return switch (status) {

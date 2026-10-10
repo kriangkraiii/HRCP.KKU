@@ -270,13 +270,14 @@
                     <!--/* Progress Tracker (7 Standard Steps) */-->
                     <div class="progress-tracker" th:with="pIdx=${req.currentStatus.progressIndex()}">
                         <div th:each="s, sStat : ${progressSteps}" class="progress-step"
-                            th:classappend="${req.currentStatus.name() == 'REVISION_REQUESTED' && s.name() == 'DOCUMENT_VERIFICATION'} ? 'revise' :
-                                     (${pIdx == sStat.index} ? 'active' :
-                                     (${pIdx > sStat.index} ? 'completed' : ''))">
+                            th:with="revising=${req.currentStatus.name() == 'REVISION_REQUESTED' and s.name() == 'DOCUMENT_VERIFICATION'}"
+                            th:classappend="${revising} ? 'revise' :
+                                     (${pIdx > sStat.index} ? 'completed' :
+                                     (${pIdx == sStat.index} ? 'active' : ''))">
                             <div class="step-icon">
-                                <i class="u-fs-08rem" th:class="'fas ' + ${s.icon}"></i>
+                                <i class="u-fs-08rem" th:class="'fas ' + (${revising} ? 'fa-circle-exclamation' : ${s.icon})"></i>
                             </div>
-                            <div class="step-label" th:text="${s.thaiLabel}"></div>
+                            <div class="step-label" th:text="${revising} ? ${req.currentStatus.thaiLabel} : ${s.thaiLabel}"></div>
                         </div>
                     </div>
 
