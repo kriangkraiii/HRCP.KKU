@@ -259,10 +259,10 @@
 
     var DOC_LINK = /^\/(user|admin)\/position\/request\/\d+\/document\/(\d+)$/;
 
-    function docLinks() {
+    function docLinks(root) {
         var seen = {};
         var out = [];
-        document.querySelectorAll('a[href]').forEach(function (a) {
+        (root || document).querySelectorAll('a[href]').forEach(function (a) {
             var url = new URL(a.getAttribute('href'), location.href);
             var m = DOC_LINK.exec(url.pathname);
             if (!m || seen[url.pathname]) return;
@@ -322,23 +322,39 @@
             btn.disabled = true;
             list.innerHTML = '';
             var failed = 0;
-            var chain = Promise.resolve();
-            links.forEach(function (link) {
-                var li = document.createElement('li');
-                li.textContent = 'เอกสารที่ ' + link.type + ' — รอ';
-                list.appendChild(li);
-                chain = chain.then(function () {
-                    li.textContent = 'เอกสารที่ ' + link.type + ' — กำลังกรอก...';
-                    setStatus(box, 'กำลังกรอกเอกสารที่ ' + link.type);
-                    return fillInFrame(link.path).then(function (r) {
-                        if (r.error) { failed++; li.dataset.tone = 'error'; li.textContent = 'เอกสารที่ ' + link.type + ' — ' + r.error; }
-                        else if (r.locked) { li.dataset.tone = 'warn'; li.textContent = 'เอกสารที่ ' + link.type + ' — ล็อกอยู่ ข้าม'; }
-                        else if (!r.saved) { failed++; li.dataset.tone = 'error'; li.textContent = 'เอกสารที่ ' + link.type + ' — กรอก ' + r.filled + ' ช่อง แต่บันทึกไม่สำเร็จ'; }
-                        else { li.dataset.tone = 'ok'; li.textContent = 'เอกสารที่ ' + link.type + ' — กรอก ' + r.filled + ' ช่อง บันทึกแล้ว'; }
+            var done = {};
+            function runAll(batch) {
+                var chain = Promise.resolve();
+                batch.forEach(function (link) {
+                    done[link.path] = true;
+                    var li = document.createElement('li');
+                    li.textContent = 'เอกสารที่ ' + link.type + ' — รอ';
+                    list.appendChild(li);
+                    chain = chain.then(function () {
+                        li.textContent = 'เอกสารที่ ' + link.type + ' — กำลังกรอก...';
+                        setStatus(box, 'กำลังกรอกเอกสารที่ ' + link.type);
+                        return fillInFrame(link.path).then(function (r) {
+                            if (r.error) { failed++; li.dataset.tone = 'error'; li.textContent = 'เอกสารที่ ' + link.type + ' — ' + r.error; }
+                            else if (r.locked) { li.dataset.tone = 'warn'; li.textContent = 'เอกสารที่ ' + link.type + ' — ล็อกอยู่ ข้าม'; }
+                            else if (!r.saved) { failed++; li.dataset.tone = 'error'; li.textContent = 'เอกสารที่ ' + link.type + ' — กรอก ' + r.filled + ' ช่อง แต่บันทึกไม่สำเร็จ'; }
+                            else { li.dataset.tone = 'ok'; li.textContent = 'เอกสารที่ ' + link.type + ' — กรอก ' + r.filled + ' ช่อง บันทึกแล้ว'; }
+                        });
                     });
                 });
-            });
-            chain.then(function () {
+                return chain;
+            }
+            // ฉบับของเอกสารที่ 6 (901, 902, ...) เกิดจากงานวิจัยในเอกสารที่ 1 — ยังไม่มีลิงก์ตอนเปิดหน้า
+            // กรอกรอบแรกเสร็จแล้วดึงหน้าคำร้องใหม่ หาฉบับที่เพิ่งเกิดแล้วกรอกต่อ
+            runAll(links).then(function () {
+                return fetch(location.href, { credentials: 'same-origin', cache: 'no-store' })
+                    .then(function (res) { return res.text(); })
+                    .then(function (html) {
+                        var fresh = docLinks(new DOMParser().parseFromString(html, 'text/html'))
+                            .filter(function (l) { return !done[l.path]; });
+                        return runAll(fresh);
+                    })
+                    .catch(function () { failed++; });
+            }).then(function () {
                 btn.disabled = false;
                 if (failed) {
                     setStatus(box, 'เสร็จ แต่มี ' + failed + ' ฉบับที่ไม่สำเร็จ', 'error');

@@ -73,6 +73,9 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
     @Autowired
     private StaffMemberRepository staffMembers;
 
+    @Autowired
+    private com.ecom.repository.UserRepository userRepo;
+
     private UserDtls professor;
     private UserDtls officer;
     private UserDtls head;
@@ -118,6 +121,14 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         member3 = data.user(MEMBER3_EMAIL, "อรุณี", "เลขานุการ", "ROLE_USER");
         author1 = data.user(AUTHOR1_EMAIL, "กิตติ", "ร่วมวิจัย", "ROLE_USER");
         author2 = data.user(AUTHOR2_EMAIL, "สุภาวดี", "บรรณกิจ", "ROLE_USER");
+
+        // ตำแหน่งในบัญชี — ช่องตำแหน่งของผู้ลงนามในแบบฟอร์มเติมจากตรงนี้เท่านั้น แก้ในฟอร์มไม่ได้ (048d823)
+        head.setPositionTitle("หัวหน้าสาขาวิชาวิทยาการคอมพิวเตอร์");
+        assocDean.setPositionTitle("รองคณบดีฝ่ายวิชาการ");
+        dean.setPositionTitle("คณบดีวิทยาลัยการคอมพิวเตอร์");
+        userRepo.save(head);
+        userRepo.save(assocDean);
+        userRepo.save(dean);
 
         staff(officer, "HR");
         staff(head, "HEAD");
@@ -272,10 +283,9 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                 .orElseThrow(() -> new AssertionError("ไม่พบแบบร่างคำร้องขอตำแหน่ง")).getId();
 
         // ---------- ข้อ 16-17, 19: เอกสารของผู้เสนอขอ ----------
-        for (int doc : new int[] { 1, 2, 3, 4, 6, 9 }) {
+        for (int doc : new int[] { 1, 2, 3, 4, 6 }) {
             String who = "ผู้เสนอขอ เอกสารตำแหน่งที่ " + doc;
-            // เอกสารที่ 9 ข้อ ข. ต้องติ๊กสถานะอย่างน้อยหนึ่งข้อ — ผู้เสนอขอในเทสต์นี้ไม่ใช่ผู้ประพันธ์ (author1/2 เป็น) จึงเป็นผู้นิพนธ์ร่วม
-            openAndFill("/user/position/request/" + id + "/document/" + doc, doc == 9 ? "chk_coauthor" : null);
+            openAndFill("/user/position/request/" + id + "/document/" + doc, null);
             boolean applicantSigns = com.ecom.academic.service.SignatureAnchorRegistry.slotsOf(SignatureModule.POSITION, doc).stream()
                     .anyMatch(slot -> "applicant".equals(slot.slotKey()));
             if (applicantSigns) {
@@ -292,6 +302,23 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                 clickAndSettle(page.locator("#panelSaveDocBtn"), who + ": บันทึกเอกสาร");
                 assertNoErrorFlash(who + ": บันทึกเอกสาร");
             }
+        }
+
+        // ---------- เอกสารที่ 6 (type 9): หนึ่งฉบับต่องานวิจัยในเอกสารที่ 1 ----------
+        // ผู้เสนอขอเป็นผู้นิพนธ์ร่วม และเลือกผู้ประพันธ์อันดับแรก/บรรณกิจเองในแบบฟอร์ม
+        // ระบบส่งให้สองคนนั้นลงนามต่อทันทีหลังผู้เสนอขอลงนาม ไม่รอเจ้าหน้าที่
+        java.util.Set<Integer> workCopies = positionService.workCopies(positionService.findById(id).orElseThrow())
+                .keySet();
+        assertThat(workCopies).as("กรอกงานวิจัยในเอกสารที่ 1 แล้วต้องมีเอกสารที่ 6 ของงานวิจัยนั้น").isNotEmpty();
+        for (int copy : workCopies) {
+            String who = "ผู้เสนอขอ เอกสารที่ 6 ฉบับ " + copy;
+            openAndFill("/user/position/request/" + id + "/document/" + copy, "chk_coauthor");
+            pickPerson(page.locator("input[name=firstauthor_name]"), author1.getFirstName(),
+                    com.ecom.academic.service.SignerNameResolver.printedName(author1));
+            pickPerson(page.locator("input[name=corres_name]"), author2.getFirstName(),
+                    com.ecom.academic.service.SignerNameResolver.printedName(author2));
+            sendForSignature(who);
+            signHere(who, null);
         }
 
         // ---------- ส่งคำร้อง ----------
@@ -319,7 +346,12 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         plan.put(6, Map.of("dean", dean));
         plan.put(7, Map.of("hr", officer, "dean", dean));                    // ข้อ 20 ตรวจสอบคุณสมบัติ
         plan.put(8, Map.of("hr", officer));                                  // ข้อ 21 เสนอกลั่นกรอง
-        plan.put(9, Map.of("first_author", author1, "corresponding_author", author2));
+
+        // ผู้ประพันธ์ลงนามเอกสารที่ 6 ตามที่ผู้เสนอขอเลือก — ก่อนเจ้าหน้าที่ทำแบบตรวจสอบคุณสมบัติ
+        for (int copy : workCopies) {
+            signEveryActiveStep(SignatureModule.POSITION, id, copy, null);
+            expectCompleted(SignatureModule.POSITION, id, copy);
+        }
 
         for (var entry : plan.entrySet()) {
             int doc = entry.getKey();
@@ -337,8 +369,9 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
             }
         }
 
-        // ผู้ร่วมประพันธ์ต้องเป็นคนที่เจ้าหน้าที่เลือก ไม่ใช่ผู้เสนอขอเซ็นแทน
-        SignatureRequest doc9 = workflow.findEnvelope(SignatureModule.POSITION, id, 9).orElseThrow();
+        // ผู้ประพันธ์ต้องเป็นคนที่ผู้เสนอขอเลือก ไม่ใช่ผู้เสนอขอเซ็นแทน
+        SignatureRequest doc9 = workflow.findEnvelope(SignatureModule.POSITION, id, workCopies.iterator().next())
+                .orElseThrow();
         Map<String, Integer> signerBySlot = new java.util.HashMap<>();
         steps.findBySignatureRequestIdOrderByStepOrderAsc(doc9.getId())
                 .forEach(st -> signerBySlot.put(st.getSlotKey(), st.getSigner().getId()));
@@ -590,8 +623,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
 
         // ---------- ข้อ 22 NO: กลั่นกรองให้แก้ เจ้าหน้าที่ส่งเอกสารที่ 3 กลับ ----------
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
+        // การส่งกลับเปลี่ยนสถานะเป็น "ส่งแก้ไข" เอง (markRevisionRequested) — ไม่ต้องเลือกสถานะซ้ำ
         sendBackAsOfficer("position", id, 3, "กรรมการกลั่นกรองให้แก้ข้อความรับรองจริยธรรมให้ครบตามแบบ");
-        setStatusViaAdminForm("position", id, "REVISION_REQUESTED", "ข้อ 22-23 — มติกลั่นกรอง: ให้แก้ไข");
         awaitPositionStatus(id, PositionRequestStatus.REVISION_REQUESTED, "ข้อ 23 — แจ้งมติให้แก้");
 
         SignatureRequest old = workflow.findEnvelope(firstEnvelope).orElseThrow();
@@ -640,11 +673,13 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                 .containsExactlyInAnyOrder("applicant", "dean");
 
         // ---------- ข้อ 20-31: ลงนามใหม่ครบแล้ว เดินเรื่องจนส่งกองทรัพยากรบุคคล ----------
+        // ลงนามใหม่ครบทุกคน คำร้องกลับเข้าขั้นตรวจสอบเอกสารเอง (resumeAfterRevision)
+        awaitPositionStatus(id, PositionRequestStatus.DOCUMENT_VERIFICATION, "ลงนามใหม่ครบแล้วกลับเข้าตรวจสอบเอกสารเอง");
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
         page.navigate(baseUrl() + "/admin/position/request/" + id);
         page.waitForLoadState();
         assertThat(page.locator("#awaitingResignAlert").count()).as("ลงนามใหม่ครบแล้ว ต้องไม่มีป้ายรอลงนามใหม่").isZero();
-        for (PositionRequestStatus st : new PositionRequestStatus[] { PositionRequestStatus.DOCUMENT_VERIFICATION,
+        for (PositionRequestStatus st : new PositionRequestStatus[] {
                 PositionRequestStatus.SCREENING_COMMITTEE, PositionRequestStatus.SCREENING_APPROVED,
                 PositionRequestStatus.COLLEGE_COMMITTEE, PositionRequestStatus.COLLEGE_APPROVED,
                 PositionRequestStatus.SENT_TO_HR }) {
@@ -705,6 +740,15 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
         setStatusViaAdminForm("academic", id, "SUB_COMMITTEE_APPOINTED", "ข้อ 3-4");
         awaitStatus(id, RequestStatus.SUB_COMMITTEE_APPOINTED, "ลงนามใหม่แล้วเดินต่อได้");
+    }
+
+    /** พิมพ์ค้นหาในช่องเลือกบุคคล (person_picker.js) แล้วเลือกจากรายชื่อ */
+    private void pickPerson(Locator input, String search, String printed) {
+        input.fill(search);
+        Locator option = page.locator(".person-picker-menu.show .dropdown-item",
+                new Page.LocatorOptions().setHasText(printed));
+        option.first().waitFor();
+        option.first().dispatchEvent("mousedown");
     }
 
     /** เจ้าหน้าที่กด "ส่งกลับให้ผู้ยื่นแก้ไข" ในหน้าเอกสาร พร้อมเหตุผล */
@@ -1123,25 +1167,13 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
             String namedField = (String) field.evaluate(
                     "e => { const b = e.closest('[data-named-signer]'); return b ? b.getAttribute('data-named-signer') : null }");
             if (namedField != null) {
+                // เลือกจากรายชื่อจริงแบบที่เจ้าหน้าที่ทำ — ช่องตำแหน่งเติมจากบัญชีที่เลือกเท่านั้น
+                Locator nameInput = page.locator("form [name='" + namedField + "'][data-person-picker]");
+                if (signer != null && nameInput.count() > 0 && nameInput.first().isEditable()) {
+                    pickPerson(nameInput.first(), signer.getFirstName(),
+                            com.ecom.academic.service.SignerNameResolver.printedName(signer));
+                }
                 String id = signer == null ? "" : String.valueOf(signer.getId());
-                page.evaluate("""
-                        ([name, id]) => {
-                          // ช่องชื่อที่ดึงจากเอกสารก่อนหน้า (กรรมการในเอกสารที่ 7-8) แก้ไม่ได้ — ผู้ลงนามคือคนที่เลือกไว้แล้ว
-                          const locked = [...document.querySelectorAll('[name="' + name + '"]')]
-                              .find(e => !e.closest('[data-named-signer]') && e.readOnly);
-                          if (locked) return;
-                          const c = (window.NAMED_SIGNER_CANDIDATES || []).find(x => String(x.userId) === id);
-                          const f = [...document.querySelectorAll('[name="' + name + '"]')]
-                              .find(e => !e.closest('[data-named-signer]'));
-                          if (!f) return;
-                          f.value = c ? c.displayName : '';
-                          // ชื่อตามทะเบียนบุคลากร ไม่มีรหัสบัญชีคู่กัน — เซิร์ฟเวอร์จับคู่จากชื่อ (ทางเดียวกับข้อมูลเก่า)
-                          const chosen = document.querySelector('[name="' + name + '__signer"]');
-                          if (chosen) chosen.value = '';
-                          f.dispatchEvent(new Event('input', { bubbles: true }));
-                          f.dispatchEvent(new Event('change', { bubbles: true }));
-                        }
-                        """, List.of(namedField, id));
                 assertThat((String) field.evaluate("e => e.value"))
                         .as(who + ": ชื่อใน " + namedField + " ต้องจับคู่ได้กับ " + slot + " = "
                                 + (signer == null ? "-" : signer.getEmail()))

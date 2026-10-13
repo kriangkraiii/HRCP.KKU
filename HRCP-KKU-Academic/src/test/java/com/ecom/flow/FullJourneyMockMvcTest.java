@@ -259,14 +259,27 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         assertThat(request.getLinkedEvaluation().getId()).isEqualTo(evaluationId);
 
         // --- ข้อ 16-19: กรอกเอกสารที่ผู้ยื่นรับผิดชอบให้ครบ ---
+        // เอกสารที่ 6 (type 9) แยกฉบับตามงานวิจัยในเอกสารที่ 1 — กรอกหลังเอกสารที่ 1 ทีละฉบับ
         for (int docType : PositionRequestService.APPLICANT_DOCS) {
+            if (docType == com.ecom.academic.service.PositionDocTypes.WORK_PARTICIPATION) {
+                continue;
+            }
             expectAccepted(mvc.perform(formPost("/user/position/request/" + id
                     + "/document/" + docType, positionDocumentFields(docType))
                     .with(asProfessor())), "/user/position/request/" + id);
         }
+        java.util.Set<Integer> workCopies = positionService.workCopies(positionService.findById(id).orElseThrow())
+                .keySet();
+        assertThat(workCopies).as("งานวิจัยในเอกสารที่ 1 ต้องได้เอกสารที่ 6 หนึ่งฉบับต่อเรื่อง").isNotEmpty();
+        for (int copy : workCopies) {
+            expectAccepted(mvc.perform(formPost("/user/position/request/" + id
+                    + "/document/" + copy, workParticipationFields())
+                    .with(asProfessor())), "/user/position/request/" + id);
+        }
+        List<Integer> applicantDocTypes = positionService.applicantDocTypes(positionService.findById(id).orElseThrow());
         assertThat(positionService.getCompletedDocTypes(id))
                 .as("เอกสารของผู้ยื่นต้องครบทุกฉบับก่อนส่ง")
-                .containsAll(PositionRequestService.APPLICANT_DOCS);
+                .containsAll(applicantDocTypes);
 
         // --- ยังไม่ลงนาม: ส่งคำร้องต้องไม่ผ่าน ---
         expectAccepted(mvc.perform(post("/user/position/request/" + id + "/submit")
@@ -276,7 +289,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                 .isEqualTo(PositionRequestStatus.DRAFT);
 
         // --- ลงนามทุกฉบับที่ต้องลงนาม ---
-        for (int docType : PositionRequestService.APPLICANT_DOCS) {
+        for (int docType : applicantDocTypes) {
             signAsApplicant(SignatureModule.POSITION, id, docType,
                     positionService.getDocLabel(docType));
         }
@@ -375,8 +388,14 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
             return;
         }
 
+        // ฉบับงานวิจัยของเอกสารที่ 6: ผู้ประพันธ์อันดับแรกและบรรณกิจที่ผู้ขอเลือกไว้อยู่ในเนื้อเอกสาร
+        // ผู้ขอเป็นเองทั้งสองช่อง จึงลงนามครบในครั้งเดียว
+        String frozen = com.ecom.academic.service.PositionDocTypes.isWorkCopy(docType)
+                ? new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(
+                        positionService.getLatestDocumentData(requestId, docType))
+                : "{\"applicant_name\":\"" + professor.getName() + "\"}";
         var created = signatureWorkflow.createEnvelope(module, requestId, docType, label,
-                "{\"applicant_name\":\"" + professor.getName() + "\"}",
+                frozen,
                 List.of(new SignatureWorkflowService.SignerAssignment("applicant",
                         professor.getId())),
                 null, professor, SignatureWorkflowService.ActorContext.none());
@@ -527,10 +546,32 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         return officerFields(fields);
     }
 
+    /** เอกสารที่ 6 ฉบับงานวิจัย — ผู้ขอเป็นผู้ประพันธ์อันดับแรกและบรรณกิจเอง */
+    private Map<String, String> workParticipationFields() {
+        String printed = com.ecom.academic.service.SignerNameResolver.printedName(professor);
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("applicant_name", professor.getName());
+        fields.put("title_name", "การจำแนกภาพถ่ายดาวเทียมด้วยการเรียนรู้เชิงลึก");
+        fields.put("chk_ firstauthor", "☑");
+        fields.put("chk_corresp", "☑");
+        fields.put("role_des1", "ออกแบบการทดลองและเขียนต้นฉบับ");
+        fields.put("firstauthor_name", printed);
+        fields.put("firstauthor_name__signer", String.valueOf(professor.getId()));
+        fields.put("corres_name", printed);
+        fields.put("corres_name__signer", String.valueOf(professor.getId()));
+        fields.put("coauthor_count", "0");
+        return fields;
+    }
+
     private Map<String, String> positionDocumentFields(int docType) {
         Map<String, String> fields = new LinkedHashMap<>();
         fields.put("applicant_name", professor.getName());
         fields.put("document_date", "1 ตุลาคม 2569");
+        if (docType == 1) {
+            // งานวิจัยของตำแหน่งที่ขอ — แต่ละเรื่องได้เอกสารที่ 6 ของตัวเอง
+            fields.put("target_position", "ผู้ช่วยศาสตราจารย์");
+            fields.put("asst_research_working_1", "การจำแนกภาพถ่ายดาวเทียมด้วยการเรียนรู้เชิงลึก");
+        }
         if (docType == 2) {
             // Document 2 feeds the request's headline fields back to the entity.
             fields.put("request_position", "ผู้ช่วยศาสตราจารย์");

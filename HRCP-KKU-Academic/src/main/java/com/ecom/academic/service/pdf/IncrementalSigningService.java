@@ -268,6 +268,10 @@ public class IncrementalSigningService {
         if (field.contains("memo_no")) {
             return 32;
         }
+        // วันที่ของบันทึกข้อความที่เจ้าหน้าที่กรอก — "๓๐ พฤศจิกายน พ.ศ. ๒๕๖๙" กว้าง 91pt แม้ย่อถึง 12pt
+        if (field.equals("date")) {
+            return 30;
+        }
         if (field.contains("date")) {
             return 25;
         }
@@ -541,7 +545,7 @@ public class IncrementalSigningService {
         Map<String, String> values = new LinkedHashMap<>();
         try {
             json.readTree(filled).properties().forEach(e -> {
-                String v = e.getValue().asText("");
+                String v = com.ecom.util.ThaiDateUtil.withoutDayLabel(e.getKey(), e.getValue().asText(""));
                 if (!v.isBlank() && (includeOffice || !office.contains(e.getKey()))) {
                     values.put(e.getKey(), thai ? com.ecom.util.ThaiDateUtil.toThaiDigits(v) : v);
                 }

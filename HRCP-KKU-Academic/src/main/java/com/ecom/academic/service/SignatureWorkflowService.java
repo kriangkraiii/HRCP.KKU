@@ -1518,8 +1518,12 @@ public class SignatureWorkflowService {
 
         // เปิดประตูให้เจ้าของเอกสารกลับมาแก้ — ถ้าไม่เปิด การตีกลับก็เป็นแค่การแจ้งเตือน
         // ที่ปลายทางทำอะไรต่อไม่ได้
+        // ประวัติสถานะของเจ้าหน้าที่: ใคร (ตำแหน่งและชื่อ) ตัดสินว่าอะไร — ผู้ยื่นเห็นแค่เหตุผล
+        String decidedBy = (step.getRoleLabel() != null && !step.getRoleLabel().isBlank()
+                ? step.getRoleLabel() + " " : "") + "(" + actingUser.getName() + ") ";
+        String decision = choiceValue != null ? "พิจารณาแล้ว" + choiceValue : "ปฏิเสธการลงนาม";
         revisionRouter.openForRevision(envelope.getModule(), envelope.getRequestId(),
-                envelope.getDocumentType(), trimmed);
+                envelope.getDocumentType(), trimmed, decidedBy + decision + ": " + trimmed);
 
         notifier.notifyDeclined(noticeFor(envelope, step, List.of(envelope.getInitiatedBy())));
         return new Result(requestRepository.save(envelope), null);
@@ -1844,10 +1848,30 @@ public class SignatureWorkflowService {
         List<String> missing = DocumentCompleteness.missingAdminFields(envelope.getModule(),
                 envelope.getDocumentType(), json);
         if (!missing.isEmpty()) {
-            return "ช่องของเจ้าหน้าที่ยังกรอกไม่ครบ (ขาดอีก " + missing.size()
-                    + " ช่อง) กรุณากรอกให้ครบก่อนส่งเวียนลงนามต่อ";
+            return "ช่องของเจ้าหน้าที่ยังกรอกไม่ครบ (ขาดอีก " + missing.size() + " ช่อง: "
+                    + describeAdminFields(missing) + ") กรุณากรอกให้ครบก่อนส่งเวียนลงนามต่อ";
         }
         return staffValuesTooLong(envelope);
+    }
+
+    /** ชื่อช่องของเจ้าหน้าที่ที่คนอ่านเข้าใจ — ช่องที่ไม่รู้จักแสดงชื่อในระบบ */
+    private static final Map<String, String> ADMIN_FIELD_LABELS = Map.ofEntries(
+            Map.entry("memo_no", "เลขที่หนังสือ"),
+            Map.entry("date", "วันที่"),
+            Map.entry("dean_name", "ชื่อคณบดี"),
+            // ช่องตำแหน่งเติมจากตำแหน่งในบัญชีของคนที่เลือก แก้ในฟอร์มไม่ได้ — บอกว่าต้องไปแก้ที่ไหน
+            Map.entry("dean_position", "ตำแหน่งคณบดี ซึ่งระบบเติมจากบัญชีผู้ใช้ที่เลือก ถ้าว่างให้ตั้งตำแหน่งในข้อมูลผู้ใช้ของผู้นั้นก่อน"),
+            Map.entry("department_head_name", "ชื่อหัวหน้าสาขา"),
+            Map.entry("applicant_signature_name", "ชื่อผู้ขอใต้ลายมือชื่อ"),
+            Map.entry("dean_signature_name", "ชื่อคณบดีใต้ลายมือชื่อ"),
+            Map.entry("position_title", "ตำแหน่งใต้ลายมือชื่อ"),
+            Map.entry("hr_staff_name", "ชื่อเจ้าหน้าที่ผู้ตรวจ"));
+
+    static String describeAdminFields(List<String> fields) {
+        return fields.stream().map(f -> ADMIN_FIELD_LABELS.getOrDefault(f,
+                f.startsWith("chk_off_") ? "ช่องตรวจของเจ้าหน้าที่ข้อ " + f.substring("chk_off_".length())
+                        : f.startsWith("text_") ? "หมายเหตุข้อ " + f.substring("text_".length()) : f))
+                .collect(java.util.stream.Collectors.joining(", "));
     }
 
     /**

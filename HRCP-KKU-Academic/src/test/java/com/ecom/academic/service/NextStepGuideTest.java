@@ -73,6 +73,31 @@ class NextStepGuideTest {
     }
 
     @Test
+    @DisplayName("เฟส 2 ส่งแก้ไข: ผู้ยื่นลงนามใหม่แล้ว — ลูกอยู่ที่เจ้าหน้าที่ ต้องส่งเวียนให้ผู้ลงนามคนอื่นลงนามซ้ำ")
+    void positionRevisionResignedByApplicant() {
+        Step step = NextStepGuide.position(PositionRequestStatus.REVISION_REQUESTED, rows(1, 3),
+                Map.of(1, Stage.AWAITING_FORWARD, 3, Stage.AWAITING_SIGNATURE), List.of(1, 3), List.of(1, 3),
+                CouncilDates.NONE);
+
+        assertThat(step.title()).isEqualTo("ส่งเวียนเอกสารที่แก้แล้วให้ลงนามใหม่");
+        assertThat(step.items()).extracting(Item::text, Item::state).containsExactly(
+                tuple("ตรวจแล้วส่งเวียนให้ลงนามใหม่ — เอกสารที่ 1 ชื่อ1", State.CURRENT),
+                tuple("รอผู้ลงนามลงนามใหม่ — เอกสารที่ 3 ชื่อ3", State.WAITING));
+    }
+
+    @Test
+    @DisplayName("เฟส 2 ส่งแก้ไข: ผู้ยื่นลงนามใหม่แล้วฉบับหนึ่ง อีกฉบับยังรอผู้ยื่น — แยกให้เห็นว่าใครต้องทำอะไร")
+    void positionRevisionMixed() {
+        Step step = NextStepGuide.position(PositionRequestStatus.REVISION_REQUESTED, rows(1, 4),
+                Map.of(1, Stage.AWAITING_FORWARD, 4, Stage.AWAITING_SIGNATURE), List.of(1, 4), List.of(1),
+                CouncilDates.NONE);
+
+        assertThat(step.items()).extracting(Item::text, Item::state).containsExactly(
+                tuple("ตรวจแล้วส่งเวียนให้ลงนามใหม่ — เอกสารที่ 1 ชื่อ1", State.CURRENT),
+                tuple("รอผู้ยื่นแก้ไขและลงนามใหม่ — เอกสารที่ 4 ชื่อ4", State.WAITING));
+    }
+
+    @Test
     @DisplayName("เฟส 2 สภาไม่อนุมัติแต่ขอทบทวนไม่ได้แล้ว — ไม่มีงาน บอกเหตุผล")
     void positionRejectedPastAppeal() {
         Step step = NextStepGuide.position(PositionRequestStatus.COUNCIL_REJECTED, rows(1), Map.of(1, Stage.DONE),

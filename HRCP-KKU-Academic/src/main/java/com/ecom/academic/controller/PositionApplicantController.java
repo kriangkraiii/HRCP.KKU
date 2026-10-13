@@ -400,7 +400,12 @@ public class PositionApplicantController {
         model.addAttribute("docSignedMap", docSignedMap);
         model.addAttribute("unsignedSigDocs", unsignedSigDocs);
         // เอกสารที่เจ้าหน้าที่ส่งกลับมาให้แก้และยังไม่ได้ลงนามใหม่ — ลงนามแล้วเอกสารถูกล็อก จึงหลุดจากรายการเอง
-        model.addAttribute("sentBackDocs", positionService.sentBackDocuments(request));
+        Map<Integer, String> sentBackDocs = positionService.sentBackDocuments(request);
+        model.addAttribute("sentBackDocs", sentBackDocs);
+        // การ์ดที่ต้องแก้ — เอกสารที่ 6 แยกฉบับตามงานวิจัย (901, 902, ...) แต่การ์ดและแถบเลขเอกสารใช้เลขหลัก 9
+        model.addAttribute("sentBackCards", sentBackDocs.keySet().stream()
+                .map(com.ecom.academic.service.PositionDocTypes::base)
+                .collect(java.util.stream.Collectors.toSet()));
         Map<Integer, Boolean> editableDocsMap = new HashMap<>();
         for (Integer docType : applicantDocTypes) {
             editableDocsMap.put(docType, positionService.canApplicantEditDocument(request, docType));

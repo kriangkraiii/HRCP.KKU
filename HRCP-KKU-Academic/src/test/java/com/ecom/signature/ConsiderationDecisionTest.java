@@ -330,6 +330,9 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
         @Autowired
         private com.ecom.academic.repository.PositionRequestRepository positionRequests;
 
+        @Autowired
+        private com.ecom.academic.service.PositionRequestService positionRequestService;
+
         private PositionRequest request;
 
         private SignatureStep headStepOnDoc1() {
@@ -375,6 +378,15 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
             assertThat(positionRequests.findById(request.getId()).orElseThrow().getCurrentStatus())
                     .as("เหมือนเจ้าหน้าที่กดส่งกลับ")
                     .isEqualTo(PositionRequestStatus.REVISION_REQUESTED);
+            String history = positionRequestService.getStatusHistory(request.getId()).stream()
+                    .map(com.ecom.academic.model.PositionStatusHistory::getNote)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.joining(" | "));
+            assertThat(history)
+                    .as("เจ้าหน้าที่ต้องเห็นในประวัติว่าใครตอบอะไร ไม่ใช่แค่ความเห็นลอย ๆ")
+                    .contains("พิจารณาแล้วไม่ครบถ้วน")
+                    .contains(head.getName())
+                    .contains("ขาดหลักฐานการสอน");
         }
     }
 

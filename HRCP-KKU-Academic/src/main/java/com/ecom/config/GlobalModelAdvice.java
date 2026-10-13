@@ -41,6 +41,10 @@ public class GlobalModelAdvice {
 
     @ModelAttribute
     public void addGlobalAttributes(jakarta.servlet.http.HttpServletRequest request, Principal principal, Model model) {
+        // อัปเดตสดไม่มีหน้าให้เรนเดอร์ — และ connection ที่หยิบตรงนี้ open-in-view จะถือไว้จนการเชื่อมต่อปิด
+        if (com.ecom.academic.live.EventStreamRequests.isEventStream(request)) {
+            return;
+        }
         // Drives which sign-in controls the login page renders.
         model.addAttribute("ssoMode", authProperties.isSsoMode());
 

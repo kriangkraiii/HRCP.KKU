@@ -270,6 +270,13 @@ public final class PdfIncrementService {
             return;
         }
         String text = value == null ? "" : value;
+        // ช่องชื่อใต้ลายเซ็น (centredFields) — วาดวงเล็บแนบชิดชื่อเสมอ ไม่ให้มีช่องไฟ
+        if (centred && !text.isBlank()) {
+            String trimmed = text.trim();
+            if (!trimmed.startsWith("(") || !trimmed.endsWith(")")) {
+                text = "(" + trimmed + ")";
+            }
+        }
         float preferred = daSize(field);
         int lines = field.getCOSObject().getInt(BasePdfBuilder.LINES, 1);
         float pitch = field.getCOSObject().getFloat(BasePdfBuilder.PITCH, 0);

@@ -75,8 +75,11 @@ class DevFormFillerBrowserTest extends PlaywrightTestBase {
 
         String status = page.textContent(".dev-fill-status");
         assertThat(status).as(page.textContent(".dev-fill-log")).contains("เสร็จทุกฉบับ");
-        for (int type : PositionRequestService.APPLICANT_DOCS) {
-            assertThat(missing(type)).as("เอกสารที่ %d", type).isEmpty();
+        // เอกสารที่ 6 (type 9) แยกฉบับตามงานวิจัยในเอกสารที่ 1 — ตรวจฉบับของงานวิจัย ไม่ใช่ type 9
+        PositionRequest reloaded = positionService.findById(draft.getId()).orElseThrow();
+        assertThat(positionService.workCopies(reloaded)).as("ตัวกรอกต้องใส่งานวิจัยในเอกสารที่ 1").isNotEmpty();
+        for (int type : positionService.applicantDocTypes(reloaded)) {
+            assertThat(missing(type)).as("เอกสาร type %d", type).isEmpty();
         }
     }
 

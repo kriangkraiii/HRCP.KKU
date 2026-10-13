@@ -240,9 +240,10 @@ class OfficeIssuedLockTest extends AbstractFlowTest {
     void aDocumentWaitingForTheNextSignerIsNotGreen() throws Exception {
         doc2SignedByApplicantOnly();
 
+        // ผู้ยื่นลงนามแล้ว ผู้ลงนามที่เหลือรอเจ้าหน้าที่ตรวจแล้วส่งต่อ (DocumentProgress.Stage.AWAITING_FORWARD)
         assertThat(card(2)).contains("dgi-draft")
                 .doesNotContain("dgi-completed")
-                .contains("รอลงนาม");
+                .contains("รอเจ้าหน้าที่ส่งต่อ");
     }
 
     @Test

@@ -38,6 +38,15 @@ public class DocumentRevisionRouter {
      */
     public boolean openForRevision(SignatureModule module, Long requestId, int documentType,
             String note) {
+        return openForRevision(module, requestId, documentType, note, note);
+    }
+
+    /**
+     * @param note        เหตุผลที่ผู้ยื่นเห็นในเอกสารที่ต้องแก้
+     * @param historyNote ข้อความในประวัติสถานะของคำร้อง — บอกด้วยว่าใครหยุดการเวียนและตอบว่าอะไร
+     */
+    public boolean openForRevision(SignatureModule module, Long requestId, int documentType,
+            String note, String historyNote) {
 
         if (module == null || requestId == null) {
             return false;
@@ -57,7 +66,7 @@ public class DocumentRevisionRouter {
             } else {
                 positionRequestService.openDocumentForRevision(requestId, documentType, note);
                 // เหมือนเจ้าหน้าที่กดส่งกลับ (PositionAdminController) — คำร้องเป็น "ส่งแก้ไข" ลูกอยู่ที่ผู้ยื่น
-                positionRequestService.markRevisionRequested(requestId, documentType, null, note);
+                positionRequestService.markRevisionRequested(requestId, documentType, null, historyNote);
             }
             return true;
         } catch (Exception e) {

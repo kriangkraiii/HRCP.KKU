@@ -119,6 +119,16 @@ public final class NextStepGuide {
      */
     public static Step position(PositionRequestStatus status, Map<Integer, String> docRows,
             Map<Integer, Stage> progress, Collection<Integer> awaitingResign, CouncilDates dates) {
+        return position(status, docRows, progress, awaitingResign, java.util.List.of(), dates);
+    }
+
+    /**
+     * @param resubmitted เอกสารที่ส่งกลับซึ่งผู้ยื่นแก้และลงนามใหม่แล้ว ยังรอผู้ลงนามคนอื่นลงนามซ้ำ
+     *                    ({@code RevisionProgress.Stage.SUBMITTED}) — ลูกอยู่ที่เจ้าหน้าที่หรือผู้ลงนาม ไม่ใช่ผู้ยื่น
+     */
+    public static Step position(PositionRequestStatus status, Map<Integer, String> docRows,
+            Map<Integer, Stage> progress, Collection<Integer> awaitingResign, Collection<Integer> resubmitted,
+            CouncilDates dates) {
         if (status == null || status == PositionRequestStatus.DRAFT || status == PositionRequestStatus.COUNCIL_APPROVED) {
             return null;
         }
@@ -126,8 +136,16 @@ public final class NextStepGuide {
         CouncilDates d = dates == null ? CouncilDates.NONE : dates;
         List<Item> items = new ArrayList<>();
         if (status == PositionRequestStatus.REVISION_REQUESTED) {
-            awaitingResign.forEach(t -> items.add(
-                    new Item("รอผู้ยื่นแก้ไขและลงนามใหม่ — " + docs.name(t), t, State.WAITING)));
+            for (int t : awaitingResign) {
+                if (!resubmitted.contains(t)) {
+                    items.add(new Item("รอผู้ยื่นแก้ไขและลงนามใหม่ — " + docs.name(t), t, State.WAITING));
+                } else if (progress.get(t) == Stage.AWAITING_FORWARD) {
+                    // ผู้ยื่นลงนามแล้ว ผู้ลงนามที่เหลือรอเจ้าหน้าที่ตรวจแล้วส่งเวียน — ไม่ส่ง สถานะไม่มีวันกลับมาเอง
+                    items.add(new Item("ตรวจแล้วส่งเวียนให้ลงนามใหม่ — " + docs.name(t), t, State.TODO));
+                } else {
+                    items.add(new Item("รอผู้ลงนามลงนามใหม่ — " + docs.name(t), t, State.WAITING));
+                }
+            }
         } else {
             // ขั้นแรกหลังรับคำร้องเห็นทั้งชุด (ที่เสร็จแล้วติ๊กไว้) ขั้นหลังจากนั้นเห็นเฉพาะที่ยังค้าง
             items.addAll(docs.chores(status == PositionRequestStatus.DOCUMENT_RECEIVED));
@@ -144,7 +162,12 @@ public final class NextStepGuide {
                 docs.staffDocument(items, P2_SUMMARY, "เสนอวาระกลั่นกรองฯ");
                 yield Step.of("สรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ เพื่อเสนอวาระกลั่นกรองฯ", items, null);
             }
-            case REVISION_REQUESTED -> Step.of("รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับ", items,
+            case REVISION_REQUESTED -> Step.of(
+                    items.stream().anyMatch(i -> i.state() == State.TODO) ? "ส่งเวียนเอกสารที่แก้แล้วให้ลงนามใหม่"
+                            : resubmitted.containsAll(awaitingResign) && !awaitingResign.isEmpty()
+                                    ? "รอผู้ลงนามลงนามเอกสารที่แก้แล้ว"
+                                    : "รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับ",
+                    items,
                     "แก้และลงนามใหม่ครบทุกช่องแล้ว สถานะกลับเป็น “ตรวจสอบความถูกต้อง/ครบถ้วน” เอง");
             case SCREENING_COMMITTEE -> {
                 items.add(manual("ที่ประชุมกลั่นกรองฯ เห็นชอบ → อัปเดตสถานะเป็น “รับรองมติกลั่นกรองฯ”"));

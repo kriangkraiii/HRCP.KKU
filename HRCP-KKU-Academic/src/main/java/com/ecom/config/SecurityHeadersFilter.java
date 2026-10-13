@@ -197,7 +197,9 @@ public class SecurityHeadersFilter implements Filter {
                 }
 
                 // For static assets, pass through directly
-                if (isStaticResource) {
+                // อัปเดตสด (SSE) ก็เช่นกัน: ห่อไว้แล้วเหตุการณ์ค้างในหน่วยความจำ ไม่ถึงเบราว์เซอร์
+                // และ Content-Length ที่ตั้งตอนท้ายทำให้ EventSource ปิดแล้วต่อใหม่ทุกไม่กี่วินาที
+                if (isStaticResource || com.ecom.academic.live.EventStreamRequests.isEventStream(httpReq)) {
                         chain.doFilter(request, response);
                         return;
                 }

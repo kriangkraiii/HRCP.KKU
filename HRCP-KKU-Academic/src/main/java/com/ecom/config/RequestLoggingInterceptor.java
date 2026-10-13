@@ -37,6 +37,11 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // การเชื่อมต่ออัปเดตสดของหน้าคำร้อง — การเปิดหน้านั้นถูกบันทึกไปแล้ว
+        if (com.ecom.academic.live.EventStreamRequests.isEventStream(request)) {
+            return true;
+        }
+
         String method = request.getMethod();
         String username = "Anonymous";
         String displayName = "ผู้เยี่ยมชม";

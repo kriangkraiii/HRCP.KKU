@@ -227,6 +227,10 @@ public class PositionAdminController {
         // กล่อง "ขั้นต่อไป" — งานที่เจ้าหน้าที่ต้องทำตอนนี้ เรียงก่อนหลัง จากสถานะและป้ายของเอกสารชุดเดียวกับรายการเอกสาร
         model.addAttribute("nextStep", com.ecom.academic.service.NextStepGuide.position(request.getCurrentStatus(),
                 docRows, docProgress, positionService.documentsAwaitingResign(id),
+                positionService.revisionProgress(request).documents().values().stream()
+                        .filter(d -> d.stage() == com.ecom.academic.service.RevisionProgress.Stage.SUBMITTED)
+                        .map(com.ecom.academic.service.RevisionProgress.SentBackDocument::documentType)
+                        .toList(),
                 new com.ecom.academic.service.NextStepGuide.CouncilDates(
                         CouncilTimeline.sendDeadline(request),
                         CouncilTimeline.appealDeadline(request),

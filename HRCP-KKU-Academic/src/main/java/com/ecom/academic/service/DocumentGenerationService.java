@@ -487,6 +487,11 @@ public class DocumentGenerationService {
                                 if (TICK_BLANK_KEY.matcher(ph.getKey()).matches()) {
                                     raw = plainTick(raw);
                                 }
+                                // ค่าวันที่ที่ขึ้นต้นด้วย "วันที่" ใส่ลงช่องที่เทมเพลตพิมพ์ "วันที่" ไว้แล้ว — ตัดคำซ้ำ
+                                // ช่องอื่น (เช่น "เมื่อ {{lecturer_appointment_date}}") ต้องการคำนั้นอยู่
+                                if (ThaiDateUtil.followsDayLabel(xml, xml.indexOf(token))) {
+                                    raw = ThaiDateUtil.withoutDayLabel(ph.getKey(), raw);
+                                }
                                 // แปลงเลขก่อน escape เสมอ มิฉะนั้นจะไปโดนตัวเลขใน entity
                                 // หรือใน markup ที่ escapeXml แทรกเข้ามาเอง — ยกเว้น overlay token (@@OVL_...@@)
                                 // ของ BasePdfBuilder มิฉะนั้นชื่อฟิลด์ที่มีเลข (เช่น s3_sign_date)

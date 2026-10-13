@@ -62,6 +62,36 @@ public class ThaiDateUtil {
             "อาทิตย์" };
 
     /** LocalDate → "วันจันทร์ที่ 5 ตุลาคม 2569" แบบที่เขียนในหนังสือนัดประชุม */
+    private static final java.util.regex.Pattern DAY_LABEL =
+            java.util.regex.Pattern.compile("^\\s*วันที่\\s*(?=[0-9๐-๙])");
+
+    /**
+     * ค่าของช่องวันที่ที่ขึ้นต้นด้วยคำว่า "วันที่" (ตัวเติมวันที่อัตโนมัติรุ่นก่อนใส่มาให้) ตัดคำนั้นออก
+     *
+     * <p>เทมเพลตพิมพ์ "วันที่ {{date}}" อยู่แล้ว ค่าที่บันทึกไว้แบบเดิมจึงออกมาเป็น "วันที่ วันที่ ๑๓ ..."
+     * และยาวเกินช่องของเอกสารที่ลงนามแบบใส่ทับ ตัดเฉพาะช่องที่ชื่อมีคำว่า date และตามด้วยตัวเลข
+     */
+    public static String withoutDayLabel(String field, String value) {
+        if (field == null || value == null || !field.toLowerCase(java.util.Locale.ROOT).contains("date")) {
+            return value;
+        }
+        return DAY_LABEL.matcher(value).replaceFirst("");
+    }
+
+    private static final java.util.regex.Pattern XML_TAG = java.util.regex.Pattern.compile("<[^>]*>");
+
+    /**
+     * ข้อความของเอกสาร (Word XML) ก่อนตำแหน่ง {@code at} ลงท้ายด้วยคำว่า "วันที่" หรือไม่
+     * — เช่น "วันที่ {{date}}" "เมื่อวันที่ {{meeting_date}}" แต่ไม่ใช่ "เมื่อ {{lecturer_appointment_date}}"
+     */
+    public static boolean followsDayLabel(String xml, int at) {
+        if (xml == null || at <= 0) {
+            return false;
+        }
+        String before = XML_TAG.matcher(xml.substring(Math.max(0, at - 600), at)).replaceAll("");
+        return before.replace('\u00a0', ' ').stripTrailing().endsWith("วันที่");
+    }
+
     public static String fullDate(LocalDate d) {
         if (d == null) return "-";
         return "วัน" + THAI_WEEKDAYS[d.getDayOfWeek().getValue() - 1] + "ที่ " + d.getDayOfMonth() + " "

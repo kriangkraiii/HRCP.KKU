@@ -70,7 +70,10 @@ class DocumentPdfPreviewTest {
         Assumptions.assumeTrue(service.isPdfConversionAvailable(),
                 "ไม่พบ LibreOffice — ข้ามการทดสอบ PDF");
 
-        byte[] docx = doc6Docx();
+        // ไฟล์ที่ไม่ซ้ำกับเทสต์อื่น (ชื่อที่พิมพ์ลงเอกสารไม่ซ้ำ) — cache ใช้ร่วมทั้ง JVM และบนดิสก์ ถ้าเทสต์ก่อนหน้าแปลงไฟล์เดียวกันไปแล้ว
+        // ครั้งแรกก็มาจาก cache (0ms → 0ms) แล้วเทสต์ล้มตามลำดับการรัน
+        byte[] docx = service.generatePreviewDocx(6,
+                DOC6_JSON.replace("ศ.ดร.ทดสอบ หนึ่ง", "ศ.ดร.ทดสอบ หนึ่ง " + System.nanoTime()));
 
         long firstStart = System.nanoTime();
         byte[] first = service.convertDocxToPdfCached(docx);
@@ -81,7 +84,10 @@ class DocumentPdfPreviewTest {
         long secondMs = (System.nanoTime() - secondStart) / 1_000_000;
 
         assertArrayEquals(first, second, "ผลจาก cache ต้องเหมือนเดิม");
-        assertTrue(secondMs < firstMs, "ครั้งที่สองต้องมาจาก cache (" + firstMs + "ms → " + secondMs + "ms)");
+        // ครั้งที่สองต้องเป็นก้อนเดียวกับที่ cache เก็บไว้ ไม่ใช่แปลงใหม่ — วัดด้วยเวลาไม่ได้แน่นอน
+        // (เครื่องเร็วหรือ LibreOffice อุ่นอยู่แล้ว ทั้งสองครั้งได้ 0ms)
+        org.junit.jupiter.api.Assertions.assertSame(first, second,
+                "ครั้งที่สองต้องมาจาก cache (" + firstMs + "ms → " + secondMs + "ms)");
     }
 
     @Test

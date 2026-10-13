@@ -80,4 +80,22 @@ class SentBackIsVisibleToApplicantTest extends AbstractFlowTest {
         assertThat(dashboard("/user/academic/dashboard"))
                 .contains("ต้องแก้ไขเอกสาร").contains(REASON).contains(link);
     }
+
+    @Test
+    @DisplayName("เอกสารที่ 6 ฉบับงานวิจัยถูกส่งกลับ: แถบเลขเอกสารและหัวการ์ดต้องขึ้นว่าต้องแก้ เหมือนฉบับอื่น")
+    void workCopySentBackIsFlaggedOnTheCard() throws Exception {
+        PositionRequest request = data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null,
+                "ผู้ช่วยศาสตราจารย์");
+        data.positionDocument(request, 1, "{\"asst_research_working_1\":\"งานวิจัยเรื่องแรก\"}");
+        data.positionDocument(request, 901, "{\"title_name\":\"งานวิจัยเรื่องแรก\"}");
+
+        positionService.openDocumentForRevision(request.getId(), 901, REASON);
+
+        org.jsoup.nodes.Document page = org.jsoup.Jsoup.parse(dashboard("/user/position/request/" + request.getId()));
+        assertThat(page.select(".step-indicator.revise")).as("แถบเลขเอกสารด้านบน").hasSize(1);
+        org.jsoup.select.Elements card = page.select(".card-academic:has(.card-header:contains(ลักษณะการมีส่วนร่วมในผลงาน))");
+        assertThat(card.select(".card-header .badge:contains(ต้องแก้ไข)")).as("หัวการ์ดเอกสารที่ 6").isNotEmpty();
+        assertThat(card.select("a.btn-warning[href=/user/position/request/" + request.getId() + "/document/901]"))
+                .as("ปุ่มแก้ไขของฉบับที่ส่งกลับ").hasSize(1);
+    }
 }

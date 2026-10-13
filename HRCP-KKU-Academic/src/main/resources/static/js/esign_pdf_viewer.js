@@ -4,6 +4,17 @@
  * Renders official documents at crisp resolution with full-width fit,
  * continuous vertical scrolling across all pages, zoom controls, and fullscreen mode.
  */
+// pdf.js 6 ไม่มี PDFDocumentProxy.destroy() แล้ว — ปิดผ่าน loadingTask แทน
+// เดิมเรียก destroy() ตรง ๆ จึงพังทุกครั้งที่เปลี่ยนลายเซ็น ม่านโหลดค้าง แล้วตกไปใช้ frame สำรอง
+function disposePdf(doc) {
+    if (!doc) return;
+    if (typeof doc.destroy === 'function') {
+        doc.destroy();
+    } else if (doc.loadingTask && typeof doc.loadingTask.destroy === 'function') {
+        doc.loadingTask.destroy();
+    }
+}
+
 class EsignPdfViewer {
     constructor(containerId, pdfUrl, options = {}) {
         this.container = document.getElementById(containerId);
@@ -171,14 +182,14 @@ class EsignPdfViewer {
 
         const pdfDoc = await loadingTask.promise;
         if (seq !== this.loadSeq) {
-            pdfDoc.destroy();
+            disposePdf(pdfDoc);
             return;
         }
 
         const scale = await this.calculateFitWidthScale(pdfDoc);
         const rendered = await this.renderAllPages(pdfDoc, scale, seq);
         if (!rendered || seq !== this.loadSeq) {
-            pdfDoc.destroy();
+            disposePdf(pdfDoc);
             return;
         }
 
@@ -190,7 +201,7 @@ class EsignPdfViewer {
         if (this.totalPagesEl) {
             this.totalPagesEl.textContent = this.pageCount;
         }
-        if (previous && previous !== pdfDoc) previous.destroy();
+        if (previous && previous !== pdfDoc) disposePdf(previous);
 
         this.hideLoading();
     }

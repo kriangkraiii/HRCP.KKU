@@ -60,6 +60,10 @@ class TemplateReadinessTest {
         if (field.contains("memo_no")) {
             return "อว 660301.26.8/12345";
         }
+        // วันที่ที่เจ้าหน้าที่กรอก — รูปแบบที่ตัวเติมวันที่ใส่ให้ เดือนที่ยาวที่สุด
+        if (field.equals("date")) {
+            return "๓๐ พฤศจิกายน พ.ศ. ๒๕๖๙";
+        }
         if (field.contains("date")) {
             return "30 พฤศจิกายน 2569";
         }

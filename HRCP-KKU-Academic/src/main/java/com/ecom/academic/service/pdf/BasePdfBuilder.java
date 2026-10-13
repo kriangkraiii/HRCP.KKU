@@ -375,13 +375,47 @@ public final class BasePdfBuilder {
                             int tEnd = xml.indexOf('>', tStart);
                             String open = xml.substring(tStart, tEnd + 1);
                             String fixed = open.contains("xml:space") ? open : "<w:t xml:space=\"preserve\">";
+                            String textBefore = xml.substring(tEnd + 1, at);
+                            String tail = xml.substring(at + token.length());
+                            String prefix = xml.substring(0, tStart);
+
+                            // ช่องชื่อผู้ลงนามที่มีวงเล็บครอบ เช่น "(@@OVL_hr_staff_name@@)"
+                            // ตัดวงเล็บ static ออกจากไฟล์ Word ฉบับฐาน เพื่อไม่ให้ LibreOffice พิมพ์วงเล็บห่าง 45 ตัวอักษร
+                            // ติดตายตัวลงในพื้นหลัง PDF — วงเล็บจะถูกวาดแนบชิดชื่อโดย PdfIncrementService แทน
+                            if (l.getKey().contains("name")) {
+                                if (textBefore.endsWith("(") && tail.startsWith(")")) {
+                                    textBefore = textBefore.substring(0, textBefore.length() - 1);
+                                    tail = tail.substring(1);
+                                } else if (textBefore.trim().endsWith("(") && tail.trim().startsWith(")")) {
+                                    int parenBefore = textBefore.lastIndexOf('(');
+                                    if (textBefore.substring(parenBefore + 1).isBlank()) {
+                                        textBefore = textBefore.substring(0, parenBefore);
+                                    }
+                                    int parenAfter = tail.indexOf(')');
+                                    if (parenAfter >= 0 && tail.substring(0, parenAfter).isBlank()) {
+                                        tail = tail.substring(parenAfter + 1);
+                                    }
+                                } else if (textBefore.isBlank()) {
+                                    java.util.regex.Matcher mPre = java.util.regex.Pattern.compile(
+                                            "(<w:r(?:\\s[^>]*)?>.*?<w:t(?:\\s[^>]*)?>\\s*)\\(\\s*(</w:t>\\s*</w:r>\\s*<w:r(?:\\s[^>]*)?>.*?)$",
+                                            java.util.regex.Pattern.DOTALL).matcher(prefix);
+                                    java.util.regex.Matcher mPost = java.util.regex.Pattern.compile(
+                                            "^(\\s*</w:t>\\s*</w:r>\\s*<w:r(?:\\s[^>]*)?>.*?<w:t(?:\\s[^>]*)?>\\s*)\\)\\s*(</w:t>\\s*</w:r>)",
+                                            java.util.regex.Pattern.DOTALL).matcher(tail);
+                                    if (mPre.find() && mPost.find()) {
+                                        prefix = mPre.replaceFirst("$1$2");
+                                        tail = mPost.replaceFirst("$1$2");
+                                    }
+                                }
+                            }
+
                             String run = String.valueOf(NBSP).repeat(l.getValue());
                             String reserved = run;
                             for (int n = lines.getOrDefault(l.getKey(), 1); n > 1; n--) {
                                 reserved += "</w:t><w:br/><w:t xml:space=\"preserve\">" + run;
                             }
-                            String head = xml.substring(0, tStart) + fixed + xml.substring(tEnd + 1, at) + reserved;
-                            xml = head + xml.substring(at + token.length());
+                            String head = prefix + fixed + textBefore + reserved;
+                            xml = head + tail;
                             xml = dropTrailingSpaces(xml, head.length());
                             seen.merge(l.getKey(), 1, Integer::sum);
                         }

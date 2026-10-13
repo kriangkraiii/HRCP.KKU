@@ -82,11 +82,15 @@ class EveryPageRendersTest extends AbstractFlowTest {
         AcademicRequest liveEvaluation = data.evaluation(applicant, RequestStatus.RECEIVED);
         // ผลประเมินหนึ่งฉบับผูกได้กับคำร้องขอตำแหน่งเดียว แบบร่างจึงต้องมีผลประเมินของตัวเอง
         AcademicRequest evaluationForDraft = data.evaluation(applicant, RequestStatus.COMPLETED);
-        PositionRequest draftPosition =
-                data.positionRequest(applicant, PositionRequestStatus.DRAFT, evaluationForDraft);
-        data.positionDocument(draftPosition, 1, "{\"applicant_name\":\"" + applicant.getName() + "\"}");
+        // เอกสารที่ 6 (type 9) แยกฉบับตามงานวิจัยในเอกสารที่ 1 — ไม่มีงานวิจัยก็ไม่มีหน้าให้เปิด
+        // หน้าจริงของมันคือฉบับของงานวิจัย (901) ไม่ใช่ /document/9 ซึ่งพาไปที่ฉบับแรก
+        PositionRequest draftPosition = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
+                evaluationForDraft, "ผู้ช่วยศาสตราจารย์");
+        data.positionDocument(draftPosition, 1, "{\"applicant_name\":\"" + applicant.getName()
+                + "\",\"asst_research_working_1\":\"งานวิจัยเรื่องแรก\"}");
         PositionRequest livePosition = data.positionRequest(
-                applicant, PositionRequestStatus.DOCUMENT_RECEIVED, liveEvaluation);
+                applicant, PositionRequestStatus.DOCUMENT_RECEIVED, liveEvaluation, "ผู้ช่วยศาสตราจารย์");
+        data.positionDocument(livePosition, 1, "{\"asst_research_working_1\":\"งานวิจัยเรื่องแรก\"}");
 
         List<Page> pages = new ArrayList<>();
 
@@ -114,14 +118,14 @@ class EveryPageRendersTest extends AbstractFlowTest {
         pages.add(asApplicant("/user/position/request/" + draftPosition.getId()));
         for (int type : positionRequestService.getApplicantDocLabels().keySet()) {
             pages.add(asApplicant("/user/position/request/" + draftPosition.getId()
-                    + "/document/" + type));
+                    + "/document/" + (type == 9 ? 901 : type)));
         }
 
         pages.add(asStaff("/admin/position/requests"));
         pages.add(asStaff("/admin/position/request/" + livePosition.getId()));
         for (int type : positionRequestService.getAdminDocLabels().keySet()) {
             pages.add(asStaff("/admin/position/request/" + livePosition.getId()
-                    + "/document/" + type));
+                    + "/document/" + (type == 9 ? 901 : type)));
         }
 
         // --- ลายเซ็นอิเล็กทรอนิกส์ ---

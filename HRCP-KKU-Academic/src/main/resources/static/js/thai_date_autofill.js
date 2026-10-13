@@ -30,11 +30,14 @@
         return String(num).split('').map(function(d) { return THAI_DIGITS[parseInt(d)] || d; }).join('');
     }
 
-    function formatThaiDate(dateObj) {
+    function formatThaiDate(dateObj, withLabel) {
         var day = toThaiDigits(dateObj.getDate());
         var month = THAI_MONTHS[dateObj.getMonth()];
         var year = toThaiDigits(dateObj.getFullYear() + 543);
-        return 'วันที่ ' + day + ' ' + month + ' พ.ศ. ' + year;
+        // ช่องวันที่ทั่วไปไม่มีคำว่า "วันที่" นำหน้า — เทมเพลตพิมพ์ "วันที่ {{...}}" ไว้เองแล้ว ใส่ซ้ำทำให้พิมพ์สองครั้ง
+        // และช่องวันที่ของบันทึกข้อความ (ลงนามแบบใส่ทับ) รับความยาวนั้นไม่ได้ จนออกเลขที่หนังสือไม่ได้
+        // ช่องใน NO_AUTOFILL (วันแต่งตั้ง ฯลฯ) เทมเพลตพิมพ์ "เมื่อ {{...}}" จึงยังต้องมีคำนี้
+        return (withLabel ? 'วันที่ ' : '') + day + ' ' + month + ' พ.ศ. ' + year;
     }
 
     function shouldSkipAutofill(name) {
@@ -104,7 +107,7 @@
         var parts = picker.value.split('-');
         if (parts.length !== 3) return;
         var selected = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        textInput.value = formatThaiDate(selected);
+        textInput.value = formatThaiDate(selected, shouldSkipAutofill(textInput.name || ''));
         if (isBirthDateField(textInput)) updateAgeFrom(textInput);
     }
 

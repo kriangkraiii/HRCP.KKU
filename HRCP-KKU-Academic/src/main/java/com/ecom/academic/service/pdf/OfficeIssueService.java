@@ -65,7 +65,12 @@ public class OfficeIssueService {
             return null;
         } catch (PdfIncrementService.DoesNotFitException e) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return "เลขที่หนังสือหรือวันที่ยาวเกินช่องในเอกสาร กรุณาย่อให้สั้นลง";
+            String what = switch (e.field()) {
+                case "memo_no" -> "เลขที่หนังสือ";
+                case "date" -> "วันที่";
+                default -> "ช่อง " + e.field();
+            };
+            return what + " \"" + e.value() + "\" ยาวเกินช่องในเอกสาร กรุณาย่อให้สั้นลง";
         } catch (TimestampClient.TimestampUnavailableException
                 | LongTermValidation.ValidationDataUnavailableException e) {
             log.warn("Envelope {}: closing signature not made: {}", envelopeId, e.getMessage());
