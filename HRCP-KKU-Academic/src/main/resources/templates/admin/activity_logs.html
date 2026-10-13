@@ -72,6 +72,11 @@
                             </a>
                         </div>
                     </div>
+                    <p class="text-muted small mb-0 mt-2">
+                        <i class="fas fa-scale-balanced"></i>
+                        เก็บประวัติไว้ <strong th:text="${retentionDays}">365</strong> วัน แล้วลบอัตโนมัติทุกคืน
+                        (พ.ร.บ.คอมพิวเตอร์ มาตรา 26 กำหนดให้เก็บไม่น้อยกว่า 90 วัน)
+                    </p>
                     <!--/* Search/Filter Bar */-->
                     <form method="get" action="/admin/activity-logs" class="row g-2 mt-2">
                         <div class="col-md-3">
@@ -86,6 +91,13 @@
                                     <option value="PAGE_VIEW" th:selected="${actionFilter == 'PAGE_VIEW'}">เข้าชมหน้า</option>
                                     <option value="FORM_SUBMIT" th:selected="${actionFilter == 'FORM_SUBMIT'}">ส่งฟอร์ม</option>
                                     <option value="API_CALL" th:selected="${actionFilter == 'API_CALL'}">เรียก API</option>
+                                    <option value="DATA_UPDATE" th:selected="${actionFilter == 'DATA_UPDATE'}">แก้ไขข้อมูล (PUT/PATCH)</option>
+                                    <option value="DATA_DELETE" th:selected="${actionFilter == 'DATA_DELETE'}">ลบข้อมูล (DELETE)</option>
+                                </optgroup>
+                                <optgroup label="Sign-in">
+                                    <option value="LOGIN_SUCCESS" th:selected="${actionFilter == 'LOGIN_SUCCESS'}">เข้าสู่ระบบสำเร็จ</option>
+                                    <option value="LOGIN_FAILED" th:selected="${actionFilter == 'LOGIN_FAILED'}">เข้าสู่ระบบไม่สำเร็จ</option>
+                                    <option value="LOGOUT" th:selected="${actionFilter == 'LOGOUT'}">ออกจากระบบ</option>
                                 </optgroup>
                                 <optgroup label="Admin Actions">
                                     <option value="CREATE_ACCOUNT" th:selected="${actionFilter == 'CREATE_ACCOUNT'}">สร้างบัญชี</option>
@@ -97,6 +109,7 @@
                                     <option value="DELETE_ADMIN_ACCOUNT" th:selected="${actionFilter == 'DELETE_ADMIN_ACCOUNT'}">ลบบัญชีผู้ดูแลระบบ</option>
                                     <option value="GENERATE_DOCUMENT" th:selected="${actionFilter == 'GENERATE_DOCUMENT'}">สร้างเอกสาร</option>
                                     <option value="UPDATE_REQUEST_STATUS" th:selected="${actionFilter == 'UPDATE_REQUEST_STATUS'}">อัปเดตคำร้อง</option>
+                                    <option value="LOG_RETENTION_PURGE" th:selected="${actionFilter == 'LOG_RETENTION_PURGE'}">ลบประวัติที่ครบกำหนดเก็บ</option>
                                 </optgroup>
                             </select>
                         </div>
@@ -152,7 +165,8 @@
                                                 (${log.action.contains('UPDATE')} ? 'bg-warning text-dark' :
                                                 (${log.action.contains('CHANGE')} ? 'bg-info' :
                                                 (${log.action.contains('DOCUMENT') or log.action.contains('GENERATE')} ? 'bg-primary' :
-                                                (${log.action.contains('DELETE')} ? 'bg-danger' : 'bg-secondary'))))))))"
+                                                (${log.action.contains('DELETE') or log.action == 'LOGIN_FAILED'} ? 'bg-danger' :
+                                                (${log.action.startsWith('LOG')} ? 'bg-info' : 'bg-secondary')))))))))"
                                             th:text="${log.action}"></span>
                                     </td>
                                     <td><small class="u-wb-break-all" th:text="${log.details}"></small></td>

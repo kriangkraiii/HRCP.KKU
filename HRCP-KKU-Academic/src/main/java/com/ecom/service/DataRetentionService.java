@@ -194,8 +194,18 @@ public class DataRetentionService {
         int count = adminLogRepository.deleteLogsBefore(cutoff);
         if (count > 0) {
             log.info("Purged {} admin audit logs older than {} days (cutoff: {})", count, effectiveDays, cutoff);
+            // The purge leaves its own entry, so a gap in the history reads as "expired", not "someone deleted it"
+            adminLogRepository.save(new com.ecom.model.AdminLog("system", "ระบบ", "LOG_RETENTION_PURGE",
+                    "ลบประวัติกิจกรรมก่อน " + cutoff.format(TS_FMT) + " (เก็บ " + effectiveDays + " วัน) จำนวน "
+                            + count + " รายการ",
+                    null));
         }
         return count;
+    }
+
+    /** How long the activity log is kept, after the 90-day legal floor is applied. */
+    public int getAdminLogRetentionDays() {
+        return Math.max(90, adminLogDays);
     }
 
     /**

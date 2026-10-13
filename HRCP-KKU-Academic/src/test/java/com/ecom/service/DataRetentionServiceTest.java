@@ -85,6 +85,20 @@ class DataRetentionServiceTest {
     }
 
     @Test
+    @DisplayName("การลบประวัติที่ครบกำหนดถูกบันทึกไว้ในประวัติเอง ไม่ให้ดูเหมือนมีคนลบ")
+    void purgeOfAdminLogsLeavesItsOwnRecord() {
+        when(adminLogRepository.deleteLogsBefore(any(LocalDateTime.class))).thenReturn(15);
+
+        retentionService.purgeOldAdminLogs(365);
+
+        ArgumentCaptor<com.ecom.model.AdminLog> saved = ArgumentCaptor.forClass(com.ecom.model.AdminLog.class);
+        verify(adminLogRepository).save(saved.capture());
+        assertEquals("LOG_RETENTION_PURGE", saved.getValue().getAction());
+        assertTrue(saved.getValue().getDetails().contains("15 รายการ"));
+        assertEquals(365, retentionService.getAdminLogRetentionDays());
+    }
+
+    @Test
     @DisplayName("ตัดรอบประวัติการซิงค์ข้อมูลคณะที่เสร็จสิ้นแล้ว (ไม่ใช่ PENDING) เกิน 180 วัน")
     void purgesProcessedFacultySyncLogsOlderThanCutoff() {
         when(fsFacultyChangeRepository.deleteProcessedChangesBefore(any(LocalDateTime.class))).thenReturn(8);

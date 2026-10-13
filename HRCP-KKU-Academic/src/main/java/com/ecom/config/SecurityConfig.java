@@ -32,6 +32,7 @@ public class SecurityConfig {
         private final UserDetailsServiceImpl userDetailsServiceImpl;
         private final AuthModeProperties authProperties;
         private final KkuSsoProperties ssoProperties;
+        private final LogoutAuditHandler logoutAuditHandler;
 
         /**
          * ชื่อคุกกี้ session — อ่านจากค่าเดียวกับที่ตั้ง container ไว้
@@ -53,6 +54,7 @@ public class SecurityConfig {
                         UserDetailsServiceImpl userDetailsServiceImpl,
                         AuthModeProperties authProperties,
                         KkuSsoProperties ssoProperties,
+                        LogoutAuditHandler logoutAuditHandler,
                         @org.springframework.beans.factory.annotation.Value(
                                         "${server.servlet.session.cookie.name:JSESSIONID}") String sessionCookieName) {
                 this.rateLimitFilter = rateLimitFilter;
@@ -61,6 +63,7 @@ public class SecurityConfig {
                 this.userDetailsServiceImpl = userDetailsServiceImpl;
                 this.authProperties = authProperties;
                 this.ssoProperties = ssoProperties;
+                this.logoutAuditHandler = logoutAuditHandler;
                 this.sessionCookieName = sessionCookieName;
         }
 
@@ -368,6 +371,7 @@ public class SecurityConfig {
                                 })
                                 .logout(logout -> logout
                                                 .logoutUrl("/logout")
+                                                .addLogoutHandler(logoutAuditHandler)
                                                 .invalidateHttpSession(true)
                                                 .deleteCookies(sessionCookieName)
                                                 .clearAuthentication(true)

@@ -687,6 +687,7 @@ public class AdminController {
 		m.addAttribute("actionFilter", action);
 		m.addAttribute("dateFrom", dateFrom);
 		m.addAttribute("dateTo", dateTo);
+		m.addAttribute("retentionDays", dataRetentionService.getAdminLogRetentionDays());
 
 		// Summary counts
 		m.addAttribute("createCount", adminLogService.countByAction("CREATE_ACCOUNT"));

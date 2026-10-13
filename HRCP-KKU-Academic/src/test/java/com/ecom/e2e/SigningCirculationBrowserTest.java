@@ -718,7 +718,10 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         sendBackAsOfficer("academic", id, 1, "ชื่อรายวิชาไม่ตรงกับที่ลงทะเบียน");
         assertThat(workflow.findEnvelope(firstEnvelope).orElseThrow().getStatus())
                 .as("ลายเซ็นเดิมของผู้ยื่นต้องถูกยกเลิก").isEqualTo(SignatureRequestStatus.CANCELLED);
-        expectStatusRefused("academic", id, "SUB_COMMITTEE_APPOINTED", "เอกสารที่ 1");
+        assertThat(academicService.findById(id).orElseThrow().getCurrentStatus())
+                .as("ส่งกลับแล้วสถานะต้องบอกว่ารอผู้ยื่นแก้").isEqualTo(RequestStatus.DOCUMENT_REVISION);
+        // ออกจากส่งแก้ไขได้ทางเดียวคือกลับขั้นเดิม — และยังกลับไม่ได้จนกว่าจะลงนามใหม่ครบ
+        expectStatusRefused("academic", id, "RECEIVED", "เอกสารที่ 1");
         signOut();
 
         // ผู้ยื่นเห็นว่าต้องแก้ แก้แล้วลงนามใหม่
@@ -736,7 +739,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         assertThat(again.getId()).isNotEqualTo(firstEnvelope);
         assertThat(again.getFrozenJson()).as("ซองใหม่ต้องแช่แข็งเนื้อหาที่แก้แล้ว").contains("วิชาที่แก้ชื่อแล้ว");
 
-        // ลงนามใหม่ครบ → เดินเรื่องต่อได้
+        // ลงนามใหม่ครบ → กลับขั้นเดิมเอง แล้วเดินเรื่องต่อได้
+        awaitStatus(id, RequestStatus.RECEIVED, "ลงนามใหม่ครบแล้วกลับไปขั้นรับคำร้องเอง");
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
         setStatusViaAdminForm("academic", id, "SUB_COMMITTEE_APPOINTED", "ข้อ 3-4");
         awaitStatus(id, RequestStatus.SUB_COMMITTEE_APPOINTED, "ลงนามใหม่แล้วเดินต่อได้");

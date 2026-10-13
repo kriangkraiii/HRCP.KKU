@@ -462,6 +462,11 @@ public class DocumentGenerationService {
                         // Step 1.6: Co-author signature cloning - เพิ่มลายเซ็นผู้ร่วมงานในเอกสารที่ 9
                         xml = expandCoauthorSignatures(xml, placeholders);
 
+                        // Step 1.65: บล็อกลงนามไม่แยกหน้า — ทุกการ render ทั้งก่อนและหลังลงนาม
+                        if (entryName.equals("word/document.xml")) {
+                            xml = keepSignatureBlocksTogether(xml);
+                        }
+
                         // Step 1.7: Signature stamping. Must sit between
                         // defragmentation and replacement: before it, the anchor
                         // token is split across runs in most templates; after it,
@@ -956,12 +961,7 @@ public class DocumentGenerationService {
         if (previous == null) {
             return null;
         }
-        String text = paragraphText(xml.substring(previous[0], previous[1]));
-        if (text.contains("ลงชื่อ")) { // ลงชื่อ
-            return previous;
-        }
-        long leaders = text.chars().filter(c -> DOT_LEADER_CHARS.indexOf(c) >= 0).count();
-        return leaders >= 5 ? previous : null;
+        return isSignatureRule(paragraphText(xml.substring(previous[0], previous[1]))) ? previous : null;
     }
 
     /**
@@ -2179,6 +2179,89 @@ public class DocumentGenerationService {
             out.replace(at[0], at[1], kept);
         }
         return out.toString();
+    }
+
+    private static final java.util.regex.Pattern BODY_STRUCTURE = java.util.regex.Pattern.compile(
+            "<w:p(?=[ >/])[^>]*>|</w:p>|<w:tbl(?=[ >])|</w:tbl>|<w:txbxContent(?=[ >])|</w:txbxContent>");
+
+    /**
+     * บล็อกลงนามทุกบล็อกในเนื้อเอกสาร ("ลงชื่อ ....", "(ชื่อ)", ตำแหน่ง/บทบาทไม่เกินสองบรรทัด) ไม่ถูกตัดหน้า
+     *
+     * <p>รูปลายเซ็นทำให้บรรทัด "ลงชื่อ" สูงขึ้น บล็อกที่อยู่ชิดท้ายหน้าพอดีจึงล้น ชื่อกับตำแหน่งไปอยู่หน้าถัดไป
+     * แยกจากลายเซ็น (p2doc_7: หน้าสุดท้ายเหลือแค่หัวกระดาษ ชื่อ และ "ตำแหน่ง") ตั้ง keep-with-next แล้ว
+     * ถ้าไม่พอ ทั้งบล็อกย้ายไปหน้าถัดไปด้วยกัน
+     *
+     * <p>ทำทุกการ render ไม่ใช่เฉพาะตอนลงนาม ฉบับก่อนลงนาม ฉบับตั้งต้นของ incremental และฉบับลงนามจึงตัดหน้า
+     * ด้วยกติกาเดียวกัน ข้ามบล็อกในตารางและกล่องข้อความ — keep-with-next ในเซลล์ไปผูกแถวตารางแทน
+     */
+    String keepSignatureBlocksTogether(String xml) {
+        record Para(int start, int end, boolean nested, String text) {
+        }
+        List<Para> paras = new ArrayList<>();
+        java.util.regex.Matcher m = BODY_STRUCTURE.matcher(xml);
+        int pDepth = 0;
+        int containerDepth = 0;
+        int openStart = -1;
+        boolean openNested = false;
+        while (m.find()) {
+            String tag = m.group();
+            if (tag.startsWith("<w:p")) {
+                if (tag.endsWith("/>")) {
+                    if (pDepth == 0) {
+                        paras.add(new Para(m.start(), m.end(), containerDepth > 0, ""));
+                    }
+                } else {
+                    if (pDepth == 0) {
+                        openStart = m.start();
+                        openNested = containerDepth > 0;
+                    }
+                    pDepth++;
+                }
+            } else if (tag.equals("</w:p>")) {
+                pDepth--;
+                if (pDepth == 0 && openStart >= 0) {
+                    paras.add(new Para(openStart, m.end(), openNested,
+                            paragraphText(xml.substring(openStart, m.end())).trim()));
+                    openStart = -1;
+                }
+            } else if (tag.startsWith("</")) {
+                containerDepth--;
+            } else {
+                containerDepth++;
+            }
+        }
+
+        List<int[]> blocks = new ArrayList<>();
+        for (int i = 1; i < paras.size(); i++) {
+            Para name = paras.get(i);
+            Para sign = paras.get(i - 1);
+            if (name.nested() || sign.nested() || !name.text().startsWith("(") || !name.text().contains("{{")
+                    || !name.text().contains(")") || !isSignatureRule(sign.text())) {
+                continue;
+            }
+            int last = i;
+            while (last + 1 < paras.size() && last - i < 2) {
+                Para next = paras.get(last + 1);
+                if (next.nested() || next.text().isBlank() || isSignatureRule(next.text())
+                        || next.text().startsWith("(")) {
+                    break;
+                }
+                last++;
+            }
+            blocks.add(new int[] { sign.start(), paras.get(last).end() });
+        }
+
+        StringBuilder out = new StringBuilder(xml);
+        for (int b = blocks.size() - 1; b >= 0; b--) {
+            int[] block = blocks.get(b);
+            out.replace(block[0], block[1], keepSignatureBlockTogether(xml.substring(block[0], block[1])));
+        }
+        return out.toString();
+    }
+
+    /** บรรทัด "ลงชื่อ ......" หรือเส้นจุดไข่ปลาไม่มีป้าย (doc_2, p2doc_6 พิมพ์เส้นโดยไม่มีคำว่าลงชื่อ) */
+    private static boolean isSignatureRule(String text) {
+        return text.contains("ลงชื่อ") || text.chars().filter(c -> DOT_LEADER_CHARS.indexOf(c) >= 0).count() >= 5;
     }
 
     private String expandCoauthorSignatures(String xml, Map<String, String> placeholders) {

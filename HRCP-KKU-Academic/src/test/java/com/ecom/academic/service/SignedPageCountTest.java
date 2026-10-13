@@ -34,10 +34,17 @@ import com.ecom.academic.service.pdf.BasePdfBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Signing must never change how many pages a document has: no empty page after
- * the last line, no line pushed onto a page of its own.
+ * Signing must not spoil the layout: no empty page after the last line, and no
+ * signature block split across a page break — the signature on one page, the
+ * signer's name and position on the next.
+ *
+ * <p>The page count stays the same, with one exception: a block that sat right
+ * at the bottom of a page has no room for the taller signature line, and then it
+ * moves to the next page whole. That page carries the block, so it is not empty
+ * and nothing is split. p2doc_7 rendered with empty data used to split the dean's
+ * block instead.
  */
-@DisplayName("ลงนามแล้วจำนวนหน้าต้องเท่าเดิม — ไม่มีหน้าว่างงอก")
+@DisplayName("ลงนามแล้วไม่มีหน้าว่างงอก และบล็อกลงนามไม่ถูกแยกหน้า")
 class SignedPageCountTest {
 
     private final DocumentGenerationService service = new DocumentGenerationService();
@@ -72,8 +79,98 @@ class SignedPageCountTest {
                 : service.generateSignedP2Docx(docType, json, signatures, signatureHeightEmu);
     }
 
-    private byte[] unsigned(SignatureModule module, int docType) throws IOException {
-        return render(module, docType, Map.of(), List.of(), DocumentGenerationService.SIGNATURE_HEIGHTS_EMU.get(0));
+    private byte[] unsigned(SignatureModule module, int docType, Map<String, String> names) throws IOException {
+        return render(module, docType, names, List.of(), DocumentGenerationService.SIGNATURE_HEIGHTS_EMU.get(0));
+    }
+
+    /** A marker per signer, printed where the name goes — finds which page each signature block ended up on. */
+    private static Map<String, String> signerMarkers(List<SignatureSlot> slots) {
+        Map<String, String> names = new LinkedHashMap<>();
+        for (int i = 0; i < slots.size(); i++) {
+            names.putIfAbsent(slots.get(i).anchorPlaceholder(), "ZSIG" + (char) ('A' + i) + "Q");
+        }
+        return names;
+    }
+
+    private static List<String> pageTexts(byte[] pdf) throws IOException {
+        List<String> texts = new ArrayList<>();
+        try (PDDocument doc = Loader.loadPDF(pdf)) {
+            PDFTextStripper stripper = new PDFTextStripper();
+            for (int p = 1; p <= doc.getNumberOfPages(); p++) {
+                stripper.setStartPage(p);
+                stripper.setEndPage(p);
+                texts.add(stripper.getText(doc));
+            }
+        }
+        return texts;
+    }
+
+    /**
+     * Images drawn on each page — every {@code Do}, not every XObject: LibreOffice stores identical
+     * pictures once, so three copies of the same signature are one XObject drawn three times.
+     */
+    private static List<Integer> imagesPerPage(byte[] pdf) throws IOException {
+        List<Integer> counts = new ArrayList<>();
+        try (PDDocument doc = Loader.loadPDF(pdf)) {
+            for (var page : doc.getPages()) {
+                List<Object> tokens = new org.apache.pdfbox.pdfparser.PDFStreamParser(page).parse();
+                int images = 0;
+                for (int i = 1; i < tokens.size(); i++) {
+                    if (tokens.get(i) instanceof org.apache.pdfbox.contentstream.operator.Operator op
+                            && "Do".equals(op.getName())
+                            && tokens.get(i - 1) instanceof org.apache.pdfbox.cos.COSName name
+                            && page.getResources().isImageXObject(name)) {
+                        images++;
+                    }
+                }
+                counts.add(images);
+            }
+        }
+        return counts;
+    }
+
+    /**
+     * The page printing this signer's name under the signature: "(name)" in brackets, the same test the
+     * stamping uses — the name also runs through the body text (p2doc_1 repeats the applicant's on later pages).
+     */
+    private static int pageOf(List<String> texts, String marker) {
+        java.util.regex.Pattern underSignature = java.util.regex.Pattern.compile(
+                "\\([^()\\n]*" + marker + "[^()\\n]*\\)");
+        for (int p = 0; p < texts.size(); p++) {
+            if (underSignature.matcher(texts.get(p)).find()) {
+                return p;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Every signer's name is on a page that also holds a signature image, and the
+     * page count grows by at most the one page a moved block takes.
+     */
+    private static void assertLayoutKept(String label, byte[] unsignedPdf, byte[] signedPdf,
+            Map<String, String> names) throws IOException {
+        List<String> texts = pageTexts(signedPdf);
+        List<Integer> images = imagesPerPage(signedPdf);
+        Map<Integer, Integer> namesPerPage = new LinkedHashMap<>();
+        for (String marker : names.values()) {
+            int page = pageOf(texts, marker);
+            if (page >= 0) {
+                namesPerPage.merge(page, 1, Integer::sum);
+            }
+        }
+        namesPerPage.forEach((page, count) -> assertThat(images.get(page))
+                .as("%s: page %d prints %d signer name(s) but holds %d image(s) — a signature block was split",
+                        label, page + 1, count, images.get(page))
+                .isGreaterThanOrEqualTo(count));
+
+        int before = pages(unsignedPdf);
+        int after = pages(signedPdf);
+        if (after != before) {
+            assertThat(after).as("%s: pages signed vs unsigned", label).isEqualTo(before + 1);
+            assertThat(namesPerPage).as("%s: the added page must carry a signature block that moved whole,"
+                    + " not be an empty page", label).containsKey(after - 1);
+        }
     }
 
     /** One dynamic test per signable document. */
@@ -103,26 +200,28 @@ class SignedPageCountTest {
     }
 
     @TestFactory
-    @DisplayName("ลงนามแบบเดิม (ฝังรูปใน DOCX): เซ็นครบทุกช่องแล้วจำนวนหน้าเท่ากับตอนยังไม่เซ็น")
+    @DisplayName("ลงนามแบบเดิม (ฝังรูปใน DOCX): เซ็นครบทุกช่องแล้วไม่มีหน้าว่างงอกและบล็อกลงนามไม่แยกหน้า")
     List<DynamicTest> stampedDocumentKeepsItsPageCount() throws IOException {
         byte[] png = signaturePng();
         return everySignableDocument((module, docType, slots) -> {
             List<StampedSignature> all = slots.stream()
                     .map(s -> new StampedSignature(s.anchorPlaceholder(), png, 900, 300))
                     .toList();
+            Map<String, String> names = signerMarkers(slots);
 
             DocumentGenerationService.Fitted fitted = service.fitSignatures(
-                    height -> render(module, docType, Map.of(), all, height), unsigned(module, docType));
+                    height -> render(module, docType, names, all, height), unsigned(module, docType, names));
 
-            assertThat(pages(fitted.pdf())).as("%s doc %d: pages signed vs unsigned", module, docType)
-                    .isEqualTo(pages(service.convertDocxToPdfCached(unsigned(module, docType))));
+            assertLayoutKept(module + " doc " + docType,
+                    service.convertDocxToPdfCached(unsigned(module, docType, names)), fitted.pdf(), names);
         });
     }
 
     @TestFactory
-    @DisplayName("ลงนามแบบ incremental: PDF ตั้งต้นที่จองช่องลงนามไว้ครบ จำนวนหน้าเท่ากับตอนยังไม่เซ็น")
+    @DisplayName("ลงนามแบบ incremental: PDF ตั้งต้นที่จองช่องลงนามไว้ครบ ไม่มีหน้าว่างงอกและบล็อกลงนามไม่แยกหน้า")
     List<DynamicTest> incrementalBaseKeepsItsPageCount() {
         return everySignableDocument((module, docType, slots) -> {
+            Map<String, String> names = signerMarkers(slots);
             BasePdfBuilder.Result base = new BasePdfBuilder().build(new BasePdfBuilder.Renderer() {
                 @Override
                 public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures)
@@ -133,7 +232,9 @@ class SignedPageCountTest {
                 @Override
                 public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures,
                         long signatureHeightEmu) throws IOException {
-                    return render(module, docType, overrides, pictures.stream()
+                    Map<String, String> values = new LinkedHashMap<>(names);
+                    values.putAll(overrides);
+                    return render(module, docType, values, pictures.stream()
                             .map(p -> new StampedSignature(p.anchorPlaceholder(), p.png(), p.width(), p.height()))
                             .toList(), signatureHeightEmu);
                 }
@@ -148,8 +249,8 @@ class SignedPageCountTest {
 
             assertThat(base.layout().signatures()).as("%s doc %d: every signature place found", module, docType)
                     .hasSizeGreaterThanOrEqualTo(slots.size());
-            assertThat(pages(base.pdf())).as("%s doc %d: base pages vs unsigned", module, docType)
-                    .isEqualTo(pages(service.convertDocxToPdfCached(unsigned(module, docType))));
+            assertLayoutKept(module + " doc " + docType + " base",
+                    service.convertDocxToPdfCached(unsigned(module, docType, names)), base.pdf(), names);
         });
     }
 
