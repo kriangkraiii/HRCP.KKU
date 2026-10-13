@@ -91,14 +91,16 @@ public class SignedDocumentStatusAdvancer {
                     requestId, documentType, e.toString());
         }
 
-        // เอกสารที่ส่งกลับแก้ลงนามใหม่ครบ — คำร้องที่ "ส่งแก้ไข" กลับเข้าขั้นตรวจสอบเอกสาร
-        if (envelope.getModule() == SignatureModule.POSITION) {
-            try {
+        // เอกสารที่ส่งกลับแก้ลงนามใหม่ครบ — เฟส 2 กลับเข้าขั้นตรวจสอบเอกสาร เฟส 1 กลับไปขั้นที่ส่งกลับมา
+        try {
+            if (envelope.getModule() == SignatureModule.POSITION) {
                 positionService.resumeAfterRevision(requestId, envelope.getInitiatedBy());
-            } catch (Exception e) {
-                log.warn("คืนสถานะคำร้อง #{} หลังแก้ไขเอกสารที่ {} ไม่สำเร็จ: {}",
-                        requestId, documentType, e.toString());
+            } else {
+                academicService.resumeAfterRevision(requestId, envelope.getInitiatedBy());
             }
+        } catch (Exception e) {
+            log.warn("คืนสถานะคำร้อง #{} หลังแก้ไขเอกสารที่ {} ไม่สำเร็จ: {}",
+                    requestId, documentType, e.toString());
         }
 
         // หนังสือเชิญเป็นกรรมการออกไปได้เมื่อลงนามครบแล้วเท่านั้น — ส่งถึงกรรมการทันทีพร้อมทางเปิดดูเอกสารของผู้ยื่น

@@ -43,6 +43,17 @@ class EvaluationTimelineTest {
     }
 
     @Test
+    @DisplayName("ส่งเอกสารกลับให้แก้ระหว่างรอประชุม — กลับมาขั้นเดิมแล้วกำหนด 45 วันทำการไม่เริ่มนับใหม่")
+    void sendingBackDoesNotRestartTheCommitteeClock() {
+        LocalDate appointed = LocalDate.of(2026, 10, 5);
+        at(appointed, RequestStatus.SUB_COMMITTEE_APPOINTED);
+        at(appointed.plusDays(10), RequestStatus.DOCUMENT_REVISION);
+        at(appointed.plusDays(15), RequestStatus.SUB_COMMITTEE_APPOINTED);
+
+        assertThat(EvaluationTimeline.of(history).get(0).due()).isEqualTo(appointed.plusWeeks(9));
+    }
+
+    @Test
     @DisplayName("ยังไม่รายงานผลเมื่อพ้นกำหนด — เกินกำหนด")
     void unreportedPastTheDueDateIsOverdue() {
         LocalDate appointed = LocalDate.of(2026, 10, 5);

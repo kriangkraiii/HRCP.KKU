@@ -481,6 +481,7 @@
 }
 
 [data-theme="dark"] .status-COMPLETED_REVISE,
+[data-theme="dark"] .status-DOCUMENT_REVISION,
 [data-theme="dark"] .status-REVISION_REQUESTED {
     background: rgba(245, 127, 23, 0.22) !important;
     color: #ffcc80 !important;

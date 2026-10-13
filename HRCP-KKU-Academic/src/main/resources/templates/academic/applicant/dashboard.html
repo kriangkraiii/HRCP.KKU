@@ -170,9 +170,11 @@
 
                         <!--/* Progress Tracker */-->
                         <!--/* เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ (ขั้นถัดจากสถานะปัจจุบัน) — กติกาอยู่ที่ RequestStatus.stepStateAt */-->
-                        <div class="timeline-v2" th:with="cur=${req.currentStatus}, sb=${sentBackMap.get(req.id)}">
+                        <div class="timeline-v2"
+                            th:with="cur=${req.progressStatus}, sb=${sentBackMap.get(req.id)},
+                                     rev=${sb != null or req.currentStatus.name() == 'DOCUMENT_REVISION'}">
                             <div th:each="step, stepStat : ${progressSteps}" class="timeline-v2-step"
-                                th:with="st=${cur.stepStateAt(stepStat.index, sb != null)}, icon=${st.iconFor(step)}"
+                                th:with="st=${cur.stepStateAt(stepStat.index, rev)}, icon=${st.iconFor(step)}"
                                 th:classappend="${st.timelineClass}">
                                 <div class="timeline-v2-icon">
                                     <i th:if="${icon != null}" th:class="'fas ' + ${icon}"></i>
@@ -180,7 +182,7 @@
                                 </div>
                                 <div class="timeline-v2-label" th:text="${step.stepLabel}"></div>
                                 <div class="timeline-v2-hint" th:if="${stepStat.index == cur.focusIndex()}"
-                                    th:text="${sb != null} ? ${sb.statusLabel} : ${cur.stepHint}"></div>
+                                    th:text="${sb != null} ? ${sb.statusLabel} : ${req.currentStatus.stepHint}"></div>
                             </div>
                         </div>
 

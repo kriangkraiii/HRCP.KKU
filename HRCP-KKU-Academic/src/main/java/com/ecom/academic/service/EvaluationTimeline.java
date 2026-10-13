@@ -91,7 +91,9 @@ public final class EvaluationTimeline {
     private static LocalDate lastEntered(List<RequestStatusHistory> ordered, Set<RequestStatus> statuses) {
         LocalDate last = null;
         for (RequestStatusHistory h : ordered) {
-            if (statuses.contains(h.getNewStatus()) && h.getNewStatus() != h.getOldStatus()) {
+            // กลับจากส่งแก้ไขเอกสารคือขั้นเดิมที่หยุดรอ ไม่ใช่เข้าขั้นใหม่ — กำหนดเวลาไม่เริ่มนับใหม่
+            if (statuses.contains(h.getNewStatus()) && h.getNewStatus() != h.getOldStatus()
+                    && h.getOldStatus() != RequestStatus.DOCUMENT_REVISION) {
                 last = h.getChangedAt().toLocalDate();
             }
         }

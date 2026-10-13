@@ -71,9 +71,11 @@
                 </div>
                 <div class="section-card-body">
                     <!--/* เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ (ขั้นถัดจากสถานะปัจจุบัน) — กติกาอยู่ที่ RequestStatus.stepStateAt */-->
-                    <div class="timeline-v2" th:with="cur=${request.currentStatus}">
+                    <div class="timeline-v2"
+                        th:with="cur=${request.progressStatus},
+                                 rev=${sentBack != null or request.currentStatus.name() == 'DOCUMENT_REVISION'}">
                         <div th:each="step, stepStat : ${progressSteps}" class="timeline-v2-step"
-                            th:with="st=${cur.stepStateAt(stepStat.index, sentBack != null)}, icon=${st.iconFor(step)}"
+                            th:with="st=${cur.stepStateAt(stepStat.index, rev)}, icon=${st.iconFor(step)}"
                             th:classappend="${st.timelineClass}">
                             <div class="timeline-v2-icon">
                                 <i th:if="${icon != null}" th:class="'fas ' + ${icon}"></i>
@@ -81,7 +83,7 @@
                             </div>
                             <div class="timeline-v2-label" th:text="${step.stepLabel}"></div>
                             <div class="timeline-v2-hint" th:if="${stepStat.index == cur.focusIndex()}"
-                                th:text="${sentBack != null} ? ${sentBack.statusLabel} : ${cur.stepHint}"></div>
+                                th:text="${sentBack != null} ? ${sentBack.statusLabel} : ${request.currentStatus.stepHint}"></div>
                         </div>
                     </div>
                 </div>

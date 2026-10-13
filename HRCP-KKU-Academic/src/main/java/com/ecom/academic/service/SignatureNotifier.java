@@ -44,6 +44,7 @@ public class SignatureNotifier {
     private final NotificationService notificationService;
     private final JavaMailSender mailSender;
     private final com.ecom.repository.UserRepository userRepository;
+    private final com.ecom.service.OfficerRecipients officerRecipients;
 
     @Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
     private String senderEmail;
@@ -52,7 +53,9 @@ public class SignatureNotifier {
     private String publicBaseUrl = "https://hrd.computing.kku.ac.th";
 
     public SignatureNotifier(NotificationService notificationService, JavaMailSender mailSender,
-            com.ecom.repository.UserRepository userRepository) {
+            com.ecom.repository.UserRepository userRepository,
+            com.ecom.service.OfficerRecipients officerRecipients) {
+        this.officerRecipients = officerRecipients;
         this.notificationService = notificationService;
         this.mailSender = mailSender;
         this.userRepository = userRepository;
@@ -110,7 +113,7 @@ public class SignatureNotifier {
                     .para("เอกสาร “" + notice.safeDocumentLabel() + "” ยังรอการลงนามของท่าน และถึงวันที่ท่านตั้งเตือนไว้แล้ว")
                     .note("info", null, "กำหนดนี้เป็นเพียงการแจ้งเตือน เอกสารยังไม่ถูกปิด ท่านลงนามได้ตามปกติ"
                             + " และยื่นคำร้องได้ทันทีที่ลงนามครบทุกฉบับ")
-                    .button("เข้าสู่ระบบเพื่อลงนาม", link("/esign/sign/" + notice.stepId()))
+                    .link("เข้าสู่ระบบเพื่อลงนาม", link("/esign/sign/" + notice.stepId()))
                     .close("จึงเรียนมาเพื่อโปรดทราบ");
             email(recipient, "ถึงกำหนดที่ตั้งเตือนไว้: " + notice.safeDocumentLabel(),
                     EmailTemplateHelper.wrapLayout("ถึงกำหนดที่ตั้งเตือนไว้", "แจ้งเตือน", body));
@@ -132,7 +135,7 @@ public class SignatureNotifier {
                             + " ได้รับการลงนามครบทุกตำแหน่งแล้ว")
                     .details(caseRows(notice, "ความคืบหน้า", notice.progressLabel()))
                     .para("ท่านสามารถดาวน์โหลดเอกสารที่ลงนามแล้ว และดำเนินการในขั้นตอนต่อไปได้ในระบบ")
-                    .button("เปิดคำร้องในระบบ", link(requestLinkFor(recipient, notice.module(), notice.requestId())))
+                    .link("เปิดคำร้องในระบบ", link(requestLinkFor(recipient, notice.module(), notice.requestId())))
                     .close("จึงเรียนมาเพื่อโปรดทราบ");
             email(recipient, "ลงนามครบแล้ว: " + notice.safeDocumentLabel() + aboutWhom(notice),
                     EmailTemplateHelper.wrapLayout("เอกสารลงนามครบแล้ว", "เสร็จสิ้น", body));
@@ -157,7 +160,7 @@ public class SignatureNotifier {
                     .note("danger", "เหตุผล", nameOr(notice.declineReason(), "-"))
                     .para("ระบบได้ปลดล็อกเอกสารให้แก้ไขได้แล้ว ขอให้ตรวจสอบและแก้ไขตามเหตุผลข้างต้น"
                             + " แล้วส่งเวียนลงนามใหม่อีกครั้ง")
-                    .button("เปิดคำร้องในระบบ", link(requestLinkFor(recipient, notice.module(), notice.requestId())))
+                    .link("เปิดคำร้องในระบบ", link(requestLinkFor(recipient, notice.module(), notice.requestId())))
                     .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
             email(recipient, "ผู้ลงนามไม่ลงนาม: " + notice.safeDocumentLabel() + aboutWhom(notice),
                     EmailTemplateHelper.wrapLayout("ผู้ลงนามไม่ลงนามในเอกสาร", "ต้องดำเนินการ", body));
@@ -207,7 +210,7 @@ public class SignatureNotifier {
                             + " รหัส " + requestId + " แล้ว และได้บันทึกผลการตรวจสอบที่ควรทราบ ดังนี้")
                     .note("warn", question, answer)
                     .para("การเวียนลงนามยังดำเนินต่อไปตามปกติ ขอให้ตรวจสอบว่าต้องดำเนินการใดเพิ่มเติมหรือไม่")
-                    .button("เปิดคำร้องในระบบ", link(requestLinkFor(recipient, module, requestId)))
+                    .link("เปิดคำร้องในระบบ", link(requestLinkFor(recipient, module, requestId)))
                     .close("จึงเรียนมาเพื่อโปรดพิจารณา");
             email(recipient, "ผลการตรวจสอบ “" + answer + "”: " + safeDoc,
                     EmailTemplateHelper.wrapLayout("ผลการตรวจสอบจากผู้ลงนาม", "ควรตรวจสอบ", body));
@@ -264,7 +267,7 @@ public class SignatureNotifier {
                         "เข้าสู่ระบบ แล้วเปิดเอกสาร “" + safeDoc + "” (ระบบปลดล็อกให้แก้ไขได้แล้ว)",
                         "แก้ไขข้อมูลตามรายละเอียดข้างต้น",
                         "ลงนามอิเล็กทรอนิกส์ในเอกสารฉบับแก้ไข เจ้าหน้าที่จะตรวจสอบและดำเนินการต่อ"))
-                .button("เปิดเอกสารเพื่อแก้ไข", link(userLink))
+                .link("เปิดเอกสารเพื่อแก้ไข", link(userLink))
                 .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
         email(applicant, "ขอให้แก้ไขเอกสารและลงนามใหม่: " + safeDoc,
                 EmailTemplateHelper.wrapLayout("ขอให้แก้ไขเอกสารและลงนามใหม่", "ต้องดำเนินการ", body));
@@ -285,7 +288,7 @@ public class SignatureNotifier {
         String message = who + " แก้ไขเอกสาร " + safeDoc + " ตามที่ส่งกลับเรียบร้อยแล้ว กรุณาตรวจสอบและดำเนินการต่อ";
         List<UserDtls> admins;
         try {
-            admins = userRepository.findByRole("ROLE_ADMIN");
+            admins = officerRecipients.officers();
         } catch (Exception e) {
             log.warn("Could not load admins to announce revision on {} request {}: {}", module, requestId, e.toString());
             return;
@@ -296,7 +299,7 @@ public class SignatureNotifier {
                     .para(who + " ได้แก้ไขเอกสาร “" + safeDoc + "” ของ" + module.getThaiLabel() + " รหัส " + requestId
                             + " ตามที่ส่งกลับ และลงนามในฉบับแก้ไขเรียบร้อยแล้ว")
                     .para("ขอให้ตรวจสอบความถูกต้อง และส่งเวียนลงนามต่อตามขั้นตอน")
-                    .button("เปิดคำร้องในระบบ", link(module.adminLink(requestId)))
+                    .link("เปิดคำร้องในระบบ", link(module.adminLink(requestId)))
                     .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
             email(admin, "ผู้ยื่นส่งเอกสารฉบับแก้ไขแล้ว: " + safeDoc + " (" + who + ")",
                     EmailTemplateHelper.wrapLayout("ผู้ยื่นส่งเอกสารฉบับแก้ไขแล้ว", "ต้องดำเนินการ", body));
@@ -385,16 +388,16 @@ public class SignatureNotifier {
             if (brief != null) {
                 steps.addAll(brief.duties());
             }
-            steps.add("กดปุ่ม “เข้าสู่ระบบเพื่อลงนาม” ด้านล่าง แล้วเข้าสู่ระบบด้วย KKU SSO โดยใช้อีเมล "
+            steps.add("เปิดลิงก์ “เข้าสู่ระบบเพื่อลงนาม” ด้านล่าง แล้วเข้าสู่ระบบด้วย KKU SSO โดยใช้อีเมล "
                     + recipient.getEmail());
             steps.add("ตรวจสอบเอกสาร แล้วลงนาม หากท่านมีใบรับรองอิเล็กทรอนิกส์ (Digital ID) ของหน่วยงาน สามารถใช้ลงนามได้"
                     + " หากไม่มี ระบบจะส่งรหัสยืนยันตัวตนไปยังอีเมลนี้เพื่อใช้ประกอบการลงนาม");
             letter.steps("ขั้นตอนการลงนาม", steps);
         } else {
-            letter.para("ท่านสามารถตรวจสอบเอกสารและลงนามได้โดยกดปุ่มด้านล่าง แล้วเข้าสู่ระบบด้วย KKU SSO");
+            letter.para("ท่านสามารถตรวจสอบเอกสารและลงนามได้ที่ลิงก์ด้านล่าง แล้วเข้าสู่ระบบด้วย KKU SSO");
         }
         String body = letter
-                .button("เข้าสู่ระบบเพื่อลงนาม", link("/esign/sign/" + notice.stepId()))
+                .link("เข้าสู่ระบบเพื่อลงนาม", link("/esign/sign/" + notice.stepId()))
                 .close("จึงเรียนมาเพื่อโปรดพิจารณาลงนาม และขอขอบคุณมา ณ โอกาสนี้");
         return EmailTemplateHelper.wrapLayout(
                 reminder ? "ขอเตือนการลงนามเอกสารอิเล็กทรอนิกส์" : "ขอความอนุเคราะห์ลงนามเอกสารอิเล็กทรอนิกส์",

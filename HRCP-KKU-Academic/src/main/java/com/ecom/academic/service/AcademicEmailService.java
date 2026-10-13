@@ -12,7 +12,6 @@ import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.repository.AcademicRequestRepository;
 import com.ecom.model.UserDtls;
-import com.ecom.repository.UserRepository;
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -20,18 +19,19 @@ import jakarta.mail.internet.MimeMessage;
 public class AcademicEmailService {
 
     private final JavaMailSender mailSender;
-    private final UserRepository userRepository;
     private final com.ecom.service.NotificationService notificationService;
+    private final com.ecom.service.OfficerRecipients officerRecipients;
     private final AcademicRequestRepository requestRepository;
 
     @org.springframework.beans.factory.annotation.Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
     private String senderEmail;
 
-    public AcademicEmailService(JavaMailSender mailSender, UserRepository userRepository,
+    public AcademicEmailService(JavaMailSender mailSender,
             com.ecom.service.NotificationService notificationService,
-            AcademicRequestRepository requestRepository) {
+            AcademicRequestRepository requestRepository,
+            com.ecom.service.OfficerRecipients officerRecipients) {
+        this.officerRecipients = officerRecipients;
         this.mailSender = mailSender;
-        this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.requestRepository = requestRepository;
     }
@@ -181,7 +181,7 @@ public class AcademicEmailService {
             }
 
             // 2. Send email to admins who opted-in
-            List<UserDtls> admins = userRepository.findByRole("ROLE_ADMIN");
+            List<UserDtls> admins = officerRecipients.officers();
             for (UserDtls admin : admins) {
                 if (Boolean.FALSE.equals(admin.getIsEnable())) {
                     continue;
@@ -214,7 +214,7 @@ public class AcademicEmailService {
                             + " แล้ว กรุณาตรวจและส่งต่อคณะอนุกรรมการ พร้อมนัดประชุมรอบใหม่",
                     adminLink, com.ecom.model.NotificationType.REVISION_SUBMITTED, true);
 
-            for (UserDtls admin : userRepository.findByRole("ROLE_ADMIN")) {
+            for (UserDtls admin : officerRecipients.officers()) {
                 if (Boolean.FALSE.equals(admin.getIsEnable())
                         || !Boolean.TRUE.equals(admin.getEmailNotificationEnabled())
                         || com.ecom.util.EmailTemplateHelper.isTestEmail(admin.getEmail())) {
@@ -229,7 +229,7 @@ public class AcademicEmailService {
                                 "ตรวจเอกสารฉบับแก้ไขในหน้ารายละเอียดคำร้อง",
                                 "ส่งเอกสารฉบับแก้ไขให้คณะอนุกรรมการประเมินการสอนพิจารณา",
                                 "นัดหมายวันประชุมคณะอนุกรรมการรอบใหม่ในระบบ"))
-                        .button("เปิดคำร้องในระบบ", publicBaseUrl.replaceAll("/+$", "") + adminLink)
+                        .link("เปิดคำร้องในระบบ", publicBaseUrl.replaceAll("/+$", "") + adminLink)
                         .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
 
                 MimeMessage message = mailSender.createMimeMessage();
@@ -268,7 +268,7 @@ public class AcademicEmailService {
                             + " กรุณาเสนอหัวหน้าส่วนงานพิจารณา",
                     adminLink, com.ecom.model.NotificationType.ACADEMIC_STATUS_UPDATE, true);
 
-            for (UserDtls admin : userRepository.findByRole("ROLE_ADMIN")) {
+            for (UserDtls admin : officerRecipients.officers()) {
                 if (Boolean.FALSE.equals(admin.getIsEnable())
                         || !Boolean.TRUE.equals(admin.getEmailNotificationEnabled())
                         || com.ecom.util.EmailTemplateHelper.isTestEmail(admin.getEmail())) {
@@ -284,7 +284,7 @@ public class AcademicEmailService {
                                 "อ่านเหตุผลที่ขอทบทวนในประวัติสถานะของคำร้อง",
                                 "เสนอหัวหน้าส่วนงานพิจารณา",
                                 "รับทบทวน: นัดประชุมคณะอนุกรรมการรอบใหม่ / ยืนผลเดิม: เปลี่ยนสถานะเป็น \"แจ้งผล - ไม่ผ่าน\" พร้อมเหตุผล"))
-                        .button("เปิดคำร้องในระบบ", publicBaseUrl.replaceAll("/+$", "") + adminLink)
+                        .link("เปิดคำร้องในระบบ", publicBaseUrl.replaceAll("/+$", "") + adminLink)
                         .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
 
                 MimeMessage message = mailSender.createMimeMessage();
@@ -377,6 +377,8 @@ public class AcademicEmailService {
             case DRAFT -> "คำร้องของท่านอยู่ในสถานะแบบร่าง ท่านสามารถแก้ไขเอกสารและยื่นคำร้องได้เมื่อพร้อม";
             case RECEIVED -> "วิทยาลัยฯ ได้รับคำร้องของท่านแล้ว เจ้าหน้าที่จะตรวจสอบเอกสาร"
                     + " และเสนอแต่งตั้งคณะอนุกรรมการประเมินผลการสอนต่อไป";
+            case DOCUMENT_REVISION -> "เจ้าหน้าที่ส่งเอกสารกลับให้ท่านแก้ไข กรุณาแก้ไขและลงนามใหม่ในหน้าคำร้อง"
+                    + " เมื่อลงนามใหม่ครบแล้ว คำร้องจะดำเนินการต่อจากขั้นเดิม";
             case SUB_COMMITTEE_APPOINTED -> "คณบดีได้ลงนามคำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอนแล้ว"
                     + " ขั้นต่อไปวิทยาลัยฯ จะนัดหมายคณะอนุกรรมการเพื่อประเมินผลการสอนของท่าน";
             case MEETING_SCHEDULED -> "วิทยาลัยฯ ได้นัดหมายคณะอนุกรรมการเพื่อประเมินผลการสอนของท่านแล้ว"

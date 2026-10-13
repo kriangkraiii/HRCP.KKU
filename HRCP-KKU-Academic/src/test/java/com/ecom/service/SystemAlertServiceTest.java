@@ -21,7 +21,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 
 import com.ecom.model.NotificationType;
 import com.ecom.model.UserDtls;
-import com.ecom.repository.UserRepository;
+
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -34,11 +34,11 @@ import jakarta.mail.internet.MimeMessage;
 class SystemAlertServiceTest {
 
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
-    private final UserRepository userRepository = mock(UserRepository.class);
+    private final OfficerRecipients officerRecipients = mock(OfficerRecipients.class);
     private final NotificationService notificationService = mock(NotificationService.class);
 
     private SystemAlertService service(boolean onSuccess, long throttleHours) {
-        return new SystemAlertService(mailSender, userRepository, notificationService,
+        return new SystemAlertService(mailSender, officerRecipients, notificationService,
                 true, onSuccess, throttleHours);
     }
 
@@ -54,7 +54,7 @@ class SystemAlertServiceTest {
     @BeforeEach
     void setUp() {
         when(mailSender.createMimeMessage()).thenReturn(mock(MimeMessage.class));
-        when(userRepository.findByRole("ROLE_ADMIN")).thenReturn(List.of(
+        when(officerRecipients.officers()).thenReturn(List.of(
                 admin("boss@kku.ac.th", true),
                 admin("quiet@kku.ac.th", false)));
     }

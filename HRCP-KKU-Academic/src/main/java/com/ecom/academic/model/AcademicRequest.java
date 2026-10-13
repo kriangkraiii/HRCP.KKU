@@ -49,6 +49,11 @@ public class AcademicRequest {
     @Column(name = "current_status", nullable = false, columnDefinition = "varchar(50)")
     private RequestStatus currentStatus;
 
+    /** ขั้นที่ส่งเอกสารกลับมาให้แก้ ({@link RequestStatus#DOCUMENT_REVISION}) — แก้ครบแล้วกลับไปขั้นนี้ */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_before_revision", columnDefinition = "varchar(50)")
+    private RequestStatus statusBeforeRevision;
+
     @Column(name = "submission_date")
     private LocalDateTime submissionDate;
 
@@ -142,6 +147,22 @@ public class AcademicRequest {
 
     public void setCurrentStatus(RequestStatus currentStatus) {
         this.currentStatus = currentStatus;
+    }
+
+    public RequestStatus getStatusBeforeRevision() {
+        return statusBeforeRevision;
+    }
+
+    public void setStatusBeforeRevision(RequestStatus statusBeforeRevision) {
+        this.statusBeforeRevision = statusBeforeRevision;
+    }
+
+    /**
+     * ขั้นบนแถบความคืบหน้า — ระหว่างส่งแก้ไขเอกสารคือขั้นที่ส่งกลับมา ไม่ใช่ "ส่งแก้ไขเอกสาร" ซึ่งไม่อยู่บนเส้นทาง
+     */
+    public RequestStatus getProgressStatus() {
+        return currentStatus == RequestStatus.DOCUMENT_REVISION && statusBeforeRevision != null
+                ? statusBeforeRevision : currentStatus;
     }
 
     public LocalDateTime getSubmissionDate() {

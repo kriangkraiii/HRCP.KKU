@@ -192,6 +192,11 @@ public class AcademicRequestService {
             throw new IllegalStateException(
                     "รับทบทวนผลการประเมินต้องระบุวันประชุมคณะอนุกรรมการรอบใหม่");
         }
+        if (newStatus == RequestStatus.DOCUMENT_REVISION && request.getCurrentStatus() != newStatus) {
+            // ต้องมีเอกสารที่ส่งกลับจริง ไม่งั้นไม่มีอะไรพาคำร้องกลับออกมา
+            throw new IllegalStateException("สถานะ “" + newStatus.getThaiLabel()
+                    + "” เกิดจากการกด “ส่งกลับแก้ไข” ในหน้าเอกสารของผู้ยื่น อัปเดตเองไม่ได้");
+        }
         return changeStatus(request, newStatus, changedBy, note, sendNotification);
     }
 
@@ -200,11 +205,20 @@ public class AcademicRequestService {
         Long requestId = request.getId();
         RequestStatus oldStatus = request.getCurrentStatus();
         requireLegalTransition(oldStatus, newStatus, requestId);
+        if (oldStatus == RequestStatus.DOCUMENT_REVISION && newStatus != RequestStatus.DOCUMENT_REVISION) {
+            // ทุกทางออก (ช่องอัปเดตสถานะ นัดประชุม กลับเองหลังแก้ครบ) ผ่านตรงนี้ — กลับได้แค่ขั้นที่ส่งกลับมา
+            RequestStatus back = returnStatusOf(request);
+            if (back != null && newStatus != back) {
+                throw new IllegalStateException("คำร้องถูกส่งแก้ไขเอกสารจากขั้น “" + back.getThaiLabel()
+                        + "” ต้องกลับไปขั้นนั้นก่อน");
+            }
+        }
         // เอกสารที่ส่งกลับให้แก้ต้องลงนามใหม่ครบก่อนเรื่องจะเดินต่อ — ส่วนการตีกลับ
         // (คืนเป็นแบบร่าง / แจ้งผลให้แก้) ยังทำได้เสมอ
         if (oldStatus != newStatus && newStatus != RequestStatus.DRAFT
                 && newStatus != RequestStatus.COMPLETED_REVISE
-                && newStatus != RequestStatus.REVISION_SUBMITTED) {
+                && newStatus != RequestStatus.REVISION_SUBMITTED
+                && newStatus != RequestStatus.DOCUMENT_REVISION) {
             String blocker = resignBlocker(requestId);
             if (blocker != null) {
                 throw new IllegalStateException(blocker);
@@ -218,6 +232,11 @@ public class AcademicRequestService {
         if (oldStatus == RequestStatus.APPEAL_SUBMITTED && newStatus == RequestStatus.COMPLETED_FAIL
                 && (note == null || note.isBlank())) {
             throw new IllegalArgumentException("กรุณาระบุเหตุผลที่หัวหน้าส่วนงานยืนผลการประเมินเดิม");
+        }
+        if (newStatus == RequestStatus.DOCUMENT_REVISION && oldStatus != newStatus) {
+            request.setStatusBeforeRevision(oldStatus);
+        } else if (newStatus != RequestStatus.DOCUMENT_REVISION) {
+            request.setStatusBeforeRevision(null);
         }
         request.setCurrentStatus(newStatus);
         requestRepository.save(request);
@@ -861,6 +880,108 @@ public class AcademicRequestService {
         }
         documentRepository.saveAll(docs);
         changed(requestId);
+    }
+
+    /**
+     * เจ้าหน้าที่ส่งเอกสารกลับให้แก้ — คำร้องเป็น "ส่งแก้ไขเอกสาร" ลูกอยู่ที่ผู้ยื่น
+     *
+     * <p>ไม่ส่งอีเมลสถานะ: การส่งกลับแจ้งผู้ยื่นพร้อมเหตุผลของเอกสารแต่ละฉบับอยู่แล้ว
+     * ส่งกลับหลายฉบับ สถานะเปลี่ยนครั้งเดียว ขั้นที่มีผลประเมินแล้ว ({@link RequestStatus#revisableStatuses()})
+     * สถานะคงเดิม เอกสารยังถูกส่งกลับตามปกติ
+     */
+    @Transactional
+    public void markRevisionRequested(Long requestId, int documentType, UserDtls admin, String reason) {
+        AcademicRequest request = requestRepository.findById(requestId).orElse(null);
+        if (request == null || !request.getCurrentStatus().canMoveTo(RequestStatus.DOCUMENT_REVISION)) {
+            return;
+        }
+        changeStatus(request, RequestStatus.DOCUMENT_REVISION, admin,
+                "ส่งกลับให้แก้ไขเอกสารที่ " + documentType
+                        + (reason != null && !reason.isBlank() ? " — " + reason.trim() : ""),
+                false);
+    }
+
+    /**
+     * เอกสารที่ส่งกลับแก้และลงนามใหม่ครบทุกช่องแล้ว — กลับไปขั้นที่ส่งกลับมา
+     *
+     * <p>ระหว่างส่งแก้ไข เอกสารของเจ้าหน้าที่ที่ลงนามครบเลื่อนสถานะไม่ได้ (ขั้นไม่ตรง) กลับมาแล้วจึงเลื่อนให้
+     * ตามลำดับ เฉพาะซองที่ปิดหลังการส่งกลับ — ซองก่อนหน้านั้นเลื่อนสถานะไปแล้วตอนปิด
+     */
+    @Transactional
+    public void resumeAfterRevision(Long requestId, UserDtls changedBy) {
+        AcademicRequest request = requestRepository.findById(requestId).orElse(null);
+        if (request == null || request.getCurrentStatus() != RequestStatus.DOCUMENT_REVISION
+                || resignBlocker(requestId) != null || revisionProgress(request).isActionRequired()) {
+            return;
+        }
+        RequestStatus back = returnStatusOf(request);
+        if (back == null) {
+            return;
+        }
+        LocalDateTime since = enteredRevisionAt(requestId);
+        changeStatus(request, back, changedBy, "อัพเดตอัตโนมัติ: แก้ไขและลงนามเอกสารที่ส่งกลับครบแล้ว", false);
+        if (since == null) {
+            return;
+        }
+        // เรียงเลขเอกสาร = เรียงตามลำดับขั้น (4 แต่งตั้ง → 5 เชิญ → 7 ผลประเมิน → 9 แจ้งผล)
+        for (int type : STATUS_ADVANCING_DOCUMENTS.stream().sorted().toList()) {
+            signatureRequestRepository
+                    .findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(
+                            com.ecom.academic.model.SignatureModule.ACADEMIC, requestId, type)
+                    .stream()
+                    .filter(e -> e.getStatus() == com.ecom.academic.model.SignatureRequestStatus.COMPLETED
+                            && e.getCompletedAt() != null && !e.getCompletedAt().isBefore(since))
+                    .findFirst()
+                    .ifPresent(e -> autoUpdateStatusByDocument(requestId, type, e.getInitiatedBy(),
+                            e.getFrozenJson(), true));
+        }
+    }
+
+    /** ขั้นที่คำร้องส่งแก้ไขเอกสารมา — คอลัมน์ว่าง (แถวเก่า) ใช้ประวัติสถานะแทน */
+    private RequestStatus returnStatusOf(AcademicRequest request) {
+        if (request.getStatusBeforeRevision() != null) {
+            return request.getStatusBeforeRevision();
+        }
+        return getStatusHistory(request.getId()).stream()
+                .filter(h -> h.getNewStatus() == RequestStatus.DOCUMENT_REVISION
+                        && h.getOldStatus() != RequestStatus.DOCUMENT_REVISION)
+                .map(RequestStatusHistory::getOldStatus)
+                .filter(RequestStatus.revisableStatuses()::contains)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private LocalDateTime enteredRevisionAt(Long requestId) {
+        return getStatusHistory(requestId).stream()
+                .filter(h -> h.getNewStatus() == RequestStatus.DOCUMENT_REVISION
+                        && h.getOldStatus() != RequestStatus.DOCUMENT_REVISION)
+                .map(RequestStatusHistory::getChangedAt)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * คำร้องที่ถูกส่งเอกสารกลับก่อนมีสถานะ "ส่งแก้ไขเอกสาร" — ยังมีเอกสารค้าง แต่สถานะยังเป็นขั้นเดิม
+     *
+     * <p>รันซ้ำได้: คำร้องที่ไม่มีเอกสารค้าง หรือขั้นที่ส่งแก้ไขไม่ได้ ไม่ถูกแตะ ไม่ส่งอีเมล
+     *
+     * @return จำนวนคำร้องที่ปรับสถานะ
+     */
+    @Transactional
+    public int backfillRevisionRequested() {
+        int moved = 0;
+        for (RequestStatus status : RequestStatus.revisableStatuses()) {
+            for (AcademicRequest request : requestRepository.findByCurrentStatus(status)) {
+                // ค้างจริงเท่านั้น — ที่ยื่นการแก้ไขครบแล้วไม่มีเหตุการณ์ไหนพากลับออกมาอีก
+                if (resignBlocker(request.getId()) == null && !revisionProgress(request).isActionRequired()) {
+                    continue;
+                }
+                changeStatus(request, RequestStatus.DOCUMENT_REVISION, null,
+                        "อัพเดตย้อนหลัง: มีเอกสารที่ส่งกลับให้แก้ไขค้างอยู่", false);
+                moved++;
+            }
+        }
+        return moved;
     }
 
     /** หน้าคำร้องที่เปิดค้างอยู่อัปเดตสด — แจ้งหลัง commit ({@code RequestLiveUpdates}) */
@@ -2265,7 +2386,7 @@ public class AcademicRequestService {
      */
     public String committeeSuggestionsFor(AcademicRequest request) {
         List<AcademicDocument> docs = getDocumentsByType(request.getId(), 6);
-        RequestStatus status = request.getCurrentStatus();
+        RequestStatus status = request.getProgressStatus();
         boolean sentForRevision = status == RequestStatus.COMPLETED_REVISE
                 || status == RequestStatus.REVISION_SUBMITTED;
         return docs.stream()

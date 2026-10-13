@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 
 import com.ecom.model.NotificationType;
 import com.ecom.model.UserDtls;
-import com.ecom.repository.UserRepository;
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -50,7 +49,7 @@ public class SystemAlertService {
     private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm น.");
 
     private final JavaMailSender mailSender;
-    private final UserRepository userRepository;
+    private final OfficerRecipients officerRecipients;
     private final NotificationService notificationService;
 
     private final boolean emailEnabled;
@@ -61,13 +60,13 @@ public class SystemAlertService {
     private final Map<String, Instant> lastSent = new ConcurrentHashMap<>();
 
     public SystemAlertService(JavaMailSender mailSender,
-            UserRepository userRepository,
+            OfficerRecipients officerRecipients,
             NotificationService notificationService,
             @Value("${app.alert.email.enabled:true}") boolean emailEnabled,
             @Value("${app.alert.on-success:false}") boolean alertOnSuccess,
             @Value("${app.alert.throttle-hours:12}") long throttleHours) {
         this.mailSender = mailSender;
-        this.userRepository = userRepository;
+        this.officerRecipients = officerRecipients;
         this.notificationService = notificationService;
         this.emailEnabled = emailEnabled;
         this.alertOnSuccess = alertOnSuccess;
@@ -160,7 +159,7 @@ public class SystemAlertService {
 
     /** Administrators who have not turned e-mail notifications off. */
     private List<UserDtls> recipients() {
-        return userRepository.findByRole("ROLE_ADMIN").stream()
+        return officerRecipients.officers().stream()
                 .filter(a -> a.getEmail() != null && !a.getEmail().isBlank())
                 .filter(a -> !Boolean.FALSE.equals(a.getIsEnable()))
                 .filter(a -> Boolean.TRUE.equals(a.getEmailNotificationEnabled()))

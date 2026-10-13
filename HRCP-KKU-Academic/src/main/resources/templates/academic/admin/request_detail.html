@@ -65,10 +65,13 @@
       <!--/* Progress Tracker */-->
       <div class="detail-progress" id="progressTracker" data-live-region>
         <!--/* เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ — กติกาเดียวกับหน้าผู้ยื่น (RequestStatus.stepStateAt) */-->
-        <div class="detail-progress-steps" th:with="cur=${request.currentStatus}">
+        <!--/* ส่งแก้ไขเอกสาร: แถบยืนอยู่ที่ขั้นที่ส่งกลับมา (progressStatus) ขั้นที่กำลังทำเป็นสีส้ม */-->
+        <div class="detail-progress-steps"
+             th:with="cur=${request.progressStatus},
+                      rev=${sentBack != null or request.currentStatus.name() == 'DOCUMENT_REVISION'}">
           <th:block th:each="step, iterStat : ${progressSteps}">
             <div class="detail-progress-step"
-                 th:with="st=${cur.stepStateAt(iterStat.index, sentBack != null)}, icon=${st.iconFor(step)}"
+                 th:with="st=${cur.stepStateAt(iterStat.index, rev)}, icon=${st.iconFor(step)}"
                  th:classappend="${st.detailClass}">
               <div th:if="${!iterStat.last}" class="detail-step-line"
                    th:classappend="${st.reached} ? 'line-done' : ''"></div>
@@ -77,7 +80,7 @@
               </div>
               <div class="detail-progress-step-label" th:text="${step.stepLabel}"></div>
               <div class="detail-progress-step-hint" th:if="${iterStat.index == cur.focusIndex()}"
-                   th:text="${sentBack != null} ? ${sentBack.statusLabel} : ${cur.stepHint}"></div>
+                   th:text="${sentBack != null} ? ${sentBack.statusLabel} : ${request.currentStatus.stepHint}"></div>
             </div>
           </th:block>
         </div>

@@ -27,6 +27,9 @@ public final class EmailTemplateHelper {
         return configuredEmail.trim();
     }
 
+    /** ระบบที่ผู้รับเข้าไปดำเนินการ — แสดงในทุกอีเมล */
+    public static final String SYSTEM_URL = "https://hrd.computing.kku.ac.th/";
+
     public static final String DEFAULT_LOGO_BASE_URL =
             "https://raw.githubusercontent.com/kriangkraiii/HRCP.KKU/main/HRCP-KKU-Academic/src/main/resources/static/img";
     public static final String CID_KKU_LOGO = "cid:kku_logo";
@@ -90,67 +93,104 @@ public final class EmailTemplateHelper {
      * @return Full HTML email string
      */
     public static String wrapLayout(String headingTitle, String badgeText, String bodyContent) {
+        // Checked against caniemail.com. Outlook for Windows renders with Word: it reads only
+        // background-color (no gradient, no rgba), honours padding only on table cells, ignores
+        // max-width, and several apps drop the <body> tag's styles. So every box is a table cell,
+        // every colour is solid, the 600px width comes from an Outlook-only ghost table, and the
+        // page font lives on the wrapper cell rather than on <body>.
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>");
         sb.append("<html lang='th'>");
-        sb.append("<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'></head>");
-        sb.append("<body style='margin:0;padding:0;background-color:#f1f5f9;font-family:\"Sarabun\",\"Prompt\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.6;'>");
-        
-        sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='0' style='background-color:#f1f5f9;padding:24px 12px;'>");
-        sb.append("<tr><td align='center'>");
-        
-        sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='0' style='max-width:600px;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.07);border:1px solid #e2e8f0;'>");
-        
-        // --- Official Brand Header (CP HRD - Matching Sign-in Page & Zero-Attachment) ---
-        sb.append("<tr><td style='background:linear-gradient(135deg,#0b1727 0%,#0f2744 50%,#173763 100%);padding:36px 28px 28px 28px;text-align:center;border-bottom:3px solid #3b82f6;'>");
-        
-        // Brand Title: CP | HRD
-        sb.append("<div style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Prompt\",Helvetica,Arial,sans-serif;font-size:32px;font-weight:800;letter-spacing:1px;line-height:1.1;margin-bottom:8px;'>");
+        sb.append("<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>");
+        sb.append("<meta name='x-apple-disable-message-reformatting'>");
+        sb.append("<meta name='color-scheme' content='light'><meta name='supported-color-schemes' content='light'>");
+        sb.append("<title>").append(escapeHtml(headingTitle)).append("</title></head>");
+        sb.append("<body style='margin:0;padding:0;background-color:#f1f5f9;'>");
+
+        sb.append("<table role='presentation' width='100%' border='0' cellspacing='0' cellpadding='0' bgcolor='#f1f5f9' style='background-color:#f1f5f9;'>");
+        sb.append("<tr><td align='center' style='padding:24px 12px;font-family:").append(FONT_STACK)
+          .append(";color:#1e293b;line-height:1.6;'>");
+        sb.append("<!--[if mso]><table role='presentation' width='600' align='center' border='0' cellspacing='0' cellpadding='0'><tr><td><![endif]-->");
+
+        sb.append("<table role='presentation' width='100%' border='0' cellspacing='0' cellpadding='0' bgcolor='#ffffff' style='max-width:600px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:14px;'>");
+
+        // --- Brand header: solid navy; the old gradient left Outlook with white text on white ---
+        sb.append("<tr><td align='center' bgcolor='#0f2744' style='background-color:#0f2744;padding:36px 28px 28px 28px;text-align:center;border-bottom:3px solid #3b82f6;border-radius:14px 14px 0 0;'>");
+
+        sb.append("<div style='font-family:").append(HEADER_FONT_STACK)
+          .append(";font-size:32px;font-weight:800;letter-spacing:1px;line-height:1.1;margin-bottom:8px;'>");
         sb.append("<span style='color:#60a5fa;'>CP</span>");
-        sb.append("<span style='color:#64748b;font-weight:300;margin:0 10px;'>|</span>");
+        sb.append("<span style='color:#64748b;font-weight:300;'>&nbsp;&nbsp;|&nbsp;&nbsp;</span>");
         sb.append("<span style='color:#ffffff;'>HRD</span>");
         sb.append("</div>");
-        
-        // Brand Subtitle: COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM
-        sb.append("<div style='color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Prompt\",Helvetica,Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:18px;'>");
+
+        sb.append("<div style='color:#94a3b8;font-family:").append(HEADER_FONT_STACK)
+          .append(";font-size:11px;font-weight:600;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:18px;'>");
         sb.append("COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM");
         sb.append("</div>");
-        
-        // Accent Divider
-        sb.append("<div style='width:48px;height:2px;background:#3b82f6;margin:0 auto 18px auto;border-radius:2px;'></div>");
-        
-        // Main Heading
-        sb.append("<h1 style='color:#ffffff;margin:0 0 6px 0;font-size:20px;font-weight:700;line-height:1.4;font-family:\"Sarabun\",\"Prompt\",sans-serif;'>")
+
+        // Accent rule: a cell with a fill, because Outlook neither centres a div with auto margins
+        // nor gives an empty div a height
+        sb.append("<table role='presentation' align='center' border='0' cellspacing='0' cellpadding='0' style='margin:0 auto 18px auto;'>")
+          .append("<tr><td width='48' height='2' bgcolor='#3b82f6' style='width:48px;height:2px;background-color:#3b82f6;font-size:0;line-height:0;'>&nbsp;</td></tr></table>");
+
+        sb.append("<h1 style='color:#ffffff;margin:0 0 6px 0;font-size:20px;font-weight:700;line-height:1.4;font-family:").append(FONT_STACK).append(";'>")
           .append(escapeHtml(headingTitle)).append("</h1>");
-        
-        // Optional Badge
+
         if (badgeText != null && !badgeText.isBlank()) {
-            sb.append("<div style='display:inline-block;background:rgba(59,130,246,0.18);border:1px solid rgba(96,165,250,0.4);color:#bfdbfe;font-size:12px;font-weight:500;padding:3px 14px;border-radius:20px;margin-top:6px;'>")
-              .append(escapeHtml(badgeText)).append("</div>");
+            sb.append("<table role='presentation' align='center' border='0' cellspacing='0' cellpadding='0' style='margin:6px auto 0 auto;'>")
+              .append("<tr><td bgcolor='#173764' style='background-color:#173764;border:1px solid #2f598d;border-radius:20px;padding:3px 14px;color:#bfdbfe;font-size:12px;font-weight:500;'>")
+              .append(escapeHtml(badgeText)).append("</td></tr></table>");
         }
-        
+
         sb.append("<div style='color:#94a3b8;font-size:12px;margin-top:12px;'>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น &bull; College of Computing, KKU</div>");
         sb.append("</td></tr>");
-        
-        // --- Body Content ---
+
+        // --- Body ---
         sb.append("<tr><td style='padding:32px 28px;'>");
         sb.append(bodyContent);
         sb.append("</td></tr>");
-        
-        // --- Official Footer ---
-        sb.append("<tr><td style='background-color:#f8fafc;padding:22px 24px;border-top:1px solid #e2e8f0;text-align:center;color:#64748b;font-size:12px;'>");
+
+        // --- Where to act: every email names the system, so a reader never has to guess
+        // which site a request, a signature or a reset belongs to ---
+        sb.append("<tr><td align='center' bgcolor='#eff6ff' style='background-color:#eff6ff;border-top:1px solid #bfdbfe;padding:16px 24px;text-align:center;font-size:14px;color:#1e3a8a;'>");
+        sb.append("<div style='font-weight:600;margin-bottom:2px;'>เข้าสู่ระบบเพื่อดำเนินการได้ที่ระบบพัฒนาบุคลากร (CP HRD)</div>");
+        sb.append("<a href='").append(SYSTEM_URL).append("' style='color:#1d4ed8;font-weight:700;text-decoration:underline;'>")
+          .append(SYSTEM_URL).append("</a>");
+        sb.append("</td></tr>");
+
+        // --- Footer ---
+        sb.append("<tr><td bgcolor='#f8fafc' style='background-color:#f8fafc;padding:22px 24px;border-top:1px solid #e2e8f0;border-radius:0 0 14px 14px;text-align:center;color:#64748b;font-size:12px;'>");
         sb.append("<p style='margin:0 0 8px 0;color:#94a3b8;font-size:11px;'>อีเมลฉบับนี้เป็นการแจ้งเตือนอัตโนมัติจากระบบ กรุณาอย่าตอบกลับอีเมลนี้</p>");
         sb.append("<div style='font-weight:600;color:#334155;font-size:13px;'>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>");
         sb.append("<div style='color:#64748b;margin-top:2px;'>College of Computing, Khon Kaen University</div>");
         sb.append("<div style='margin-top:6px;color:#64748b;'>123 ถนนมิตรภาพ ตำบลในเมือง อำเภอเมือง จังหวัดขอนแก่น 40002</div>");
-        sb.append("<div style='margin-top:4px;color:#64748b;'>โทรศัพท์: 043-009700 ต่อ 44456-59 | เว็บไซต์: <a href='https://computing.kku.ac.th' target='_blank' style='color:#2563eb;text-decoration:none;'>computing.kku.ac.th</a></div>");
+        sb.append("<div style='margin-top:4px;color:#64748b;'>โทรศัพท์: 043-009700 ต่อ 44456-59 | เว็บไซต์: <a href='https://computing.kku.ac.th' style='color:#2563eb;text-decoration:none;'>computing.kku.ac.th</a></div>");
         sb.append("</td></tr>");
-        
+
         sb.append("</table>");
+        sb.append("<!--[if mso]></td></tr></table><![endif]-->");
         sb.append("</td></tr></table>");
         sb.append("</body></html>");
         return sb.toString();
     }
+
+    private static final String FONT_STACK =
+            "\"Sarabun\",\"Prompt\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif";
+    private static final String HEADER_FONT_STACK =
+            "-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Prompt\",Helvetica,Arial,sans-serif";
+
+    /**
+     * A shaded box as a single table cell — Outlook for Windows drops padding and borders on a
+     * {@code <div>}, which is how these boxes were first written.
+     */
+    private static String boxOpen(String background, String border, String accent, String padding, String margin) {
+        return "<table role='presentation' width='100%' border='0' cellspacing='0' cellpadding='0' style='margin:" + margin + ";'>"
+                + "<tr><td bgcolor='" + background + "' style='background-color:" + background + ";border:1px solid " + border
+                + ";border-left:4px solid " + accent + ";border-radius:8px;padding:" + padding + ";font-size:14px;'>";
+    }
+
+    private static final String BOX_CLOSE = "</td></tr></table>";
 
     // =====================================================================
     // จดหมายแบบทางการ — ทุกอีเมลขึ้นต้น "เรื่อง / เรียน" บอกว่าเป็นเรื่องอะไร ต้องทำอะไร แล้วปิดท้ายแบบหนังสือราชการ
@@ -212,15 +252,15 @@ public final class EmailTemplateHelper {
 
         /** ตารางรายละเอียด แถวที่ค่าว่างไม่แสดง */
         public Letter details(java.util.Map<String, String> rows) {
-            sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1e3a8a;border-radius:8px;padding:14px 18px;margin:4px 0 18px 0;'>");
-            sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='4' style='font-size:14px;'>");
+            sb.append(boxOpen("#f8fafc", "#e2e8f0", "#1e3a8a", "14px 18px", "4px 0 18px 0"));
+            sb.append("<table role='presentation' width='100%' border='0' cellspacing='0' cellpadding='4' style='font-size:14px;'>");
             rows.forEach((label, value) -> {
                 if (value != null && !value.isBlank()) {
                     sb.append("<tr><td width='34%' valign='top' style='color:#64748b;font-weight:600;'>").append(escapeHtml(label))
                             .append("</td><td style='color:#1e293b;'>").append(escapeHtml(value)).append("</td></tr>");
                 }
             });
-            sb.append("</table></div>");
+            sb.append("</table>").append(BOX_CLOSE);
             return this;
         }
 
@@ -246,12 +286,12 @@ public final class EmailTemplateHelper {
                 case "success" -> new String[] { "#f0fdf4", "#bbf7d0", "#16a34a", "#166534" };
                 default -> new String[] { "#eff6ff", "#bfdbfe", "#2563eb", "#1e3a8a" };
             };
-            sb.append("<div style='background:").append(c[0]).append(";border:1px solid ").append(c[1])
-                    .append(";border-left:4px solid ").append(c[2]).append(";border-radius:8px;padding:12px 16px;margin:0 0 16px 0;font-size:14px;'>");
+            sb.append(boxOpen(c[0], c[1], c[2], "12px 16px", "0 0 16px 0"));
             if (heading != null && !heading.isBlank()) {
                 sb.append("<div style='font-weight:700;color:").append(c[3]).append(";margin-bottom:4px;'>").append(escapeHtml(heading)).append("</div>");
             }
-            sb.append("<div style='color:#1e293b;white-space:pre-wrap;'>").append(escapeHtml(text)).append("</div></div>");
+            // Line breaks as <br>: white-space:pre-wrap is ignored by Outlook and Samsung Email
+            sb.append("<div style='color:#1e293b;'>").append(withBreaks(text)).append("</div>").append(BOX_CLOSE);
             return this;
         }
 
@@ -261,15 +301,18 @@ public final class EmailTemplateHelper {
             return this;
         }
 
-        public Letter button(String label, String url) {
+        /**
+         * ที่อยู่ให้ผู้รับเปิดเอง เป็นลิงก์ตัวอักษรธรรมดา — อีเมลของระบบไม่มีปุ่ม
+         * แสดง URL เต็มให้เห็นว่าพาไปที่ไหน และคัดลอกได้ถ้าคลิกไม่ได้
+         */
+        public Letter link(String label, String url) {
             if (url == null || url.isBlank()) {
                 return this;
             }
-            sb.append("<div style='text-align:center;margin:22px 0 10px 0;'><a href='").append(escapeHtml(url))
-                    .append("' target='_blank' style='display:inline-block;background-color:#0d47a1;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;font-size:15px;'>")
-                    .append(escapeHtml(label)).append("</a></div>");
-            sb.append("<p style='font-size:12px;color:#94a3b8;text-align:center;margin:0 0 18px 0;word-break:break-all;'>หากปุ่มไม่ทำงาน กรุณาคัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์: ")
-                    .append(escapeHtml(url)).append("</p>");
+            String safe = escapeHtml(url);
+            sb.append("<p style='font-size:14px;color:#334155;margin:0 0 14px 0;text-indent:2.5em;'>")
+                    .append(escapeHtml(label)).append(": <a href='").append(safe)
+                    .append("' style='color:#1d4ed8;text-decoration:underline;'>").append(safe).append("</a></p>");
             return this;
         }
 
@@ -303,11 +346,11 @@ public final class EmailTemplateHelper {
      * @param name ชื่อสำหรับขึ้นต้นจดหมาย ({@link #formalName})
      */
     public static String buildOtpEmail(String name, String otp, String purposeText, int expiryMinutes) {
-        String code = "<div style='text-align:center;margin:8px 0 20px 0;'>"
-                + "<div style='display:inline-block;background:#f0f7ff;border:2px dashed #2563eb;border-radius:12px;padding:14px 36px;'>"
+        String code = "<table role='presentation' align='center' border='0' cellspacing='0' cellpadding='0' style='margin:8px auto 20px auto;'>"
+                + "<tr><td align='center' bgcolor='#f0f7ff' style='background-color:#f0f7ff;border:2px dashed #2563eb;border-radius:12px;padding:14px 36px;'>"
                 + "<div style='font-size:12px;color:#64748b;margin-bottom:4px;'>รหัสยืนยันตัวตน (OTP)</div>"
-                + "<span style='font-size:34px;font-weight:700;color:#1e3a8a;letter-spacing:6px;font-family:monospace;'>"
-                + escapeHtml(otp) + "</span></div></div>";
+                + "<div style='font-size:34px;font-weight:700;color:#1e3a8a;letter-spacing:6px;font-family:monospace;'>"
+                + escapeHtml(otp) + "</div></td></tr></table>";
         String body = Letter.of("รหัสยืนยันตัวตนสำหรับ" + purposeText, name)
                 .para("ตามที่ท่านได้ขอรหัสยืนยันตัวตน (OTP) สำหรับ" + purposeText
                         + " ในระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์ ขอแจ้งรหัสของท่าน ดังนี้")
@@ -327,8 +370,8 @@ public final class EmailTemplateHelper {
     public static String buildPasswordResetEmail(String name, String resetUrl) {
         String body = Letter.of("การตั้งรหัสผ่านใหม่", name == null ? "ผู้ใช้งานระบบ" : name)
                 .para("ระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์ ได้รับคำขอตั้งรหัสผ่านใหม่สำหรับบัญชีของท่าน"
-                        + " ท่านสามารถตั้งรหัสผ่านใหม่ได้โดยกดปุ่มด้านล่าง")
-                .button("ตั้งรหัสผ่านใหม่", resetUrl)
+                        + " ท่านสามารถตั้งรหัสผ่านใหม่ได้ที่ลิงก์ด้านล่าง")
+                .link("ตั้งรหัสผ่านใหม่", resetUrl)
                 .para("หากท่านไม่ได้ขอตั้งรหัสผ่านใหม่ บัญชีของท่านยังปลอดภัย ไม่ต้องดำเนินการใด ๆ")
                 .close("จึงเรียนมาเพื่อโปรดทราบ");
         return wrapLayout("การตั้งรหัสผ่านใหม่", "ความปลอดภัยของบัญชี", body);
@@ -409,32 +452,16 @@ public final class EmailTemplateHelper {
      */
     public static String buildResultLetterEmail(String applicantName, String requestCode, String memoNo,
             String issuedDate, String resultLevel, String expiryDate, String viewUrl) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
-          .append(escapeHtml(applicantName)).append("</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 16px 0;'>หนังสือแจ้งผลการประเมินผลการสอนตามคำร้องหมายเลข <strong>#")
-          .append(escapeHtml(requestCode)).append("</strong> ของท่านออกแล้ว ท่านเปิดดูและดาวน์โหลดหนังสือได้ในระบบ</p>");
-
-        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #2563eb;padding:16px 20px;border-radius:8px;margin:20px 0;font-size:14px;color:#1e293b;line-height:1.8;'>");
-        appendRow(sb, "เลขที่หนังสือ", memoNo);
-        appendRow(sb, "ลงวันที่", issuedDate);
-        appendRow(sb, "ผลการประเมิน", resultLevel);
-        appendRow(sb, "ใช้ประกอบการขอกำหนดตำแหน่งได้ภายในวันที่", expiryDate);
-        sb.append("</div>");
-
-        sb.append("<div style='text-align:center;margin:30px 0;'>");
-        sb.append("<a href='").append(escapeHtml(viewUrl)).append("' target='_blank' style='background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;text-decoration:none;padding:14px 32px;font-size:15px;font-weight:600;border-radius:8px;display:inline-block;box-shadow:0 4px 12px rgba(37,99,235,0.25);'>เปิดดูหนังสือแจ้งผล</a>");
-        sb.append("</div>");
-
-        return wrapLayout("หนังสือแจ้งผลการประเมินผลการสอน", "ออกหนังสือแล้ว", sb.toString());
-    }
-
-    private static void appendRow(StringBuilder sb, String label, String value) {
-        if (value == null || value.isBlank()) {
-            return;
-        }
-        sb.append("<div><span style='color:#64748b;'>").append(escapeHtml(label)).append(":</span> <strong>")
-          .append(escapeHtml(value)).append("</strong></div>");
+        String body = Letter.of("หนังสือแจ้งผลการประเมินผลการสอน (รหัส " + requestCode + ")", applicantName)
+                .para("หนังสือแจ้งผลการประเมินผลการสอนตามคำร้องรหัส " + requestCode
+                        + " ของท่านออกแล้ว ท่านเปิดดูและดาวน์โหลดหนังสือได้ในระบบ รายละเอียดดังนี้")
+                .details(rows("เลขที่หนังสือ", memoNo,
+                        "ลงวันที่", issuedDate,
+                        "ผลการประเมิน", resultLevel,
+                        "ใช้ประกอบการขอกำหนดตำแหน่งได้ภายในวันที่", expiryDate))
+                .link("เปิดดูหนังสือแจ้งผล", viewUrl)
+                .close("จึงเรียนมาเพื่อโปรดทราบ");
+        return wrapLayout("หนังสือแจ้งผลการประเมินผลการสอน", "ออกหนังสือแล้ว", body);
     }
 
     /**
@@ -460,7 +487,7 @@ public final class EmailTemplateHelper {
             }
             for (java.util.Map.Entry<String, String> link : links) {
                 list.append("<li><a href='").append(escapeHtml(link.getValue()))
-                        .append("' target='_blank' style='color:#2563eb;'>").append(escapeHtml(link.getKey())).append("</a></li>");
+                        .append("' style='color:#2563eb;'>").append(escapeHtml(link.getKey())).append("</a></li>");
             }
             list.append("</ul>");
         }
@@ -475,7 +502,7 @@ public final class EmailTemplateHelper {
                         "สิ่งที่แนบมาด้วย", "หนังสือเชิญเป็นกรรมการผู้ทรงคุณวุฒิ (ไฟล์แนบ)"))
                 .html(list.toString());
         if (!files.isEmpty()) {
-            letter.button("เปิดดูเอกสารของผู้ขอรับการประเมิน", filesUrl)
+            letter.link("เปิดดูเอกสารของผู้ขอรับการประเมิน", filesUrl)
                     .para("การเปิดดูเอกสาร ท่านต้องเข้าสู่ระบบด้วยอีเมลที่ได้รับหนังสือฉบับนี้");
         }
         String body = letter
@@ -509,7 +536,7 @@ public final class EmailTemplateHelper {
             }
             for (java.util.Map.Entry<String, String> link : links) {
                 list.append("<li><a href='").append(escapeHtml(link.getValue()))
-                        .append("' target='_blank' style='color:#2563eb;'>").append(escapeHtml(link.getKey())).append("</a></li>");
+                        .append("' style='color:#2563eb;'>").append(escapeHtml(link.getKey())).append("</a></li>");
             }
             list.append("</ul>");
         }
@@ -524,7 +551,7 @@ public final class EmailTemplateHelper {
                         "สถานที่", location == null || location.isBlank() ? "-" : location))
                 .html(list.toString());
         if (!files.isEmpty()) {
-            letter.button("เปิดดูเอกสารฉบับแก้ไข", filesUrl)
+            letter.link("เปิดดูเอกสารฉบับแก้ไข", filesUrl)
                     .para("การเปิดดูเอกสาร ท่านต้องเข้าสู่ระบบด้วยอีเมลที่ได้รับหนังสือฉบับนี้");
         }
         String body = letter
@@ -558,8 +585,9 @@ public final class EmailTemplateHelper {
                 .details(rows("เหตุการณ์", (levelIcon != null && !levelIcon.isBlank() ? levelIcon + " " : "") + heading,
                         "ส่วนของระบบ", source,
                         "เวลา", timestamp))
-                .html("<div style='background:#ffffff;border:1px solid #cbd5e1;padding:12px;border-radius:6px;font-size:13px;color:#334155;white-space:pre-wrap;font-family:monospace;margin:0 0 16px 0;'>"
-                        + escapeHtml(detail) + "</div>")
+                .html(boxOpen("#ffffff", "#cbd5e1", "#cbd5e1", "12px", "0 0 16px 0")
+                        + "<div style='font-size:13px;color:#334155;font-family:monospace;'>" + withBreaks(detail) + "</div>"
+                        + BOX_CLOSE)
                 .para("ขอให้ตรวจสอบสาเหตุและดำเนินการแก้ไขตามความเหมาะสม")
                 .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
         return wrapLayout("แจ้งเหตุขัดข้องของระบบ", source, body);
@@ -597,6 +625,11 @@ public final class EmailTemplateHelper {
                         "เวลาที่ส่ง", timestamp + " (เวลาประเทศไทย)"))
                 .close("จึงเรียนมาเพื่อโปรดทราบ");
         return wrapLayout("ทดสอบการส่งอีเมล", "ตรวจสอบระบบ", body);
+    }
+
+    /** Escaped text with its line breaks kept as {@code <br>}. */
+    private static String withBreaks(String text) {
+        return escapeHtml(text).replace("\r\n", "\n").replace("\n", "<br>");
     }
 
     private static String escapeHtml(String text) {

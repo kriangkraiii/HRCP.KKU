@@ -18,6 +18,15 @@ public enum RequestStatus {
     /** ข้อ 1 — หน่วยสารบรรณรับเรื่อง */
     RECEIVED("รับคำร้อง", "fa-file-signature", "#1565c0"),
 
+    /**
+     * เจ้าหน้าที่ส่งเอกสารของผู้ยื่นกลับให้แก้ — ลูกอยู่ที่ผู้ยื่น งานของขั้นเดิมหยุดรอ
+     *
+     * <p>ขั้นเดิมเก็บไว้ที่ {@code AcademicRequest.statusBeforeRevision} แก้และลงนามใหม่ครบแล้วกลับไปขั้นนั้นเอง
+     * ส่งกลับได้เฉพาะก่อนมีผลประเมิน ({@link #revisableStatuses()}) — หลังจากนั้นสถานะคงเดิม
+     * แต่ยังแสดงว่ามีเอกสารรอผู้ยื่นแก้ ({@code RevisionProgress})
+     */
+    DOCUMENT_REVISION("ส่งแก้ไขเอกสาร", "fa-circle-exclamation", "#f57f17"),
+
     /** ข้อ 3-4 — คณบดีเสนอรายชื่ออนุกรรมการ 3 คน และลงนามคำสั่งแต่งตั้ง */
     SUB_COMMITTEE_APPOINTED("แต่งตั้งอนุกรรมการ", "fa-users-cog", "#e65100"),
 
@@ -82,6 +91,7 @@ public enum RequestStatus {
     /** ป้ายสั้นสำหรับชิปบนแถบสถานะหน้าแอดมิน — ป้ายเต็มยาวจนตัดหลายบรรทัด */
     public String getShortLabel() {
         return switch (this) {
+            case DOCUMENT_REVISION -> "รอผู้ยื่นแก้ไขเอกสาร";
             case MEETING_SCHEDULED -> "นัดหมายอนุกรรมการ";
             case COMPLETED_PASS -> "ผ่าน · รอรับรอง";
             case COMPLETED_REVISE -> "รอผู้ยื่นแก้ไข";
@@ -115,7 +125,12 @@ public enum RequestStatus {
 
     /** แถบสถานะหน้าแอดมิน: ลูกอยู่ที่ผู้ยื่น (ข้อ 12-13) */
     public static List<RequestStatus> awaitingApplicant() {
-        return List.of(COMPLETED_REVISE);
+        return List.of(DOCUMENT_REVISION, COMPLETED_REVISE);
+    }
+
+    /** สถานะที่ส่งเอกสารกลับให้ผู้ยื่นแก้แล้วเปลี่ยนเป็น {@link #DOCUMENT_REVISION} ได้ — ก่อนมีผลประเมิน */
+    public static Set<RequestStatus> revisableStatuses() {
+        return EnumSet.of(RECEIVED, SUB_COMMITTEE_APPOINTED, MEETING_SCHEDULED, REVISION_SUBMITTED);
     }
 
     /** แถบสถานะหน้าแอดมิน: ปิดแล้ว */
@@ -138,15 +153,17 @@ public enum RequestStatus {
         return switch (this) {
             case DRAFT -> EnumSet.of(RECEIVED);
             // ข้อ 2 — คณบดีไม่เห็นชอบ: ส่งคืนให้ผู้ยื่นแก้แล้วยื่นใหม่ (กลับไปข้อ 1)
-            case RECEIVED -> EnumSet.of(SUB_COMMITTEE_APPOINTED, DRAFT);
-            case SUB_COMMITTEE_APPOINTED -> EnumSet.of(MEETING_SCHEDULED);
+            case RECEIVED -> EnumSet.of(SUB_COMMITTEE_APPOINTED, DRAFT, DOCUMENT_REVISION);
+            case SUB_COMMITTEE_APPOINTED -> EnumSet.of(MEETING_SCHEDULED, DOCUMENT_REVISION);
             case MEETING_SCHEDULED ->
-                EnumSet.of(COMPLETED_PASS, COMPLETED_REVISE, SUBCOMMITTEE_FAIL);
+                EnumSet.of(COMPLETED_PASS, COMPLETED_REVISE, SUBCOMMITTEE_FAIL, DOCUMENT_REVISION);
+            // กลับไปขั้นที่ส่งกลับมา — ขั้นไหนในชุดนี้ AcademicRequestService ตัดสินจาก statusBeforeRevision
+            case DOCUMENT_REVISION -> revisableStatuses();
             // ข้อ 9-10 — ผลจากอนุกรรมการต้องผ่านการรับรองของกรรมการประจำวิทยาลัยฯ ก่อนแจ้งผล
             case COMPLETED_PASS -> EnumSet.of(COLLEGE_ENDORSED);
             // ข้อ 12-15 — วงจรแก้ไข: ผู้ยื่นส่งกลับ แล้ววนเข้าที่ประชุมอนุกรรมการอีกรอบ
             case COMPLETED_REVISE -> EnumSet.of(REVISION_SUBMITTED);
-            case REVISION_SUBMITTED -> EnumSet.of(MEETING_SCHEDULED);
+            case REVISION_SUBMITTED -> EnumSet.of(MEETING_SCHEDULED, DOCUMENT_REVISION);
             case COLLEGE_ENDORSED -> EnumSet.of(COMPLETED);
             // 1669/2569 ข้อ 10.3 — ผลไม่ผ่านก็ต้องผ่านการรับรองของกรรมการประจำวิทยาลัยฯ ก่อนแจ้งผล
             case SUBCOMMITTEE_FAIL -> EnumSet.of(COLLEGE_ENDORSED_FAIL);
@@ -185,6 +202,8 @@ public enum RequestStatus {
     public int progressIndex() {
         RequestStatus onMainPath = switch (this) {
             case DRAFT -> null;
+            // ขั้นจริงอยู่ที่ AcademicRequest.getProgressStatus() — enum ไม่รู้ว่าส่งกลับมาจากขั้นไหน
+            case DOCUMENT_REVISION -> RECEIVED;
             case COMPLETED_REVISE, REVISION_SUBMITTED, SUBCOMMITTEE_FAIL, COLLEGE_ENDORSED_FAIL, COMPLETED_FAIL,
                     APPEAL_SUBMITTED -> MEETING_SCHEDULED;
             default -> this;
@@ -225,7 +244,7 @@ public enum RequestStatus {
             return ProgressStepState.PENDING;
         }
         return switch (this) {
-            case COMPLETED_REVISE, REVISION_SUBMITTED, APPEAL_SUBMITTED -> ProgressStepState.REVISE;
+            case COMPLETED_REVISE, REVISION_SUBMITTED, APPEAL_SUBMITTED, DOCUMENT_REVISION -> ProgressStepState.REVISE;
             case SUBCOMMITTEE_FAIL, COLLEGE_ENDORSED_FAIL, COMPLETED_FAIL -> ProgressStepState.REJECTED;
             default -> ProgressStepState.CURRENT;
         };
@@ -247,6 +266,7 @@ public enum RequestStatus {
         return switch (this) {
             case DRAFT, COMPLETED -> null;
             case MEETING_SCHEDULED -> "รอผลการประชุม";
+            case DOCUMENT_REVISION -> "รอผู้ยื่นแก้ไขเอกสาร";
             case COMPLETED_REVISE -> "รอผู้ยื่นแก้ไข";
             case REVISION_SUBMITTED -> "ส่งแก้ไขแล้ว · รอพิจารณารอบใหม่";
             case SUBCOMMITTEE_FAIL -> "ไม่ผ่าน · รอกรรมการประจำวิทยาลัยฯ รับรอง";

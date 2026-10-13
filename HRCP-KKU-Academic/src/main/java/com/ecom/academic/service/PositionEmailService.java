@@ -11,7 +11,6 @@ import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.repository.PositionRequestRepository;
 import com.ecom.model.UserDtls;
-import com.ecom.repository.UserRepository;
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -19,18 +18,19 @@ import jakarta.mail.internet.MimeMessage;
 public class PositionEmailService {
 
     private final JavaMailSender mailSender;
-    private final UserRepository userRepository;
     private final com.ecom.service.NotificationService notificationService;
+    private final com.ecom.service.OfficerRecipients officerRecipients;
     private final PositionRequestRepository requestRepository;
 
     @org.springframework.beans.factory.annotation.Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
     private String senderEmail;
 
-    public PositionEmailService(JavaMailSender mailSender, UserRepository userRepository,
+    public PositionEmailService(JavaMailSender mailSender,
             com.ecom.service.NotificationService notificationService,
-            PositionRequestRepository requestRepository) {
+            PositionRequestRepository requestRepository,
+            com.ecom.service.OfficerRecipients officerRecipients) {
+        this.officerRecipients = officerRecipients;
         this.mailSender = mailSender;
-        this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.requestRepository = requestRepository;
     }
@@ -125,7 +125,7 @@ public class PositionEmailService {
             }
 
             // 2. Send email to admins who opted-in
-            List<UserDtls> admins = userRepository.findByRole("ROLE_ADMIN");
+            List<UserDtls> admins = officerRecipients.officers();
             for (UserDtls admin : admins) {
                 if (Boolean.FALSE.equals(admin.getIsEnable())) {
                     continue;

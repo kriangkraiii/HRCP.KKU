@@ -198,7 +198,8 @@ public class DashboardAnalyticsService {
         long failed = countOf(acad, RequestStatus.SUBCOMMITTEE_FAIL, RequestStatus.COLLEGE_ENDORSED_FAIL,
                 RequestStatus.COMPLETED_FAIL);
 
-        long revising = countOf(acad, RequestStatus.COMPLETED_REVISE, RequestStatus.REVISION_SUBMITTED)
+        long revising = countOf(acad, RequestStatus.COMPLETED_REVISE, RequestStatus.REVISION_SUBMITTED,
+                        RequestStatus.DOCUMENT_REVISION)
                       + countOf(pos, PositionRequestStatus.REVISION_REQUESTED);
 
         Map<String, Long> dist = new LinkedHashMap<>();

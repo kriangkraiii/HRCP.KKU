@@ -63,6 +63,8 @@ public class DocumentRevisionRouter {
         try {
             if (module == SignatureModule.ACADEMIC) {
                 academicRequestService.openDocumentForRevision(requestId, documentType, note);
+                // เหมือนเจ้าหน้าที่กดส่งกลับ (AcademicAdminController) — คำร้องเป็น "ส่งแก้ไขเอกสาร"
+                academicRequestService.markRevisionRequested(requestId, documentType, null, historyNote);
             } else {
                 positionRequestService.openDocumentForRevision(requestId, documentType, note);
                 // เหมือนเจ้าหน้าที่กดส่งกลับ (PositionAdminController) — คำร้องเป็น "ส่งแก้ไข" ลูกอยู่ที่ผู้ยื่น

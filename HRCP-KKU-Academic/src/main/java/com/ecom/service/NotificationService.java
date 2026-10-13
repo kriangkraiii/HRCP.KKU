@@ -21,7 +21,6 @@ import com.ecom.model.Notification;
 import com.ecom.model.NotificationType;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.NotificationRepository;
-import com.ecom.repository.UserRepository;
 
 @Service
 @Transactional
@@ -30,11 +29,11 @@ public class NotificationService {
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
     private final NotificationRepository notificationRepository;
-    private final UserRepository userRepository;
+    private final OfficerRecipients officerRecipients;
 
-    public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository) {
+    public NotificationService(NotificationRepository notificationRepository, OfficerRecipients officerRecipients) {
         this.notificationRepository = notificationRepository;
-        this.userRepository = userRepository;
+        this.officerRecipients = officerRecipients;
     }
 
     // ================= Send Notifications =================
@@ -65,7 +64,7 @@ public class NotificationService {
      */
     public void notifyAdmins(UserDtls actor, String title, String message, String link, NotificationType type, Boolean isImportant) {
         try {
-            List<UserDtls> admins = userRepository.findByRole("ROLE_ADMIN");
+            List<UserDtls> admins = officerRecipients.officers();
             for (UserDtls admin : admins) {
                 if (Boolean.FALSE.equals(admin.getIsEnable())) {
                     continue; // Skip inactive admins

@@ -49,6 +49,7 @@ class SentBackStatusShownTest extends AbstractFlowTest {
         request = data.evaluation(applicant, RequestStatus.RECEIVED);
         data.academicDocument(request, 1, "{}");
         academicService.openDocumentForRevision(request.getId(), 1, "แก้ชื่อรายวิชา");
+        academicService.markRevisionRequested(request.getId(), 1, officer, "แก้ชื่อรายวิชา");
     }
 
     private Document page(String url, UserDtls who, String role) throws Exception {
@@ -88,7 +89,10 @@ class SentBackStatusShownTest extends AbstractFlowTest {
         assertThat(detail.select("#nextStep h5").text()).contains("รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับ");
 
         Document list = page("/admin/academic/requests", officer, "ADMIN");
-        assertThat(list.select("#req-" + request.getId() + " .at-status").text()).contains(AWAITING);
+        assertThat(list.select("#req-" + request.getId() + " .at-status").text())
+                .contains("ส่งแก้ไขเอกสาร").contains(AWAITING);
+        // ตัวกรองหน้าแอดมิน: อยู่กลุ่ม "รอผู้ยื่น"
+        assertThat(list.select("a[href*=status=DOCUMENT_REVISION]")).isNotEmpty();
     }
 
     /** หลังรับรองมติกลั่นกรองฯ flow ไม่ให้เปลี่ยนเป็น "ส่งแก้ไข" — สถานะคงเดิม แต่ที่แสดงต้องบอกว่ารอผู้ยื่น */

@@ -1790,7 +1790,8 @@ body.modal-open .sidebar-toggle {
   color: var(--color-success, #2e7d32);
 }
 
-.status-COMPLETED_REVISE {
+.status-COMPLETED_REVISE,
+.status-DOCUMENT_REVISION {
   background: var(--status-revise-bg, #fff8e1);
   color: var(--color-warning, #f57f17);
 }
@@ -3926,6 +3927,7 @@ body.modal-open .sidebar-toggle {
 }
 
 .admin-table .at-status-completed_revise,
+.admin-table .at-status-document_revision,
 .admin-table .at-status-revision_requested {
   background-color: #f57f17 !important;
 }

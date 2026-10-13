@@ -478,7 +478,13 @@ public class AcademicAdminController {
         // Only the moves the process allows from where this request stands.
         // Offering the whole list invited exactly the mistake the guard now
         // refuses, and left the officer to find out from an error message.
-        model.addAttribute("allowedNextStatuses", request.getCurrentStatus().allowedNext());
+        // "ส่งแก้ไขเอกสาร" เกิดจากปุ่มส่งกลับในหน้าเอกสารเท่านั้น และออกได้ทางเดียวคือกลับขั้นที่ส่งกลับมา
+        model.addAttribute("allowedNextStatuses", request.getCurrentStatus() == RequestStatus.DOCUMENT_REVISION
+                && request.getStatusBeforeRevision() != null
+                        ? java.util.Set.of(request.getStatusBeforeRevision())
+                        : request.getCurrentStatus().allowedNext().stream()
+                                .filter(s -> s != RequestStatus.DOCUMENT_REVISION)
+                                .toList());
         // เอกสารที่ส่งกลับให้แก้แล้วยังลงนามใหม่ไม่ครบ — ฟอร์มสถานะบอกไว้ก่อนเจ้าหน้าที่กดแล้วโดนปฏิเสธ
         model.addAttribute("awaitingResignDocs", requestService.documentsAwaitingResign(id).stream()
                 .map(t -> "เอกสารที่ " + t + " " + requestService.getDocLabel(t)).toList());
@@ -489,7 +495,7 @@ public class AcademicAdminController {
 
         // Progress percentage
         RequestStatus[] steps = RequestStatus.getProgressSteps();
-        int currentIdx = Math.max(0, request.getCurrentStatus().progressIndex());
+        int currentIdx = Math.max(0, request.getProgressStatus().progressIndex());
         int progressPercent = steps.length > 1 ? (currentIdx * 100) / (steps.length - 1) : 0;
         model.addAttribute("progressPercent", progressPercent);
 
@@ -524,7 +530,8 @@ public class AcademicAdminController {
         // การส่งกลับไม่เปลี่ยนสถานะ — เอกสารที่ส่งกลับยังค้าง (รวมฉบับที่ไม่มีช่องลงนามของผู้ยื่น) ขึ้นก่อนงานของขั้น
         java.util.Set<Integer> sentBackDocs = new java.util.TreeSet<>(requestService.documentsAwaitingResign(id));
         sentBackDocs.addAll(sentBack.documents().keySet());
-        model.addAttribute("nextStep", com.ecom.academic.service.NextStepGuide.academic(request.getCurrentStatus(),
+        // ระหว่างส่งแก้ไขเอกสาร งานของขั้นที่ส่งกลับมายังอยู่ (ทำต่อได้บางข้อ) งานแก้ไขขึ้นก่อน
+        model.addAttribute("nextStep", com.ecom.academic.service.NextStepGuide.academic(request.getProgressStatus(),
                 DOC_LABELS, docProgress, requestService.appealDeadline(id), sentBackDocs,
                 sentBack.documents().values().stream()
                         .filter(d -> d.stage() == com.ecom.academic.service.RevisionProgress.Stage.SUBMITTED)
@@ -1051,6 +1058,7 @@ public class AcademicAdminController {
         // การยกเลิกซองลงนามอย่างเดียวไม่พอ เพราะเอกสารที่ไม่มีช่องลงนามของผู้ยื่น
         // จะไม่มีซองให้ยกเลิกตั้งแต่แรก
         requestService.openDocumentForRevision(id, type, reason);
+        requestService.markRevisionRequested(id, type, admin, reason);
         requestService.findById(id).ifPresent(r -> requestService.logDocumentChange(r, type,
                 reason != null && !reason.isBlank() ? "เหตุผล: " + reason : null, admin,
                 AcademicDocumentEditLog.EditAction.RESIGN_REQUESTED));
