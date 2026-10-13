@@ -241,6 +241,30 @@
 				}
 			});
 		}
+
+		// SSO redirect waits on the KKU SSO server; keep the spinner until the browser actually leaves this page
+		var ssoBtn = document.getElementById('ssoLoginBtn');
+		if (ssoBtn) {
+			var ssoBtnHtml = ssoBtn.innerHTML;
+			ssoBtn.addEventListener('click', function (e) {
+				// Let ctrl/cmd/shift-click open a new tab without locking this button
+				if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+				if (ssoBtn.classList.contains('is-loading')) {
+					e.preventDefault();
+					return;
+				}
+				ssoBtn.classList.add('is-loading');
+				ssoBtn.setAttribute('aria-busy', 'true');
+				ssoBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> กำลังเชื่อมต่อ KKU SSO...';
+			});
+			// Back button restores this page from bfcache with the spinner still showing
+			window.addEventListener('pageshow', function (e) {
+				if (!e.persisted) return;
+				ssoBtn.classList.remove('is-loading');
+				ssoBtn.removeAttribute('aria-busy');
+				ssoBtn.innerHTML = ssoBtnHtml;
+			});
+		}
 	</script>
 	<script src="/js/guest-alert.js"></script>
 </body>
