@@ -1898,6 +1898,14 @@ public class DocumentGenerationService {
      * มข. พ.ศ. 2569 ข้อ 3.1) — ติ๊กผู้นิพนธ์ร่วมไว้ สองช่องแรกพิมพ์เป็นช่องว่าง ช่องที่ไม่ได้ติ๊กพิมพ์เป็นกล่องว่าง
      */
     public static void normalizePhase2(int documentType, Map<String, String> placeholders) {
+        if (documentType == 1) {
+            String printed = AcademicRankPolicy.printedMethod(placeholders.get("method"),
+                    AcademicRank.of(placeholders.get("target_position")), placeholders.get("works_method"));
+            if (printed != null) {
+                placeholders.put("method", printed);
+            }
+            return;
+        }
         if (documentType == 7) {
             // ฟอร์มส่งจริยธรรมการวิจัยเป็นปุ่มเลือก (have / not_have) ส่วนเอกสารเป็นช่องติ๊ก "มี" กับ "ไม่มี"
             String ethics = trimmed(placeholders.get("ethics_status"));

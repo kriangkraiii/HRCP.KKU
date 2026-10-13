@@ -63,12 +63,47 @@
                                 <!--/* ตำแหน่งที่ขอตั้งไว้ตั้งแต่สร้างคำร้อง (ตามผลประเมินการสอน หรือ ศ.) แก้ในฟอร์มไม่ได้ */-->
                                 <input type="hidden" name="target_position" th:if="${request.targetPosition != null}" th:value="${request.targetPosition}">
                             </div>
+                            <!--/* วิธีการ — ข้อบังคับ มข. พ.ศ. 2569 ข้อ 15, 18 เป็นปุ่มเลือก ไม่ใช่ select เพราะ select_to_datalist.js
+                                 แปลง select ทุกตัวเป็นช่องพิมพ์อิสระ คำร้องที่ข้ามขั้นระบบตรึงเป็นวิธีพิเศษ (PositionRequestService.lockedFields) */-->
                             <div class="col-md-4">
-                                <label class="form-label">วิธีการ <span class="text-danger">*</span></label>
-                                <select name="method" class="form-select" required>
-                                    <option value="ปกติ">ปกติ</option>
-                                    <option value="พิเศษ">พิเศษ</option>
-                                </select>
+                                <label class="form-label">วิธีการ <span class="text-danger">*</span><th:block
+                                        th:if="${lockedFields != null and lockedFields.containsKey('method')}"><span
+                                        th:replace="~{academic/_info_tip :: tip('ตำแหน่งที่ขอข้ามขั้นจากตำแหน่งปัจจุบัน จึงต้องขอโดยวิธีพิเศษ (ข้อบังคับ มข. พ.ศ. 2569 ข้อ 18)')}"></span></th:block><th:block
+                                        th:unless="${lockedFields != null and lockedFields.containsKey('method')}"><span
+                                        th:replace="~{academic/_info_tip :: tip('เลือกวิธีพิเศษเมื่อดำรงตำแหน่งยังไม่ครบระยะเวลาที่กำหนด หรือขอในสาขาวิชาที่ต่างจากที่ดำรงอยู่ (ข้อบังคับ มข. พ.ศ. 2569 ข้อ 18)')}"></span></th:block></label>
+                                <input th:if="${lockedFields != null and lockedFields.containsKey('method')}" type="text" name="method"
+                                       class="form-control" readonly th:value="${lockedFields['method']}">
+                                <div th:unless="${lockedFields != null and lockedFields.containsKey('method')}" class="pt-1">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="method" id="methodNormal" value="ปกติ" checked required>
+                                        <label class="form-check-label" for="methodNormal">ปกติ</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="method" id="methodSpecial" value="พิเศษ">
+                                        <label class="form-check-label" for="methodSpecial">พิเศษ</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--/* วิธีเสนอผลงาน — เฉพาะขอ รศ./ศ. (ผศ. ไม่แบ่งวิธี) วิธีที่ ๓ ชะลอการใช้ (ข้อ ๔๐) จึงไม่มีให้เลือก
+                                 วิธีพิเศษเสนอได้เฉพาะวิธีที่ ๑ (ข้อ 18.2, 18.3) — แสดง/ซ่อนตามตำแหน่งที่ขอในสคริปต์ด้านล่าง */-->
+                            <div class="col-md-4" id="worksMethodGroup" style="display:none">
+                                <label class="form-label">เสนอผลงานตาม <span class="text-danger">*</span><span
+                                        th:replace="~{academic/_info_tip :: tip('เกณฑ์ผลงานของแต่ละวิธีดูได้ที่หัวข้อผลงานทางวิชาการด้านล่าง วิธีที่ ๓ ชะลอการใช้ตามข้อบังคับ ข้อ ๔๐')}"></span></label>
+                                <th:block th:if="${lockedFields != null and lockedFields.containsKey('works_method')}">
+                                    <input type="text" class="form-control" readonly value="วิธีที่ ๑ (วิธีพิเศษ)">
+                                    <input type="hidden" name="works_method" th:value="${lockedFields['works_method']}">
+                                </th:block>
+                                <div th:unless="${lockedFields != null and lockedFields.containsKey('works_method')}" class="pt-1">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input works-method-radio" type="radio" name="works_method" id="worksMethod1" value="1">
+                                        <label class="form-check-label" for="worksMethod1">วิธีที่ ๑</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input works-method-radio" type="radio" name="works_method" id="worksMethod2" value="2">
+                                        <label class="form-check-label" for="worksMethod2">วิธีที่ ๒</label>
+                                    </div>
+                                    <div class="form-text d-none" id="worksMethodSpecialHint">วิธีพิเศษเสนอผลงานได้เฉพาะวิธีที่ ๑ (ข้อ 18.2, 18.3)</div>
+                                </div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">สาขาวิชา <span class="text-danger">*</span></label>
@@ -824,12 +859,33 @@
             // nothing at all: no section ever appeared, so the whole ผลงานทางวิชาการ
             // part of the form — research rows, books, the Scopus buttons — stayed
             // invisible whichever position was chosen.
+            // วิธีพิเศษ → ผลงานวิธีที่ ๑ เท่านั้น (ข้อ 18.2, 18.3) — server ตรวจซ้ำตอนส่งลงนาม
+            function syncWorksMethod() {
+                var special = document.getElementById('methodSpecial');
+                var w1 = document.getElementById('worksMethod1');
+                var w2 = document.getElementById('worksMethod2');
+                var hint = document.getElementById('worksMethodSpecialHint');
+                if (!special || !w1 || !w2) return;
+                w2.disabled = special.checked;
+                if (special.checked) w1.checked = true;
+                if (hint) hint.classList.toggle('d-none', !special.checked);
+            }
+            document.addEventListener('change', function(e) {
+                if (e.target && e.target.name === 'method') syncWorksMethod();
+            });
+
             document.addEventListener('change', function(e) {
                 if (!e.target || e.target.id !== 'targetPos') return;
                 const val = e.target.value;
                 document.getElementById('sectionAsst').style.display = (val === 'ผู้ช่วยศาสตราจารย์') ? '' : 'none';
                 document.getElementById('sectionAssoc').style.display = (val === 'รองศาสตราจารย์') ? '' : 'none';
                 document.getElementById('sectionProf').style.display = (val === 'ศาสตราจารย์') ? '' : 'none';
+
+                // วิธีเสนอผลงานมีเฉพาะ รศ./ศ.
+                var needsWorksMethod = (val === 'รองศาสตราจารย์' || val === 'ศาสตราจารย์');
+                document.getElementById('worksMethodGroup').style.display = needsWorksMethod ? '' : 'none';
+                document.querySelectorAll('.works-method-radio').forEach(function (el) { el.required = needsWorksMethod; });
+                syncWorksMethod();
 
                 // ๒.๓/๒.๔ ถามถึงตำแหน่งที่ "เคยดำรง" มาแล้ว ผู้ขอ ผศ. จึงยังไม่เคยเป็น
                 // ทั้ง ผศ. และ รศ. — ซ่อนข้อที่ไม่เกี่ยวไว้ ช่องที่ไม่ได้กรอกจะพิมพ์

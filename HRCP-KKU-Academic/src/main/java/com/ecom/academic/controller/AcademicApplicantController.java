@@ -384,8 +384,6 @@ public class AcademicApplicantController {
         model.addAttribute("currentRank", currentRank);
         model.addAttribute("assistantBlocked", !AcademicRank.ASSISTANT_PROFESSOR.isAbove(currentRank));
         model.addAttribute("associateBlocked", !AcademicRank.ASSOCIATE_PROFESSOR.isAbove(currentRank));
-        model.addAttribute("associateDisabled", AcademicRankPolicy
-                .evaluationTargetViolation(currentRank, AcademicRank.ASSOCIATE_PROFESSOR).isPresent());
         model.addAttribute("isAssociateProfessor", currentRank == AcademicRank.ASSOCIATE_PROFESSOR);
         model.addAttribute("isProfessor", currentRank == AcademicRank.PROFESSOR);
 
@@ -1410,7 +1408,7 @@ public class AcademicApplicantController {
     }
 
     /**
-     * ขอประเมินการสอนเพื่อตำแหน่งที่ถืออยู่แล้วหรือต่ำกว่าไม่ได้ และอาจารย์ขอได้เฉพาะ ผศ. — ตำแหน่งปัจจุบันยึดช่อง
+     * ขอประเมินการสอนเพื่อตำแหน่งที่ถืออยู่แล้วหรือต่ำกว่าไม่ได้ — ตำแหน่งปัจจุบันยึดช่อง
      * {@code current_position} ของเอกสารที่ 1 ก่อน แล้วค่อยโปรไฟล์
      */
     private Optional<String> doc1RankProblem(Map<String, String> doc1, UserDtls user) {
@@ -1422,7 +1420,7 @@ public class AcademicApplicantController {
         if (current == AcademicRank.ASSOCIATE_PROFESSOR) {
             return Optional.of("ท่านดำรงตำแหน่งรองศาสตราจารย์แล้ว การขอกำหนดตำแหน่งศาสตราจารย์ (ศ.) ไม่ต้องผ่านการประเมินผลการสอน");
         }
-        return AcademicRankPolicy.evaluationTargetViolation(current, AcademicRank.fromDoc1Checks(doc1));
+        return AcademicRankPolicy.rankViolation(current, AcademicRank.fromDoc1Checks(doc1));
     }
 
     /** ข้อมูลฟอร์มที่บันทึกไว้ของเอกสารประเภทนี้ หรือ null ถ้ายังไม่มี */

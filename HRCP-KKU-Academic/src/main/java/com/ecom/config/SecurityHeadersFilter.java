@@ -222,10 +222,11 @@ public class SecurityHeadersFilter implements Filter {
                                 + "https://translate.googleapis.com https://translate-pa.googleapis.com; "
                                 // Fonts and third-party libraries are self-hosted under /vendor, so no CDN
                                 // host is allowed (a third-party stylesheet/script cannot carry SRI reliably)
-                                + "style-src 'self' 'nonce-" + nonce + "' https://translate.googleapis.com; "
+                                + "style-src 'self' 'nonce-" + nonce + "' https://translate.googleapis.com "
+                                + "https://www.gstatic.com; "
                                 + "font-src 'self' data:; "
                                 + "img-src 'self' data: blob: https://translate.google.com "
-                                + "https://www.google.com https://*.gstatic.com; "
+                                + "https://translate.googleapis.com https://www.google.com https://*.gstatic.com; "
                                 + "connect-src 'self' https://translate.googleapis.com "
                                 + "https://translate-pa.googleapis.com; "
                                 + "worker-src 'self' blob:; "

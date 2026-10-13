@@ -102,31 +102,61 @@ class AcademicRankPolicyTest {
     }
 
     @Nested
-    @DisplayName("ตำแหน่งที่ขอประเมินการสอน — อาจารย์ขอได้เฉพาะ ผศ.")
-    class EvaluationTarget {
+    @DisplayName("วิธีพิเศษ — ข้อบังคับ มข. พ.ศ. 2569 ข้อ 18")
+    class SpecialMethod {
 
         @Test
-        @DisplayName("อาจารย์ ขอประเมินเพื่อ รศ. — ไม่ได้")
-        void aLecturerCannotSkipToAssociate() {
-            assertThat(AcademicRankPolicy.evaluationTargetViolation(
-                    AcademicRank.LECTURER, AcademicRank.ASSOCIATE_PROFESSOR))
-                    .hasValueSatisfying(message -> assertThat(message).contains("ผู้ช่วยศาสตราจารย์"));
+        @DisplayName("ข้ามขั้นต้องใช้วิธีพิเศษ: อาจารย์ → รศ./ศ., ผศ. → ศ.")
+        void skippingARankRequiresTheSpecialMethod() {
+            assertThat(AcademicRankPolicy.requiresSpecialMethod(
+                    AcademicRank.LECTURER, AcademicRank.ASSOCIATE_PROFESSOR)).isTrue();
+            assertThat(AcademicRankPolicy.requiresSpecialMethod(
+                    AcademicRank.LECTURER, AcademicRank.PROFESSOR)).isTrue();
+            assertThat(AcademicRankPolicy.requiresSpecialMethod(
+                    AcademicRank.ASSISTANT_PROFESSOR, AcademicRank.PROFESSOR)).isTrue();
         }
 
         @Test
-        @DisplayName("อาจารย์ ขอ ผศ. และ ผศ. ขอ รศ. — ได้")
-        void theNextRankIsAllowed() {
-            assertThat(AcademicRankPolicy.evaluationTargetViolation(
-                    AcademicRank.LECTURER, AcademicRank.ASSISTANT_PROFESSOR)).isEmpty();
-            assertThat(AcademicRankPolicy.evaluationTargetViolation(
-                    AcademicRank.ASSISTANT_PROFESSOR, AcademicRank.ASSOCIATE_PROFESSOR)).isEmpty();
+        @DisplayName("ขอตำแหน่งถัดไป ระบบไม่บังคับ — ผู้ยื่นเลือกวิธีพิเศษเองได้เมื่อระยะเวลาไม่ครบหรือขอต่างสาขา")
+        void theNextRankLeavesTheChoiceToTheApplicant() {
+            assertThat(AcademicRankPolicy.requiresSpecialMethod(
+                    AcademicRank.LECTURER, AcademicRank.ASSISTANT_PROFESSOR)).isFalse();
+            assertThat(AcademicRankPolicy.requiresSpecialMethod(
+                    AcademicRank.ASSISTANT_PROFESSOR, AcademicRank.ASSOCIATE_PROFESSOR)).isFalse();
+            assertThat(AcademicRankPolicy.requiresSpecialMethod(
+                    AcademicRank.ASSOCIATE_PROFESSOR, AcademicRank.PROFESSOR)).isFalse();
+            assertThat(AcademicRankPolicy.requiresSpecialMethod(AcademicRank.LECTURER, null)).isFalse();
         }
 
         @Test
-        @DisplayName("ขอตำแหน่งเดิมหรือต่ำกว่า — ยังไม่ได้เหมือนเดิม")
-        void aRankNotHigherIsStillRefused() {
-            assertThat(AcademicRankPolicy.evaluationTargetViolation(
-                    AcademicRank.ASSISTANT_PROFESSOR, AcademicRank.ASSISTANT_PROFESSOR)).isPresent();
+        @DisplayName("รศ./ศ. วิธีพิเศษ เสนอผลงานวิธีที่ 2 ไม่ได้ (ข้อ 18.2, 18.3)")
+        void theSpecialMethodTakesOnlyWorksMethodOne() {
+            assertThat(AcademicRankPolicy.worksMethodViolation("พิเศษ", AcademicRank.ASSOCIATE_PROFESSOR, "2"))
+                    .hasValueSatisfying(message -> assertThat(message).contains("18.2"));
+            assertThat(AcademicRankPolicy.worksMethodViolation("พิเศษ", AcademicRank.PROFESSOR, "2"))
+                    .hasValueSatisfying(message -> assertThat(message).contains("18.3"));
+            assertThat(AcademicRankPolicy.worksMethodViolation("พิเศษ", AcademicRank.ASSOCIATE_PROFESSOR, "1")).isEmpty();
+        }
+
+        @Test
+        @DisplayName("เอกสารที่ 1 พิมพ์ \"(โดยวิธีปกติ วิธีที่ ๒)\" — วิธีพิเศษและ ผศ. ไม่ต่อท้าย")
+        void documentOnePrintsTheWorksMethod() {
+            java.util.Map<String, String> placeholders = new java.util.HashMap<>(java.util.Map.of(
+                    "method", "ปกติ", "target_position", "รองศาสตราจารย์", "works_method", "2"));
+            DocumentGenerationService.normalizePhase2(1, placeholders);
+            assertThat(placeholders).containsEntry("method", "ปกติ วิธีที่ ๒");
+
+            assertThat(AcademicRankPolicy.printedMethod("พิเศษ", AcademicRank.PROFESSOR, "1")).isEqualTo("พิเศษ");
+            assertThat(AcademicRankPolicy.printedMethod("ปกติ", AcademicRank.ASSISTANT_PROFESSOR, "1")).isEqualTo("ปกติ");
+            assertThat(AcademicRankPolicy.printedMethod("ปกติ", AcademicRank.PROFESSOR, null)).isEqualTo("ปกติ");
+        }
+
+        @Test
+        @DisplayName("วิธีปกติ, ขอ ผศ. หรือยังไม่เลือกวิธีเสนอผลงาน — ไม่ใช่ข้อผิด")
+        void otherCombinationsAreFine() {
+            assertThat(AcademicRankPolicy.worksMethodViolation("ปกติ", AcademicRank.ASSOCIATE_PROFESSOR, "2")).isEmpty();
+            assertThat(AcademicRankPolicy.worksMethodViolation("พิเศษ", AcademicRank.ASSISTANT_PROFESSOR, "2")).isEmpty();
+            assertThat(AcademicRankPolicy.worksMethodViolation("พิเศษ", AcademicRank.PROFESSOR, "")).isEmpty();
         }
     }
 

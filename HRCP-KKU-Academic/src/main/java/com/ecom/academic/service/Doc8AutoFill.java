@@ -7,6 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.ecom.academic.dto.EvaluationSummary;
+import com.ecom.academic.model.AcademicRank;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.model.UserDtls;
 import com.ecom.util.ThaiDateUtil;
@@ -49,8 +50,9 @@ public final class Doc8AutoFill {
         String target = firstNonBlank(request == null ? null : request.getTargetPosition(),
                 d1.get("target_position"));
         put(out, "target_position", target);
-        put(out, "evaluation_method", firstNonBlank(request == null ? null : request.getEvaluationMethod(),
-                d1.get("method")));
+        put(out, "evaluation_method", AcademicRankPolicy.printedMethod(
+                firstNonBlank(request == null ? null : request.getEvaluationMethod(), d1.get("method")),
+                AcademicRank.of(target), d1.get("works_method")));
         put(out, "major", firstNonBlank(d1.get("major"), request == null ? null : request.getMajor()));
         put(out, "major_code", firstNonBlank(d1.get("major_code"), request == null ? null : request.getMajorCode()));
 

@@ -465,6 +465,133 @@ class PositionRankRuleTest extends AbstractFlowTest {
         }
     }
 
+    @Nested
+    @DisplayName("วิธีพิเศษ — ข้อบังคับ มข. พ.ศ. 2569 ข้อ 18")
+    class SpecialMethod {
+
+        @Test
+        @DisplayName("อาจารย์ขอประเมินการสอนเพื่อ รศ. ได้ (ข้ามขั้นโดยวิธีพิเศษ) — บันทึกเอกสารที่ 1")
+        void aLecturerMayAskToBeEvaluatedForAssociateProfessor() throws Exception {
+            UserDtls applicant = applicantHolding("อาจารย์");
+            AcademicRequest draft = data.evaluation(applicant, RequestStatus.DRAFT);
+
+            String html = mvc.perform(get("/user/academic/request/" + draft.getId() + "/document-1")
+                    .with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(inputTag(html, "targetPos2")).doesNotContain("disabled");
+            assertThat(html).contains("specialMethodNotice");
+
+            mvc.perform(post("/user/academic/request/" + draft.getId() + "/document-1")
+                    .param("current_position", "อาจารย์")
+                    .param("chk2", "✓")
+                    .param("action", "submit")
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(status().is3xxRedirection());
+
+            assertThat(academicService.getDocumentsByType(draft.getId(), 1)).isNotEmpty();
+        }
+
+        @Test
+        @DisplayName("ผศ. สร้างคำร้องขอ ศ. — คำร้องเป็นวิธีพิเศษ และเอกสารที่ 1 ตรึงวิธีพิเศษ + ผลงานวิธีที่ 1")
+        void anAssistantProfessorsProfessorRequestIsSpecial() throws Exception {
+            UserDtls applicant = applicantHolding("ผู้ช่วยศาสตราจารย์");
+
+            mvc.perform(post("/user/position/create-professor-request")
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(redirectedUrlPattern("/user/position/request/*"));
+
+            PositionRequest draft = positionService.findDraftByApplicant(applicant.getId()).orElseThrow();
+            assertThat(draft.getEvaluationMethod()).isEqualTo("พิเศษ");
+            String html = documentOne(applicant, draft);
+            assertThat(namedInput(html, "method")).contains("readonly").contains("value=\"พิเศษ\"");
+            assertThat(namedInput(html, "works_method")).contains("type=\"hidden\"").contains("value=\"1\"");
+        }
+
+        @Test
+        @DisplayName("รศ. ขอ ศ. — วิธีปกติ ระบบไม่ตรึงวิธีการ ผู้ยื่นเลือกเอง")
+        void anAssociateProfessorsProfessorRequestLeavesTheMethodOpen() throws Exception {
+            UserDtls applicant = applicantHolding("รองศาสตราจารย์");
+
+            mvc.perform(post("/user/position/create-professor-request")
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(redirectedUrlPattern("/user/position/request/*"));
+
+            PositionRequest draft = positionService.findDraftByApplicant(applicant.getId()).orElseThrow();
+            assertThat(draft.getEvaluationMethod()).isNull();
+            String html = documentOne(applicant, draft);
+            assertThat(inputTag(html, "methodSpecial")).doesNotContain("disabled");
+            assertThat(inputTag(html, "worksMethod2")).doesNotContain("disabled");
+        }
+
+        @Test
+        @DisplayName("อาจารย์ขอ รศ. บันทึกเอกสารที่ 1 ว่าวิธีปกติ วิธีที่ 2 — ระบบบันทึกเป็นวิธีพิเศษ วิธีที่ 1 และคำร้องตามด้วย")
+        void savingDocumentOnePinsTheSpecialMethod() throws Exception {
+            UserDtls applicant = applicantHolding("อาจารย์");
+            AcademicRequest evaluation = data.evaluationFor(applicant,
+                    AcademicRank.ASSOCIATE_PROFESSOR, "อาจารย์");
+            PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
+                    evaluation, "รองศาสตราจารย์");
+
+            mvc.perform(post("/user/position/request/" + draft.getId() + "/document/1")
+                    .param("method", "ปกติ")
+                    .param("works_method", "2")
+                    .param("action", "draft")
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(status().is3xxRedirection());
+
+            assertThat(positionService.getLatestDocumentData(draft.getId(), 1))
+                    .containsEntry("method", "พิเศษ")
+                    .containsEntry("works_method", "1");
+            assertThat(positionService.findById(draft.getId()).orElseThrow().getEvaluationMethod())
+                    .isEqualTo("พิเศษ");
+        }
+
+        @Test
+        @DisplayName("เอกสารที่ 1 ที่บันทึกก่อนมีกติกา: ข้ามขั้นแต่ระบุวิธีปกติ — ส่งคำร้องไม่ได้")
+        void aLegacyNormalMethodOnASkippedRankIsRefused() throws Exception {
+            UserDtls applicant = applicantHolding("อาจารย์");
+            AcademicRequest evaluation = data.evaluationFor(applicant,
+                    AcademicRank.ASSOCIATE_PROFESSOR, "อาจารย์");
+            PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
+                    evaluation, "รองศาสตราจารย์");
+            data.positionDocument(draft, 1, "{\"method\":\"ปกติ\",\"works_method\":\"1\"}");
+
+            mvc.perform(post("/user/position/request/" + draft.getId() + "/submit")
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(redirectedUrl("/user/position/request/" + draft.getId() + "?error=special_method"));
+        }
+
+        @Test
+        @DisplayName("ผศ. ขอ รศ. เลือกวิธีพิเศษเองแต่เสนอผลงานวิธีที่ 2 — ส่งคำร้องไม่ได้ (ข้อ 18.2)")
+        void aChosenSpecialMethodWithWorksMethodTwoIsRefused() throws Exception {
+            UserDtls applicant = applicantHolding("ผู้ช่วยศาสตราจารย์");
+            AcademicRequest evaluation = data.evaluationFor(applicant,
+                    AcademicRank.ASSOCIATE_PROFESSOR, "ผู้ช่วยศาสตราจารย์");
+            PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
+                    evaluation, "รองศาสตราจารย์");
+            data.positionDocument(draft, 1, "{\"method\":\"พิเศษ\",\"works_method\":\"2\"}");
+
+            mvc.perform(post("/user/position/request/" + draft.getId() + "/submit")
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(redirectedUrl("/user/position/request/" + draft.getId() + "?error=special_method"));
+        }
+    }
+
+    private String documentOne(UserDtls applicant, PositionRequest draft) throws Exception {
+        return mvc.perform(get("/user/position/request/" + draft.getId() + "/document/1")
+                .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+    }
+
+    /** The first {@code <input ...>} tag with this name. */
+    private static String namedInput(String html, String name) {
+        Matcher m = Pattern.compile("<input[^>]*name=\"" + name + "\"[^>]*>").matcher(html);
+        assertThat(m.find()).as("ไม่พบ input name=" + name).isTrue();
+        return m.group();
+    }
+
     /** The whole {@code <input ...>} tag carrying this id, so its attributes can be checked. */
     private static String inputTag(String html, String id) {
         Matcher m = Pattern.compile("<input[^>]*id=\"" + id + "\"[^>]*>").matcher(html);

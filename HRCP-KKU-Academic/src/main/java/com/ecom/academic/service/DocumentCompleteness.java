@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ecom.academic.model.AcademicRank;
 import com.ecom.academic.model.SignatureModule;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -120,7 +121,9 @@ public final class DocumentCompleteness {
             new RankGroup("prof_", Set.of("ศาสตราจารย์")),
             // ๒.๓ / ๒.๔ ประวัติการดำรงตำแหน่ง — กรอกเฉพาะตำแหน่งที่เคยดำรงมาก่อน
             new RankGroup("assistant_", Set.of("รองศาสตราจารย์", "ศาสตราจารย์")),
-            new RankGroup("associate_", Set.of("ศาสตราจารย์")));
+            new RankGroup("associate_", Set.of("ศาสตราจารย์")),
+            // วิธีเสนอผลงาน (วิธีที่ ๑/๒) — ผศ. ไม่มีการแบ่งวิธี
+            new RankGroup("works_method", Set.of("รองศาสตราจารย์", "ศาสตราจารย์")));
 
     private record RankGroup(String prefix, Set<String> appliesTo) {
     }
@@ -321,7 +324,14 @@ public final class DocumentCompleteness {
      */
     public static List<String> malformedFields(SignatureModule module, int documentType, String json) {
         if (module == SignatureModule.POSITION && documentType == 1) {
-            return professorTeachingLoadProblems(parse(json));
+            Map<String, String> data = parse(json);
+            List<String> problems = new ArrayList<>(professorTeachingLoadProblems(data));
+            if (data != null) {
+                AcademicRankPolicy.worksMethodViolation(data.get("method"),
+                        AcademicRank.of(data.get("target_position")), data.get("works_method"))
+                        .ifPresent(problems::add);
+            }
+            return problems;
         }
         if (module == SignatureModule.POSITION && PositionDocTypes.base(documentType) == PositionDocTypes.WORK_PARTICIPATION) {
             return applicantRoleConflict(parse(json));
@@ -418,6 +428,11 @@ public final class DocumentCompleteness {
         if (module == SignatureModule.POSITION && PositionDocTypes.base(documentType) == PositionDocTypes.WORK_PARTICIPATION
                 && APPLICANT_ROLE_FIELDS.stream().noneMatch(key -> isTicked(data.get(key)))) {
             missing.add(APPLICANT_ROLE);
+        }
+        // วิธีเสนอผลงานเป็นปุ่มเลือก — ไม่เลือกก็ไม่ถูกส่งมาเลย ด่านช่องว่างข้างบนจึงไม่เห็น (ส่งมาแต่ว่าง ข้างบนนับแล้ว)
+        if (module == SignatureModule.POSITION && documentType == 1 && needsWorksMethod(targetPosition)
+                && !data.containsKey(WORKS_METHOD)) {
+            missing.add(WORKS_METHOD);
         }
         return missing;
     }
@@ -578,6 +593,14 @@ public final class DocumentCompleteness {
             }
         }
         return false;
+    }
+
+    /** วิธีเสนอผลงาน (วิธีที่ 1/2) ในเอกสารที่ 1 เฟส 2 — มีเฉพาะการขอ รศ. และ ศ. */
+    public static final String WORKS_METHOD = "works_method";
+
+    private static boolean needsWorksMethod(String targetPosition) {
+        AcademicRank target = AcademicRank.of(targetPosition);
+        return target != null && target.isAbove(AcademicRank.ASSISTANT_PROFESSOR);
     }
 
     /** ช่องของระดับตำแหน่งที่คำร้องนี้ไม่ได้ขอ */

@@ -181,10 +181,16 @@
                                         <input class="form-check-input target-pos-radio" type="radio" name="target_position_choice" id="targetPos2"
                                             value="chk2"
                                             th:checked="${dData != null && dData.getOrDefault('chk2', '') == '✓'}" required
-                                            th:disabled="${associateDisabled}" th:attr="data-rank-blocked=${associateBlocked}">
-                                        <label class="form-check-label fw-semibold" for="targetPos2">รองศาสตราจารย์<span
-                                            th:replace="~{academic/_info_tip :: tip('ผู้ดำรงตำแหน่งอาจารย์ขอประเมินได้เฉพาะตำแหน่งผู้ช่วยศาสตราจารย์')}"></span></label>
+                                            th:disabled="${associateBlocked}">
+                                        <label class="form-check-label fw-semibold" for="targetPos2">รองศาสตราจารย์</label>
                                     </div>
+                                </div>
+                                <!--/* อาจารย์ขอ รศ. ได้ แต่เป็นวิธีพิเศษ (ข้อบังคับ มข. พ.ศ. 2569 ข้อ 18) — สคริปต์ด้านล่างแสดงเมื่อเลือก */-->
+                                <div id="specialMethodNotice" class="alert alert-warning small mt-3 mb-0 d-none">
+                                    <i class="fas fa-triangle-exclamation me-1"></i>
+                                    <strong>อาจารย์ขอตำแหน่งรองศาสตราจารย์เป็นการขอโดยวิธีพิเศษ</strong>
+                                    (ข้อบังคับ มข. พ.ศ. 2569 ข้อ 18.2) — ผลงานต้องเสนอตามวิธีที่ ๑ เท่านั้นและมีคุณภาพระดับ A
+                                    และผลประเมินการสอนต้องอยู่ในระดับชำนาญพิเศษขึ้นไป
                                 </div>
                                 <!--/* Hidden inputs for backend binding */-->
                                 <input type="hidden" name="chk1" id="chk1"
@@ -408,28 +414,32 @@
                                     }
                                 }
 
-                                // อาจารย์ขอได้เฉพาะ ผศ. — ปิด รศ. ทันทีที่เลือกตำแหน่งปัจจุบัน (server ตรวจซ้ำตอนบันทึก)
-                                if (r2 && r2.dataset.rankBlocked !== 'true') {
-                                    var lecturer = pos === 'อาจารย์';
-                                    r2.disabled = lecturer;
-                                    if (lecturer && r2.checked) {
-                                        r2.checked = false;
-                                        r1.checked = true;
-                                        syncTargetPos();
+                                // ตัวเลือกตามตำแหน่งปัจจุบัน (server ตรวจซ้ำตอนบันทึก) ตำแหน่งว่างหรือฟอร์มอ่านอย่างเดียว
+                                // ใช้สถานะที่ server render มา: อาจารย์ขอได้ทั้ง ผศ. และ รศ. (วิธีพิเศษ) ผศ. ขอได้เฉพาะ รศ.
+                                var rank = ['อาจารย์', 'ผู้ช่วยศาสตราจารย์', 'รองศาสตราจารย์'].indexOf(pos);
+                                if (r1 && r2 && rank !== -1 && !r1.closest('fieldset:disabled')) {
+                                    r1.disabled = rank !== 0;
+                                    r2.disabled = rank > 1;
+                                    if (r1.disabled) r1.checked = false;
+                                    if (r2.disabled) r2.checked = false;
+                                    if (!r1.checked && !r2.checked) {
+                                        if (!r1.disabled) r1.checked = true;
+                                        else if (!r2.disabled) r2.checked = true;
                                     }
+                                    syncTargetPos();
                                 }
+                                updateSpecialNotice();
+                            }
 
-                                // Suggest target position if not selected yet
-                                if (r1 && r2 && !r1.checked && !r2.checked) {
-                                    if (pos === 'อาจารย์') {
-                                        r1.checked = true;
-                                        syncTargetPos();
-                                    } else if (pos === 'ผู้ช่วยศาสตราจารย์') {
-                                        r2.checked = true;
-                                        syncTargetPos();
-                                    }
+                            function updateSpecialNotice() {
+                                var notice = document.getElementById('specialMethodNotice');
+                                if (notice && r2) {
+                                    notice.classList.toggle('d-none', !(posSelect.value === 'อาจารย์' && r2.checked));
                                 }
                             }
+                            document.querySelectorAll('.target-pos-radio').forEach(function(radio) {
+                                radio.addEventListener('change', updateSpecialNotice);
+                            });
 
                             posSelect.addEventListener('change', updateTitleOptions);
                             updateTitleOptions(); // run on page load

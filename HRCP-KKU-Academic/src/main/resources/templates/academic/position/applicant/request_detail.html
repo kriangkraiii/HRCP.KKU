@@ -48,10 +48,15 @@
                     ยื่นคำร้องนี้ไม่ได้ เนื่องจากผลการประเมินผลการสอนที่เลือกไว้ใช้ไม่ได้แล้ว เช่น หมดอายุ
                     (ใช้ได้ 3 ปีนับจากวันประเมินการสอน ตามประกาศ มข. ฉบับที่ 1669/2569 ข้อ 7)
                 </span>
+                <span th:if="${param.error[0] == 'special_method'}">
+                    ยื่นคำร้องนี้ไม่ได้ เนื่องจากเอกสารที่ 1 ระบุวิธีการไม่ตรงกับข้อบังคับ มข. พ.ศ. 2569 ข้อ 18 —
+                    คำร้องที่ข้ามขั้นต้องขอโดยวิธีพิเศษ และขอรองศาสตราจารย์หรือศาสตราจารย์โดยวิธีพิเศษต้องเสนอผลงานตามวิธีที่ ๑
+                    กรุณาเปิดเอกสารที่ 1 บันทึกใหม่ แล้วลงนามอีกครั้ง
+                </span>
                 <span th:unless="${param.error[0] == 'incomplete_docs' or param.error[0] == 'rank_not_higher'
                         or param.error[0] == 'evaluation_required' or param.error[0] == 'position_mismatch'
                         or param.error[0] == 'already_professor' or param.error[0] == 'level_below_rank'
-                        or param.error[0] == 'evaluation_unusable'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
+                        or param.error[0] == 'evaluation_unusable' or param.error[0] == 'special_method'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 

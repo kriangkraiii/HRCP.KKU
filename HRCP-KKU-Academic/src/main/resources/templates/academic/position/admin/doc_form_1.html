@@ -34,12 +34,32 @@
                                     <option value="ศาสตราจารย์">ศาสตราจารย์</option>
                                 </select>
                             </div>
+                            <!--/* ช่องของผู้ยื่น — แสดงให้แอดมินเห็นเหมือนหน้าผู้ยื่น (ปุ่มเลือก ไม่ใช่ select ที่ถูกแปลงเป็นช่องพิมพ์) */-->
                             <div class="col-md-4">
                                 <label class="form-label">วิธีการ</label>
-                                <select name="method" class="form-select">
-                                    <option value="ปกติ">ปกติ</option>
-                                    <option value="พิเศษ">พิเศษ</option>
-                                </select>
+                                <div class="pt-1">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="method" id="methodNormal" value="ปกติ">
+                                        <label class="form-check-label" for="methodNormal">ปกติ</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="method" id="methodSpecial" value="พิเศษ">
+                                        <label class="form-check-label" for="methodSpecial">พิเศษ</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">เสนอผลงานตาม (รศ./ศ.)</label>
+                                <div class="pt-1">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="works_method" id="worksMethod1" value="1">
+                                        <label class="form-check-label" for="worksMethod1">วิธีที่ ๑</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="works_method" id="worksMethod2" value="2">
+                                        <label class="form-check-label" for="worksMethod2">วิธีที่ ๒</label>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">สาขาวิชา</label>

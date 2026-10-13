@@ -44,6 +44,25 @@ class Doc8AutoFillTest {
     }
 
     @Test
+    @DisplayName("วิธีปกติของ รศ./ศ. พิมพ์วิธีเสนอผลงานต่อท้าย วิธีพิเศษพิมพ์คำเดียว — เทมเพลตเขียน \"โดยวิธี{{evaluation_method}}\"")
+    void printsTheWorksMethodAfterTheNormalMethod() {
+        Map<String, String> doc1 = new java.util.HashMap<>(DOC1);
+        doc1.put("works_method", "2");
+        assertEquals("ปกติ วิธีที่ ๒",
+                Doc8AutoFill.derive(request("รองศาสตราจารย์"), doc1, null, evaluation()).get("evaluation_method"));
+
+        doc1.put("method", "พิเศษ");
+        doc1.put("works_method", "1");
+        assertEquals("พิเศษ",
+                Doc8AutoFill.derive(request("ศาสตราจารย์"), doc1, null, evaluation()).get("evaluation_method"));
+
+        doc1.put("method", "ปกติ");
+        assertEquals("ปกติ",
+                Doc8AutoFill.derive(request("ผู้ช่วยศาสตราจารย์"), doc1, null, evaluation()).get("evaluation_method"),
+                "ผศ. ไม่มีวิธีเสนอผลงาน");
+    }
+
+    @Test
     void fillsApplicantAndThePositionHeldBeforeTheRequestedRank() {
         PositionRequest request = request("รองศาสตราจารย์");
         request.setCollegeResolutionDate(LocalDate.of(2026, 9, 15));

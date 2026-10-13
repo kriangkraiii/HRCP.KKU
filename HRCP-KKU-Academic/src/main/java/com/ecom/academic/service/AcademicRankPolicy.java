@@ -6,8 +6,8 @@ import com.ecom.academic.model.AcademicRank;
 import com.ecom.model.UserDtls;
 
 /**
- * ตำแหน่งที่ขอต้องสูงกว่าตำแหน่งที่ถืออยู่ ขอตำแหน่งเดิมหรือต่ำกว่าไม่ได้ ข้ามขั้นได้เฉพาะไปขอ ศ. (วิธีพิเศษ)
- * ส่วนการประเมินการสอน อาจารย์ขอได้เฉพาะ ผศ. ({@link #evaluationTargetViolation})
+ * ตำแหน่งที่ขอต้องสูงกว่าตำแหน่งที่ถืออยู่ ขอตำแหน่งเดิมหรือต่ำกว่าไม่ได้ ข้ามขั้นได้แต่ต้องขอโดยวิธีพิเศษ
+ * ({@link #requiresSpecialMethod})
  *
  * <p>ใช้ร่วมกันทั้งสองเฟส: ตอนกรอกเอกสารที่ 1 ของการประเมินการสอน และตอนสร้าง/ยื่นคำร้องขอตำแหน่ง
  */
@@ -72,16 +72,57 @@ public final class AcademicRankPolicy {
                 + " ซึ่งเท่ากับหรือต่ำกว่าตำแหน่งปัจจุบันได้");
     }
 
+    /** ค่าช่อง "วิธีการ" ในแบบ ก.พ.ว. มข. 03 */
+    public static final String NORMAL_METHOD = "ปกติ";
+    public static final String SPECIAL_METHOD = "พิเศษ";
+
+    /** วิธีเสนอผลงานที่วิธีพิเศษของ รศ./ศ. ใช้ได้ */
+    public static final String SPECIAL_WORKS_METHOD = "1";
+
     /**
-     * ตำแหน่งที่ขอในเอกสารที่ 1 ของการประเมินการสอน — นอกจากต้องสูงกว่าตำแหน่งปัจจุบันแล้ว
-     * อาจารย์ขอประเมินได้เฉพาะ ผศ. ข้ามไปขอ รศ. ไม่ได้
+     * ข้ามขั้นต้องขอโดยวิธีพิเศษ — ข้อบังคับ มข. พ.ศ. 2569 ข้อ 18 วรรคหนึ่ง เช่น อาจารย์ขอ รศ. โดยไม่เคยเป็น ผศ.
      *
-     * @return ข้อความแจ้งเหตุผล ถ้าขอตำแหน่งนี้ไม่ได้
+     * <p>อีกสองกรณีของวิธีพิเศษ (ดำรงตำแหน่งไม่ครบระยะเวลา และขอต่างสาขา) ระบบไม่มีข้อมูลพอจะรู้เอง
+     * ผู้ยื่นเลือกวิธีพิเศษเอง
      */
-    public static Optional<String> evaluationTargetViolation(AcademicRank current, AcademicRank target) {
-        if (current == AcademicRank.LECTURER && target == AcademicRank.ASSOCIATE_PROFESSOR) {
-            return Optional.of("ผู้ดำรงตำแหน่งอาจารย์ขอประเมินการสอนได้เฉพาะตำแหน่งผู้ช่วยศาสตราจารย์");
+    public static boolean requiresSpecialMethod(AcademicRank current, AcademicRank target) {
+        return current != null && target != null && target.ordinal() - current.ordinal() >= 2;
+    }
+
+    /** ค่าในช่องวิธีการเป็นวิธีพิเศษหรือไม่ — ช่องเก่าเป็นช่องพิมพ์ได้ จึงดูว่ามีคำนี้อยู่ */
+    public static boolean isSpecial(String method) {
+        return method != null && method.contains(SPECIAL_METHOD);
+    }
+
+    /**
+     * ขอ รศ./ศ. โดยวิธีพิเศษ เสนอผลงานได้เฉพาะวิธีที่ 1 (ข้อ 18.2, 18.3) ส่วน ผศ. ไม่มีการแบ่งวิธีเสนอผลงาน
+     *
+     * @param worksMethod วิธีเสนอผลงาน ("1", "2") — ว่างคือยังไม่ได้เลือก ไม่นับว่าผิด
+     * @return ข้อความแจ้งเหตุผล ถ้าวิธีเสนอผลงานใช้กับวิธีพิเศษไม่ได้
+     */
+    public static Optional<String> worksMethodViolation(String method, AcademicRank target, String worksMethod) {
+        if (!isSpecial(method) || target == null || !target.isAbove(AcademicRank.ASSISTANT_PROFESSOR)
+                || worksMethod == null || worksMethod.isBlank()
+                || SPECIAL_WORKS_METHOD.equals(worksMethod.strip())) {
+            return Optional.empty();
         }
-        return rankViolation(current, target);
+        return Optional.of("ขอตำแหน่ง" + target.thaiLabel() + "โดยวิธีพิเศษ เสนอผลงานได้เฉพาะวิธีที่ ๑ (ข้อบังคับ มข. พ.ศ. 2569 ข้อ "
+                + (target == AcademicRank.PROFESSOR ? "18.3" : "18.2") + ")");
+    }
+
+    /**
+     * วิธีการที่พิมพ์ในเอกสาร — แบบ ก.พ.ว. มข. 03 เขียนว่า "(โดยวิธีปกติ วิธีที่...... / วิธีพิเศษ)"
+     * วิธีปกติของ รศ./ศ. จึงต่อท้ายด้วยวิธีเสนอผลงาน เช่น "ปกติ วิธีที่ ๒" วิธีพิเศษพิมพ์ "พิเศษ" อย่างเดียว
+     */
+    public static String printedMethod(String method, AcademicRank target, String worksMethod) {
+        if (method == null || method.isBlank() || isSpecial(method) || target == null
+                || !target.isAbove(AcademicRank.ASSISTANT_PROFESSOR) || worksMethod == null) {
+            return method;
+        }
+        return switch (worksMethod.strip()) {
+            case "1" -> method.strip() + " วิธีที่ ๑";
+            case "2" -> method.strip() + " วิธีที่ ๒";
+            default -> method;
+        };
     }
 }

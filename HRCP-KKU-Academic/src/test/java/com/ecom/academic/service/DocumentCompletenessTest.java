@@ -37,7 +37,8 @@ class DocumentCompletenessTest {
         data.put("department", "วิทยาการคอมพิวเตอร์");
         data.put("faculty", "วิทยาศาสตร์");
         data.put("university", "มหาวิทยาลัยขอนแก่น");
-        data.put("method", "วิธีที่ ๑");
+        data.put("method", "ปกติ");
+        data.put("works_method", "1");
         data.put("birth_date", "๑ มกราคม ๒๕๒๐");
         data.put("age", "๔๕");
         data.put("current_position", "ผู้ช่วยศาสตราจารย์");
@@ -109,6 +110,43 @@ class DocumentCompletenessTest {
             assertThat(missing)
                     .as("ส่วนของ ผศ./รศ. ในข้อ ๔ ไม่ใช่ของคำขอ ศ.")
                     .doesNotContain("asst_used_research", "assoc_used_research");
+        }
+
+        @Test
+        @DisplayName("ขอ รศ./ศ. ต้องเลือกวิธีเสนอผลงาน — ปุ่มเลือกที่ไม่เลือกไม่ถูกส่งมา จึงนับตอนไม่มีคีย์ด้วย")
+        void associateApplicantMustPickAWorksMethod() {
+            Map<String, String> data = positionDoc1("assoc_");
+            assertThat(DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "รองศาสตราจารย์")).doesNotContain("works_method");
+
+            data.remove("works_method");
+            assertThat(DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "รองศาสตราจารย์")).containsOnlyOnce("works_method");
+            assertThat(DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "ศาสตราจารย์")).contains("works_method");
+        }
+
+        @Test
+        @DisplayName("ขอ ผศ. ไม่มีวิธีเสนอผลงาน — ช่องว่างหรือไม่มีก็ไม่นับ")
+        void assistantApplicantHasNoWorksMethod() {
+            Map<String, String> data = positionDoc1("asst_");
+            data.put("works_method", "");
+
+            assertThat(DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "ผู้ช่วยศาสตราจารย์")).isEmpty();
+        }
+
+        @Test
+        @DisplayName("วิธีพิเศษ ขอ รศ. เสนอผลงานวิธีที่ 2 — ส่งลงนามไม่ได้ (ข้อ 18.2)")
+        void theSpecialMethodWithWorksMethodTwoIsMalformed() {
+            Map<String, String> data = positionDoc1("assoc_");
+            data.put("method", "พิเศษ");
+            data.put("works_method", "2");
+
+            assertThat(DocumentCompleteness.malformedFields(SignatureModule.POSITION, 1, json(data)))
+                    .singleElement().asString().contains("18.2");
+            data.put("works_method", "1");
+            assertThat(DocumentCompleteness.malformedFields(SignatureModule.POSITION, 1, json(data))).isEmpty();
         }
 
         @Test

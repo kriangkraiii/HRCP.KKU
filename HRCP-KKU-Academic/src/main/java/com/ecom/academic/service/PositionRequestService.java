@@ -365,6 +365,7 @@ public class PositionRequestService {
     public static final String ERROR_LEVEL_BELOW_RANK = "level_below_rank";
     public static final String ERROR_EVALUATION_UNUSABLE = "evaluation_unusable";
     public static final String ERROR_ALREADY_PROFESSOR = "already_professor";
+    public static final String ERROR_SPECIAL_METHOD = "special_method";
 
     /** ศาสตราจารย์เป็นตำแหน่งสูงสุด — ยื่นคำร้องขอตำแหน่งใหม่ไม่ได้ ดูจากโปรไฟล์ */
     public boolean holdsHighestRank(UserDtls applicant) {
@@ -438,9 +439,7 @@ public class PositionRequestService {
         if (target == null) {
             return Optional.empty();
         }
-        AcademicRank current = AcademicRankPolicy.currentRank(request.getApplicant(),
-                evaluation == null ? null : evaluation.currentPosition(),
-                doc1 == null ? null : doc1.get("current_position"));
+        AcademicRank current = currentRank(request, evaluation, doc1);
         // ศ. ต้องใช้ผลประเมินหรือไม่ขึ้นกับตำแหน่งปัจจุบัน จึงต้องรู้ current ก่อนตัดสิน
         if (evaluation == null && AcademicRankPolicy.requiresTeachingEvaluation(current, target)) {
             return Optional.of(ERROR_EVALUATION_REQUIRED);
@@ -455,7 +454,41 @@ public class PositionRequestService {
         if (evaluation != null && !academicRequestService.isUsableEvaluation(request.getLinkedEvaluation())) {
             return Optional.of(ERROR_EVALUATION_UNUSABLE);
         }
-        return AcademicRankPolicy.rankViolation(current, target).map(message -> ERROR_RANK_NOT_HIGHER);
+        Optional<String> notHigher = AcademicRankPolicy.rankViolation(current, target)
+                .map(message -> ERROR_RANK_NOT_HIGHER);
+        if (notHigher.isPresent()) {
+            return notHigher;
+        }
+        // ช่องวิธีการถูกตรึงทุกครั้งที่บันทึก ด่านนี้มีไว้กันเอกสารที่ 1 ที่บันทึก/ลงนามก่อนมีกติกา (ข้อ 18)
+        if (doc1 != null && (AcademicRankPolicy.requiresSpecialMethod(current, target)
+                && !AcademicRankPolicy.isSpecial(doc1.get("method"))
+                || AcademicRankPolicy.worksMethodViolation(doc1.get("method"), target, doc1.get("works_method")).isPresent())) {
+            return Optional.of(ERROR_SPECIAL_METHOD);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * ตำแหน่งปัจจุบันของผู้ยื่นคำร้องนี้ — ยึดเอกสารที่ 1 ของผลประเมิน แล้วเอกสารที่ 1 ของคำร้องนี้ แล้วค่อยโปรไฟล์
+     */
+    private static AcademicRank currentRank(PositionRequest request, EvaluationSummary evaluation,
+            Map<String, String> doc1) {
+        return AcademicRankPolicy.currentRank(request.getApplicant(),
+                evaluation == null ? null : evaluation.currentPosition(),
+                doc1 == null ? null : doc1.get("current_position"));
+    }
+
+    /**
+     * คำร้องนี้ข้ามขั้น จึงต้องขอโดยวิธีพิเศษ (ข้อบังคับ มข. พ.ศ. 2569 ข้อ 18) — ไม่รู้ตำแหน่งที่ขอถือว่าไม่ต้อง
+     */
+    public boolean requiresSpecialMethod(PositionRequest request) {
+        AcademicRank target = AcademicRank.of(request.getTargetPosition());
+        if (target == null) {
+            return false;
+        }
+        EvaluationSummary evaluation = academicRequestService.summarize(request.getLinkedEvaluation());
+        Map<String, String> doc1 = request.getId() == null ? null : getLatestDocumentData(request.getId(), 1);
+        return AcademicRankPolicy.requiresSpecialMethod(currentRank(request, evaluation, doc1), target);
     }
 
     /** ชื่อช่องตำแหน่งที่ขอในแบบฟอร์มฝั่งผู้ยื่น — เอกสาร 1, 6 ใช้ชื่อหนึ่ง เอกสาร 2, 4 อีกชื่อหนึ่ง */
@@ -510,6 +543,7 @@ public class PositionRequestService {
      *   <li>เอกสารที่ 1 เป็นต้นฉบับ: สาขาวิชาในเอกสารที่ 2 ตามเอกสารที่ 1</li>
      *   <li>งานสอนจากผลประเมินการสอน ({@link #teachingHistoryRows}) — เฉพาะรายวิชาและภาค/ปี
      *       ระดับและชั่วโมงผู้ยื่นกรอกเอง</li>
+     *   <li>วิธีการของคำร้องที่ข้ามขั้น ({@link #requiresSpecialMethod}) — วิธีพิเศษ และวิธีที่ 1 ของผลงาน</li>
      * </ul>
      *
      * <p>ช่องที่หาค่าไม่ได้ไม่อยู่ในผลลัพธ์ จึงยังกรอกเองได้ ตำแหน่งที่ขอตรึงแยกไว้ที่
@@ -534,6 +568,14 @@ public class PositionRequestService {
                 fields.put("faculty", FACULTY);
                 fields.put("university", UNIVERSITY);
                 fields.putAll(teachingHistoryRows(request));
+                // ข้ามขั้น: วิธีพิเศษ และ รศ./ศ. เสนอผลงานได้เฉพาะวิธีที่ 1 (ข้อ 18.2, 18.3)
+                if (requiresSpecialMethod(request)) {
+                    fields.put("method", AcademicRankPolicy.SPECIAL_METHOD);
+                    AcademicRank target = AcademicRank.of(request.getTargetPosition());
+                    if (target != null && target.isAbove(AcademicRank.ASSISTANT_PROFESSOR)) {
+                        fields.put("works_method", AcademicRankPolicy.SPECIAL_WORKS_METHOD);
+                    }
+                }
             }
             case 2 -> {
                 Map<String, String> doc1 = getLatestDocumentData(request.getId(), 1);
@@ -823,6 +865,9 @@ public class PositionRequestService {
         request.setLinkedEvaluation(evaluation);
         if (target != null) {
             request.setTargetPosition(target.thaiLabel());
+        }
+        if (requiresSpecialMethod(request)) {
+            request.setEvaluationMethod(AcademicRankPolicy.SPECIAL_METHOD);
         }
 
         request = requestRepository.save(request);
@@ -1346,6 +1391,9 @@ public class PositionRequestService {
         if (documentType == 2 && jsonData != null) {
             syncDoc2ToRequest(request, jsonData);
         }
+        if (documentType == 1 && jsonData != null) {
+            syncMethodToRequest(request, jsonData);
+        }
         syncPublicationLinks(request, documentType, jsonData);
 
         return saved;
@@ -1387,6 +1435,9 @@ public class PositionRequestService {
         // Sync doc 2 fields back to request
         if (documentType == 2 && jsonData != null) {
             syncDoc2ToRequest(request, jsonData);
+        }
+        if (documentType == 1 && jsonData != null) {
+            syncMethodToRequest(request, jsonData);
         }
         // A draft records its publications too. "Still a draft" means the work is
         // not spent yet, not that nobody knows which work it is — the applicant
@@ -1950,6 +2001,20 @@ public class PositionRequestService {
 
     public PositionRequest save(PositionRequest request) {
         return requestRepository.save(request);
+    }
+
+    /** วิธีการ (ปกติ/พิเศษ) ในเอกสารที่ 1 เป็นต้นฉบับของคำร้อง — รายการคำร้อง การค้นหา และเอกสารที่ 8 อ่านจากคำร้อง */
+    private void syncMethodToRequest(PositionRequest request, String jsonData) {
+        try {
+            String method = objectMapper.readValue(jsonData, new TypeReference<Map<String, String>>() {
+            }).get("method");
+            if (method != null && !method.isBlank() && !method.strip().equals(request.getEvaluationMethod())) {
+                request.setEvaluationMethod(method.strip());
+                requestRepository.save(request);
+            }
+        } catch (Exception e) {
+            log.warn("Could not sync the method of document 1 to request {}", request.getId(), e);
+        }
     }
 
     @SuppressWarnings("unchecked")
