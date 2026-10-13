@@ -32,4 +32,13 @@ public interface AcademicCommitteeMemberRepository extends JpaRepository<Academi
     List<AcademicCommitteeMember> searchActive(@Param("kw") String keyword);
 
     boolean existsByEmailIgnoreCase(String email);
+
+    @Query("SELECT c FROM AcademicCommitteeMember c WHERE c.isActive = true "
+            + "AND (:excludeId IS NULL OR c.id <> :excludeId) "
+            + "AND (LOWER(TRIM(c.email)) = LOWER(:email) "
+            + "OR (LOWER(TRIM(c.firstName)) = LOWER(:firstName) AND LOWER(TRIM(c.lastName)) = LOWER(:lastName)))")
+    List<AcademicCommitteeMember> findActiveDuplicates(@Param("email") String email,
+            @Param("firstName") String firstName,
+            @Param("lastName") String lastName,
+            @Param("excludeId") Long excludeId);
 }

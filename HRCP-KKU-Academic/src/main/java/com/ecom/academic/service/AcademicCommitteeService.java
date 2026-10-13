@@ -63,6 +63,9 @@ public class AcademicCommitteeService {
         if (member.getEmail() != null) {
             member.setEmail(member.getEmail().trim().toLowerCase());
         }
+        member.setFirstName(member.getFirstName() != null ? member.getFirstName().trim() : null);
+        member.setLastName(member.getLastName() != null ? member.getLastName().trim() : null);
+        rejectDuplicate(member);
 
         // Link with user account if exists or create placeholder
         UserDtls existingUser = userRepository.findByEmail(member.getEmail());
@@ -74,6 +77,21 @@ public class AcademicCommitteeService {
         }
 
         return committeeRepository.save(member);
+    }
+
+    private void rejectDuplicate(AcademicCommitteeMember member) {
+        List<AcademicCommitteeMember> duplicates = committeeRepository.findActiveDuplicates(
+                member.getEmail(), member.getFirstName(), member.getLastName(), member.getId());
+        if (duplicates.isEmpty()) {
+            return;
+        }
+        AcademicCommitteeMember existing = duplicates.get(0);
+        boolean sameEmail = existing.getEmail() != null && existing.getEmail().equalsIgnoreCase(member.getEmail());
+        String reason = sameEmail
+                ? "อีเมล " + member.getEmail() + " ถูกใช้แล้ว"
+                : "ชื่อ-นามสกุล " + member.getFirstName() + " " + member.getLastName() + " มีอยู่แล้ว";
+        throw new DuplicateCommitteeMemberException("มีข้อมูลกรรมการนี้ในระบบแล้ว: " + reason
+                + " (" + existing.getFullName() + ", " + existing.getAffiliation() + ")");
     }
 
     @Transactional

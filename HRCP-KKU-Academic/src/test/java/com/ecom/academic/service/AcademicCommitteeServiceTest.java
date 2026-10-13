@@ -1,6 +1,7 @@
 package com.ecom.academic.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Optional;
@@ -114,6 +115,76 @@ class AcademicCommitteeServiceTest {
         List<AcademicCommitteeMember> evalList = committeeService.findByType(CommitteeType.TEACHING_EVALUATION);
         assertThat(evalList).hasSize(1);
         assertThat(evalList.get(0).getFirstName()).isEqualTo("ประเสริฐ");
+    }
+
+    private AcademicCommitteeMember member(String firstName, String lastName, String email) {
+        AcademicCommitteeMember m = new AcademicCommitteeMember();
+        m.setTitle("รศ.ดร.");
+        m.setFirstName(firstName);
+        m.setLastName(lastName);
+        m.setAffiliation("มหาวิทยาลัยขอนแก่น");
+        m.setEmail(email);
+        m.setCommitteeType(CommitteeType.EXTERNAL_READER);
+        return m;
+    }
+
+    @Test
+    @DisplayName("ไม่อนุญาตให้เพิ่มกรรมการที่อีเมลซ้ำกับข้อมูลในระบบ")
+    void rejectsDuplicateEmail() {
+        committeeService.save(member("สมศักดิ์", "ดีมาก", "somsak.d@kku.ac.th"));
+
+        assertThatThrownBy(() -> committeeService.save(member("สมศรี", "ดีใจ", "  SOMSAK.D@kku.ac.th ")))
+                .isInstanceOf(DuplicateCommitteeMemberException.class)
+                .hasMessageContaining("somsak.d@kku.ac.th");
+        assertThat(committeeService.findAllActive()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("ไม่อนุญาตให้เพิ่มกรรมการที่ชื่อ-นามสกุลซ้ำกับข้อมูลในระบบ")
+    void rejectsDuplicateThaiName() {
+        committeeService.save(member("สมศักดิ์", "ดีมาก", "somsak.d@kku.ac.th"));
+
+        assertThatThrownBy(() -> committeeService.save(member(" สมศักดิ์ ", "ดีมาก", "somsak.other@gmail.com")))
+                .isInstanceOf(DuplicateCommitteeMemberException.class)
+                .hasMessageContaining("สมศักดิ์ ดีมาก");
+        assertThat(committeeService.findAllActive()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("แก้ไขข้อมูลกรรมการเดิมได้โดยไม่ถือว่าซ้ำกับตัวเอง")
+    void allowsEditingSelf() {
+        AcademicCommitteeMember saved = committeeService.save(member("สมศักดิ์", "ดีมาก", "somsak.d@kku.ac.th"));
+
+        AcademicCommitteeMember edit = member("สมศักดิ์", "ดีมาก", "somsak.d@kku.ac.th");
+        edit.setId(saved.getId());
+        edit.setPhoneNumber("089-9999999");
+
+        assertThat(committeeService.save(edit).getPhoneNumber()).isEqualTo("089-9999999");
+    }
+
+    @Test
+    @DisplayName("แก้ไขข้อมูลให้ซ้ำกับกรรมการคนอื่นไม่ได้")
+    void rejectsEditIntoAnotherMember() {
+        committeeService.save(member("สมศักดิ์", "ดีมาก", "somsak.d@kku.ac.th"));
+        AcademicCommitteeMember other = committeeService.save(member("สมศรี", "ดีใจ", "somsri.d@kku.ac.th"));
+
+        AcademicCommitteeMember edit = member("สมศรี", "ดีใจ", "somsak.d@kku.ac.th");
+        edit.setId(other.getId());
+
+        assertThatThrownBy(() -> committeeService.save(edit))
+                .isInstanceOf(DuplicateCommitteeMemberException.class);
+    }
+
+    @Test
+    @DisplayName("เพิ่มกรรมการที่เคยถูกลบ (Soft Delete) กลับเข้ามาใหม่ได้")
+    void allowsReAddingSoftDeletedMember() {
+        AcademicCommitteeMember saved = committeeService.save(member("สมศักดิ์", "ดีมาก", "somsak.d@kku.ac.th"));
+        committeeService.delete(saved.getId());
+
+        AcademicCommitteeMember again = committeeService.save(member("สมศักดิ์", "ดีมาก", "somsak.d@kku.ac.th"));
+
+        assertThat(again.getId()).isNotEqualTo(saved.getId());
+        assertThat(committeeService.findAllActive()).hasSize(1);
     }
 
     @Test

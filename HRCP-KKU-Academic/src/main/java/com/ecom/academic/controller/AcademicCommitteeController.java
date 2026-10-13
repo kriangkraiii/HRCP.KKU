@@ -19,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.ecom.academic.model.AcademicCommitteeMember;
 import com.ecom.academic.model.CommitteeType;
 import com.ecom.academic.service.AcademicCommitteeService;
+import com.ecom.academic.service.DuplicateCommitteeMemberException;
 import com.ecom.service.AdminLogService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -86,6 +87,8 @@ public class AcademicCommitteeController {
                     httpRequest.getRemoteAddr());
 
             redirect.addFlashAttribute("succMsg", isNew ? "เพิ่มข้อมูลกรรมการสำเร็จ" : "บันทึกการแก้ไขเรียบร้อยแล้ว");
+        } catch (DuplicateCommitteeMemberException e) {
+            redirect.addFlashAttribute("errorMsg", e.getMessage());
         } catch (Exception e) {
             log.error("Failed to save committee member: {}", e.getMessage());
             redirect.addFlashAttribute("errorMsg", "เกิดข้อผิดพลาดในการบันทึก: " + e.getMessage());
