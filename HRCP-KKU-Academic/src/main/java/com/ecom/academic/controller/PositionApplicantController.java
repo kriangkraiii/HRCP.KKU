@@ -402,6 +402,9 @@ public class PositionApplicantController {
         // เอกสารที่เจ้าหน้าที่ส่งกลับมาให้แก้และยังไม่ได้ลงนามใหม่ — ลงนามแล้วเอกสารถูกล็อก จึงหลุดจากรายการเอง
         Map<Integer, String> sentBackDocs = positionService.sentBackDocuments(request);
         model.addAttribute("sentBackDocs", sentBackDocs);
+        // ป้ายสถานะบนหัวหน้า — ส่งกลับในขั้นที่สถานะไม่เปลี่ยนตาม ป้ายต้องบอกงานที่รออยู่จริง
+        var sentBack = positionService.revisionProgress(request);
+        model.addAttribute("sentBack", sentBack.isEmpty() ? null : sentBack);
         // การ์ดที่ต้องแก้ — เอกสารที่ 6 แยกฉบับตามงานวิจัย (901, 902, ...) แต่การ์ดและแถบเลขเอกสารใช้เลขหลัก 9
         model.addAttribute("sentBackCards", sentBackDocs.keySet().stream()
                 .map(com.ecom.academic.service.PositionDocTypes::base)

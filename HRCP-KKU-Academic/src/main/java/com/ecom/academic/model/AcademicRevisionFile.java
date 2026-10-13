@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,6 +21,7 @@ import jakarta.persistence.Table;
  * <p>แยกจาก {@link AcademicAttachment} เพราะนั่นคือไฟล์แนบของเอกสารที่ 2 ที่ผูกกับช่องในเช็กลิสต์
  * ส่วนนี้คือฉบับแก้ที่เจ้าหน้าที่ส่งต่อคณะอนุกรรมการ และเก็บทุกรอบไว้ให้ย้อนดูได้
  */
+@EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity
 @Table(name = "academic_revision_file", indexes = {
         @Index(name = "idx_acad_rev_req_round", columnList = "request_id, revision_round")

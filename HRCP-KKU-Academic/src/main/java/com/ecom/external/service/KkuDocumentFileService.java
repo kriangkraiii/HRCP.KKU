@@ -59,7 +59,14 @@ public class KkuDocumentFileService {
 
     /** เนื้อไฟล์ จากหน่วยความจำ หรือดึงจาก hr2 — ดึงไม่ได้หรือใหญ่เกินจะไม่ถูกเก็บไว้ */
     public byte[] bytes(KkuRegulationDoc doc) throws IOException {
-        String url = doc.getFileUrl();
+        return bytes(doc.getFileUrl());
+    }
+
+    /** เหมือน {@link #bytes(KkuRegulationDoc)} แต่รับ URL ตรง ๆ — ปฏิเสธทุก URL ที่ไม่ได้อยู่บน hr2.kku.ac.th */
+    public byte[] bytes(String url) throws IOException {
+        if (!isOnHrSite(url)) {
+            throw new IOException("ไม่ใช่ไฟล์บน " + ALLOWED_HOST + ": " + url);
+        }
         byte[] cached = files.getIfPresent(url);
         if (cached != null) {
             return cached;

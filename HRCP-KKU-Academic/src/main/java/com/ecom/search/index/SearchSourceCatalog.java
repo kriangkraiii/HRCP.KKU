@@ -43,6 +43,8 @@ public class SearchSourceCatalog {
         ENTITY_NAMES.put(SearchEntityType.ACADEMIC_ATTACHMENT, "AcademicAttachment");
         ENTITY_NAMES.put(SearchEntityType.POSITION_ATTACHMENT, "PositionAttachment");
         ENTITY_NAMES.put(SearchEntityType.STATUS_HISTORY, "RequestStatusHistory");
+        ENTITY_NAMES.put(SearchEntityType.POSITION_STATUS_HISTORY, "PositionStatusHistory");
+        ENTITY_NAMES.put(SearchEntityType.REVISION_FILE, "AcademicRevisionFile");
         ENTITY_NAMES.put(SearchEntityType.SIGNATURE_REQUEST, "SignatureRequest");
         ENTITY_NAMES.put(SearchEntityType.PUBLICATION, "ScopusPublication");
     }

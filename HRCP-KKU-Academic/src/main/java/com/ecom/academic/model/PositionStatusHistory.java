@@ -6,6 +6,7 @@ import com.ecom.model.UserDtls;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -18,6 +19,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
+@EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity
 @Table(name = "position_status_history", indexes = {
         @Index(name = "idx_pos_hist_req_date", columnList = "request_id, changed_at DESC")

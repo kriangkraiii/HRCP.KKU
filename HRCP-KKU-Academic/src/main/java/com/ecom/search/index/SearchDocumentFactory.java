@@ -15,9 +15,12 @@ import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.AdminFile;
 import com.ecom.academic.model.PositionAttachment;
 import com.ecom.academic.model.PositionDocument;
+import com.ecom.academic.model.AcademicRevisionFile;
 import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionStatusHistory;
 import com.ecom.academic.model.RequestStatusHistory;
 import com.ecom.academic.model.SignatureRequest;
+import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.StaffMember;
 import com.ecom.external.model.KkuRegulationDoc;
 import com.ecom.external.model.ScopusPublication;
@@ -114,6 +117,15 @@ public class SearchDocumentFactory {
     // ------------------------------------------------------------------
 
     public SearchDocument fromPositionRequest(PositionRequest r) {
+        return fromPositionRequest(r, List.of());
+    }
+
+    /**
+     * @param publicationTitles titles of the harvested publications the applicant
+     *                          attached as evidence — the link rows carry only an
+     *                          id, so the caller looks the titles up
+     */
+    public SearchDocument fromPositionRequest(PositionRequest r, List<String> publicationTitles) {
         UserDtls applicant = r.getApplicant();
         String code = r.getRequestCode() != null ? r.getRequestCode() : "#" + r.getId();
 
@@ -125,6 +137,8 @@ public class SearchDocumentFactory {
                 r.getTargetPosition(), r.getMajor(), r.getMajorCode(),
                 r.getSubMajor(), r.getSubMajorCode(), r.getEvaluationMethod(),
                 allNamesOf(applicant)));
+        String titles = join(" ", publicationTitles.toArray(String[]::new));
+        d.setBody(titles.isEmpty() ? null : titles);
         d.setStatus(r.getCurrentStatus() != null ? r.getCurrentStatus().name() : null);
         d.setBadge(thaiStatus(r));
         d.setBadgeClass("bg-info");
@@ -250,6 +264,7 @@ public class SearchDocumentFactory {
         d.setOccurredAt(f.getCreatedAt());
         d.setSourceUpdatedAt(f.getCreatedAt());
         d.setDeleted(Boolean.TRUE.equals(f.getIsDeleted()));
+        queueFileText(d, f.getStoredFilePath());
         d.setBadge("Storage");
         d.setBadgeClass("bg-warning text-dark");
         d.setVisibility(SearchVisibility.ADMIN);
@@ -271,6 +286,9 @@ public class SearchDocumentFactory {
         // Regulations are published to the whole university; there is nothing
         // to scope and everyone signed in may read them.
         d.setVisibility(SearchVisibility.PUBLIC);
+        // The PDF lives on hr2.kku.ac.th, not on our disk; the extraction worker
+        // fetches it through KkuDocumentFileService, which only goes to that host.
+        queueFileText(d, doc.getFileUrl());
         d.setUrl(requireUrl(SearchEntityType.REGULATION_DOC, doc.getId(), null));
         d.setAdminUrl(SearchEntityType.REGULATION_DOC.adminUrl(doc.getId(), null));
         return d;
@@ -317,11 +335,13 @@ public class SearchDocumentFactory {
         d.setBadgeClass("bg-secondary");
         d.setOccurredAt(uploadedAt);
         d.setSourceUpdatedAt(uploadedAt);
-        // The file's own text is pulled out later, by the extraction worker.
-        d.setFilePath(LINK_TYPE.equalsIgnoreCase(fileType) ? null : path);
-        d.setExtractionState(LINK_TYPE.equalsIgnoreCase(fileType) || isBlank(path)
-                ? ExtractionState.NONE
-                : ExtractionState.PENDING);
+        queueFileText(d, LINK_TYPE.equalsIgnoreCase(fileType) ? null : path);
+    }
+
+    /** The file's own text is pulled out later, by the extraction worker. */
+    private static void queueFileText(SearchDocument d, String path) {
+        d.setFilePath(isBlank(path) ? null : path.trim());
+        d.setExtractionState(isBlank(path) ? ExtractionState.NONE : ExtractionState.PENDING);
     }
 
     /**
@@ -380,6 +400,46 @@ public class SearchDocumentFactory {
         return d;
     }
 
+    public SearchDocument fromPositionStatusHistory(PositionStatusHistory h) {
+        PositionRequest request = h.getRequest();
+        SearchDocument d = base(SearchEntityType.POSITION_STATUS_HISTORY, h.getId(), "MAIN");
+        d.setTitle(h.getNewStatus() != null
+                ? "เปลี่ยนสถานะเป็น " + h.getNewStatus().getThaiLabel()
+                : "บันทึกประวัติสถานะ");
+        d.setSubtitle(request != null && request.getRequestCode() != null
+                ? "คำร้องตำแหน่ง: " + request.getRequestCode()
+                : null);
+        d.setKeywords(keywords(
+                request != null ? request.getRequestCode() : null,
+                h.getOldStatus() != null ? h.getOldStatus().getThaiLabel() : null,
+                h.getNewStatus() != null ? h.getNewStatus().getThaiLabel() : null,
+                h.getChangedBy() != null ? allNamesOf(h.getChangedBy()) : null));
+        d.setBody(h.getNote());
+        d.setStatus(h.getNewStatus() != null ? h.getNewStatus().name() : null);
+        d.setBadge("ประวัติ");
+        d.setBadgeClass("bg-light text-dark border");
+        d.setOccurredAt(h.getChangedAt());
+        d.setSourceUpdatedAt(h.getChangedAt());
+        scopeToApplicant(d, request != null ? request.getApplicant() : null,
+                request != null ? request.getId() : null);
+        return d;
+    }
+
+    /** A file the applicant sent in answer to a revision request. */
+    public SearchDocument fromRevisionFile(AcademicRevisionFile f) {
+        AcademicRequest request = f.getRequest();
+        SearchDocument d = base(SearchEntityType.REVISION_FILE, f.getId(), "MAIN");
+        fillAttachment(d, f.getOriginalFilename(), f.getStoredPath(), f.getFileType(),
+                request != null ? request.getRequestCode() : null,
+                f.getUploadedAt());
+        d.setSubtitle(join(" · ", d.getSubtitle(), "แก้ไขรอบที่ " + f.getRound()));
+        d.setBadge(f.isLink() ? "ลิงก์" : "ฉบับแก้ไข");
+        scopeToApplicant(d, request != null ? request.getApplicant() : null,
+                request != null ? request.getId() : null);
+        applyExternalLink(d, f.getStoredPath(), f.getFileType());
+        return d;
+    }
+
     /**
      * A harvested publication.
      *
@@ -422,7 +482,8 @@ public class SearchDocumentFactory {
         d.setSubtitle(r.getStatus() != null ? "สถานะ: " + r.getStatus().name() : null);
         d.setKeywords(keywords(r.getVerificationCode(),
                 r.getModule() != null ? r.getModule().name() : null,
-                r.getInitiatedBy() != null ? allNamesOf(r.getInitiatedBy()) : null));
+                r.getInitiatedBy() != null ? allNamesOf(r.getInitiatedBy()) : null,
+                signersOf(r)));
         d.setStatus(r.getStatus() != null ? r.getStatus().name() : null);
         d.setBadge("ลงนาม");
         d.setBadgeClass("bg-info");
@@ -434,6 +495,21 @@ public class SearchDocumentFactory {
         d.setUrl(requireUrl(SearchEntityType.SIGNATURE_REQUEST, r.getId(), null));
         d.setAdminUrl(SearchEntityType.SIGNATURE_REQUEST.adminUrl(r.getId(), null));
         return d;
+    }
+
+    /** Everyone asked to sign, so an envelope can be found by any signer's name. */
+    private String signersOf(SignatureRequest r) {
+        if (r.getSteps() == null) {
+            return null;
+        }
+        List<String> parts = new ArrayList<>();
+        for (SignatureStep step : r.getSteps()) {
+            parts.add(step.getSignerNameSnapshot());
+            parts.add(step.getRoleLabel());
+            parts.add(step.getActingPosition());
+            parts.add(allNamesOf(step.getSigner()));
+        }
+        return join(" ", parts.toArray(String[]::new));
     }
 
     // ------------------------------------------------------------------

@@ -12,9 +12,13 @@ import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.AdminFile;
 import com.ecom.academic.model.PositionAttachment;
 import com.ecom.academic.model.PositionDocument;
+import com.ecom.academic.model.AcademicRevisionFile;
 import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestPublication;
+import com.ecom.academic.model.PositionStatusHistory;
 import com.ecom.academic.model.RequestStatusHistory;
 import com.ecom.academic.model.SignatureRequest;
+import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.StaffMember;
 import com.ecom.external.model.KkuRegulationDoc;
 import com.ecom.external.model.ScopusPublication;
@@ -85,6 +89,11 @@ public class SearchIndexListener {
             return;
         }
         try {
+            SearchReindexEvent parent = parentChangeOf(entity);
+            if (parent != null) {
+                publisher.publishEvent(parent);
+                return;
+            }
             SearchEntityType type = typeOf(entity);
             Long id = idOf(entity);
             if (type == null || id == null) {
@@ -98,6 +107,28 @@ public class SearchIndexListener {
             log.warn("แจ้ง reindex ไม่สำเร็จสำหรับ {}: {}",
                     entity.getClass().getSimpleName(), e.toString());
         }
+    }
+
+    /**
+     * Rows with no index entry of their own, whose text is folded into their
+     * parent's document instead: a signing step's signer names belong to the
+     * envelope, a linked publication's title to the position request. Any change
+     * to one — a delete included — means the parent must be rebuilt.
+     *
+     * <p>Reading the parent's id off a lazy proxy does not initialise it, so this
+     * stays clear of the {@code EntityManager} like everything else here.
+     */
+    private static SearchReindexEvent parentChangeOf(Object entity) {
+        if (entity instanceof SignatureStep s) {
+            return s.getSignatureRequest() == null ? null
+                    : SearchReindexEvent.changed(SearchEntityType.SIGNATURE_REQUEST,
+                            s.getSignatureRequest().getId());
+        }
+        if (entity instanceof PositionRequestPublication p) {
+            return p.getRequest() == null ? null
+                    : SearchReindexEvent.changed(SearchEntityType.POSITION_REQUEST, p.getRequest().getId());
+        }
+        return null;
     }
 
     private static SearchEntityType typeOf(Object entity) {
@@ -114,6 +145,8 @@ public class SearchIndexListener {
         if (entity instanceof AcademicAttachment) return SearchEntityType.ACADEMIC_ATTACHMENT;
         if (entity instanceof PositionAttachment) return SearchEntityType.POSITION_ATTACHMENT;
         if (entity instanceof RequestStatusHistory) return SearchEntityType.STATUS_HISTORY;
+        if (entity instanceof PositionStatusHistory) return SearchEntityType.POSITION_STATUS_HISTORY;
+        if (entity instanceof AcademicRevisionFile) return SearchEntityType.REVISION_FILE;
         if (entity instanceof SignatureRequest) return SearchEntityType.SIGNATURE_REQUEST;
         if (entity instanceof ScopusPublication) return SearchEntityType.PUBLICATION;
         return null;
@@ -133,6 +166,8 @@ public class SearchIndexListener {
         if (entity instanceof AcademicAttachment e) return e.getId();
         if (entity instanceof PositionAttachment e) return e.getId();
         if (entity instanceof RequestStatusHistory e) return e.getId();
+        if (entity instanceof PositionStatusHistory e) return e.getId();
+        if (entity instanceof AcademicRevisionFile e) return e.getId();
         if (entity instanceof SignatureRequest e) return e.getId();
         if (entity instanceof ScopusPublication e) return e.getId();
         return null;

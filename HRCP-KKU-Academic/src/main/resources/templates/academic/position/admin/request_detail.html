@@ -116,10 +116,11 @@
               </span>
             </div>
           </div>
+          <!--/* มีเอกสารถูกส่งกลับ: บอกงานที่รออยู่จริง (ส่งกลับบางขั้นสถานะไม่เปลี่ยนตาม) */-->
           <span
             class="detail-hero-status"
-            th:data-bg="${request.currentStatus.color}"
-            th:text="${request.currentStatus.thaiLabel}"
+            th:data-bg="${sentBack != null} ? ${sentBack.color} : ${request.currentStatus.color}"
+            th:text="${sentBack != null} ? ${sentBack.statusLabel} : ${request.currentStatus.thaiLabel}"
           ></span>
         </div>
 
@@ -280,7 +281,7 @@
             <th:block th:each="step, iterStat : ${progressSteps}">
               <!--/* ส่งแก้ไขถอยมาที่ขั้นตรวจสอบเอกสาร — ระบายสีและเขียนว่าส่งแก้ไข ไม่ให้ดูเหมือนกำลังตรวจตามปกติ */-->
               <div class="detail-progress-step"
-                   th:with="revising=${request.currentStatus.name() == 'REVISION_REQUESTED' and step.name() == 'DOCUMENT_VERIFICATION'}"
+                   th:with="revising=${request.currentStatus.revisingAt(iterStat.index, sentBack != null)}"
                    th:classappend="${revising} ? 'dp-revise' : (${pIdx > iterStat.index} ? 'dp-done' : (${pIdx == iterStat.index} ? (${iterStat.last} ? 'dp-done dp-final' : 'dp-active') : ''))">
                 <div th:if="${!iterStat.last}" class="detail-step-line"
                      th:classappend="${pIdx > iterStat.index} ? 'line-done' : ''"></div>
@@ -288,7 +289,7 @@
                   <i class="fas" th:classappend="${revising} ? 'fa-circle-exclamation' : ${step.icon}"></i>
                 </div>
                 <div class="detail-progress-step-label"
-                     th:text="${revising} ? ${request.currentStatus.thaiLabel} : ${step.thaiLabel}"></div>
+                     th:text="${revising} ? ${sentBack != null ? sentBack.statusLabel : request.currentStatus.thaiLabel} : ${step.thaiLabel}"></div>
               </div>
             </th:block>
           </div>

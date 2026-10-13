@@ -14,7 +14,12 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.model.PositionStatusHistory;
 import com.ecom.academic.model.RequestStatus;
+import com.ecom.academic.repository.PositionStatusHistoryRepository;
+import com.ecom.external.model.ScopusPublication;
 import com.ecom.model.UserDtls;
 import com.ecom.search.index.SearchDocumentLoader;
 import com.ecom.search.index.SearchIndexer;
@@ -42,6 +47,9 @@ class SearchIndexFreshnessTest extends AbstractFlowTest {
 
     @Autowired
     private SearchDocumentRepository index;
+
+    @Autowired
+    private PositionStatusHistoryRepository positionHistory;
 
     private UserDtls applicant;
 
@@ -194,5 +202,35 @@ class SearchIndexFreshnessTest extends AbstractFlowTest {
         assertThat(populated).contains(
                 SearchEntityType.ACADEMIC_REQUEST,
                 SearchEntityType.SYSTEM_USER);
+    }
+
+    @Test
+    @DisplayName("position status history gets its own row, scoped to the applicant")
+    void positionStatusHistoryIsIndexed() {
+        PositionRequest r = data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null);
+        PositionStatusHistory h = new PositionStatusHistory();
+        h.setRequest(r);
+        h.setNewStatus(PositionRequestStatus.REVISION_REQUESTED);
+        h.setNote("แก้ไขตารางผลงานวิจัย");
+        h = positionHistory.save(h);
+
+        SearchDocument row = indexRowFor(SearchEntityType.POSITION_STATUS_HISTORY, h.getId())
+                .orElseThrow(() -> new AssertionError("PositionStatusHistory ต้องมี @EntityListeners"));
+        assertThat(row.getOwnerUserId()).isEqualTo(applicant.getId());
+        assertThat(row.getBody()).contains("ตารางผลงานวิจัย");
+    }
+
+    @Test
+    @DisplayName("linking a publication to a position request rewrites the request's row")
+    void linkingPublicationReindexesTheRequest() {
+        PositionRequest r = data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null);
+        ScopusPublication p = data.publication(9001L, "Graph Neural Networks for Isan Dialects", 2025, 3);
+
+        data.recordPublicationUse(r, p);
+
+        SearchDocument row = indexRowFor(SearchEntityType.POSITION_REQUEST, r.getId()).orElseThrow();
+        assertThat(row.getBody())
+                .as("แถวลิงก์ไม่มี index ของตัวเอง การบันทึกต้องสั่งให้คำร้องแม่ index ใหม่")
+                .contains("Graph Neural Networks for Isan Dialects");
     }
 }

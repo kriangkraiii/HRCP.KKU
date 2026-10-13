@@ -25,8 +25,11 @@
                         <i class="fas fa-calendar me-1"></i> วันที่ยื่น: <span th:text="${@thaiDateUtil.format(request.submissionDate)}"></span>
                     </p>
                 </div>
-                <span class="status-badge" th:classappend="'status-' + ${request.currentStatus.name()}"
+                <!--/* มีเอกสารถูกส่งกลับ: ป้ายบอกงานที่รออยู่จริง แทนสถานะคำร้องที่ไม่เปลี่ยนตอนส่งกลับ */-->
+                <span th:unless="${sentBack != null}" class="status-badge"
+                    th:classappend="'status-' + ${request.currentStatus.name()}"
                     th:text="${request.currentStatus.thaiLabel}"></span>
+                <th:block th:if="${sentBack != null}"><th:block th:replace="~{academic/_sent_back_alert :: badge(${sentBack})}"></th:block></th:block>
             </div>
 
             <!--/* ข้อมูลรายวิชา จากเอกสารที่ 1 */-->
@@ -70,7 +73,7 @@
                     <!--/* เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ (ขั้นถัดจากสถานะปัจจุบัน) — กติกาอยู่ที่ RequestStatus.stepStateAt */-->
                     <div class="timeline-v2" th:with="cur=${request.currentStatus}">
                         <div th:each="step, stepStat : ${progressSteps}" class="timeline-v2-step"
-                            th:with="st=${cur.stepStateAt(stepStat.index)}, icon=${st.iconFor(step)}"
+                            th:with="st=${cur.stepStateAt(stepStat.index, sentBack != null)}, icon=${st.iconFor(step)}"
                             th:classappend="${st.timelineClass}">
                             <div class="timeline-v2-icon">
                                 <i th:if="${icon != null}" th:class="'fas ' + ${icon}"></i>
@@ -78,7 +81,7 @@
                             </div>
                             <div class="timeline-v2-label" th:text="${step.stepLabel}"></div>
                             <div class="timeline-v2-hint" th:if="${stepStat.index == cur.focusIndex()}"
-                                th:text="${cur.stepHint}"></div>
+                                th:text="${sentBack != null} ? ${sentBack.statusLabel} : ${cur.stepHint}"></div>
                         </div>
                     </div>
                 </div>

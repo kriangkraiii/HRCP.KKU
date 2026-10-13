@@ -169,6 +169,21 @@ public enum PositionRequestStatus {
     }
 
     /**
+     * ขั้นที่ {@code index} บนแถบความคืบหน้าแสดงเป็น "ส่งแก้ไข" หรือไม่
+     *
+     * <p>สถานะ "ส่งแก้ไข" ถอยมาที่ขั้นตรวจสอบเอกสาร ส่วนการส่งกลับในขั้นที่ flow ไม่ให้เปลี่ยนเป็น "ส่งแก้ไข"
+     * (เช่น รับรองมติกลั่นกรองฯ แล้ว) สถานะคงเดิม แต่งานหยุดรอผู้ยื่นอยู่ที่ขั้นปัจจุบัน
+     *
+     * @param documentsSentBack มีเอกสารที่ส่งกลับให้ผู้ยื่นแก้ยังไม่จบ
+     */
+    public boolean revisingAt(int index, boolean documentsSentBack) {
+        if (this == REVISION_REQUESTED) {
+            return index == DOCUMENT_VERIFICATION.progressIndex();
+        }
+        return documentsSentBack && index == progressIndex();
+    }
+
+    /**
      * จบงานฝั่งวิทยาลัยแล้ว — ส่งออกกองทรัพยากรบุคคลไปแล้ว ขั้นหลังจากนั้น (มติสภา การขอทบทวน)
      * เป็นการบันทึกตามผลของมหาวิทยาลัย ผู้ยื่นจึงเริ่มคำร้องใหม่ได้ตั้งแต่ส่งออก เหมือนเดิม
      */

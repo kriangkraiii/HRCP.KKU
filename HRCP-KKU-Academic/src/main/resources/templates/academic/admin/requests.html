@@ -146,6 +146,14 @@
                                                     <i class="fas" th:classappend="${req.currentStatus.icon}"></i>
                                                     <span th:text="${req.currentStatus.thaiLabel}"></span>
                                                 </span>
+                                                <!--/* การส่งกลับไม่เปลี่ยนสถานะคำร้อง — บอกไว้ว่างานรอผู้ยื่นอยู่ */-->
+                                                <div th:if="${sentBackMap.containsKey(req.id)}" class="mt-1"
+                                                     th:with="sb=${sentBackMap.get(req.id)}">
+                                                    <span class="at-status" th:data-bg="${sb.color}">
+                                                        <i class="fas fa-pen-to-square"></i>
+                                                        <span th:text="${sb.statusLabel}"></span>
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td>
                                                 <a th:href="'/admin/academic/request/' + ${req.id}"
@@ -219,6 +227,14 @@
                                                     <i class="fas" th:classappend="${req.currentStatus.icon}"></i>
                                                     <span th:text="${req.currentStatus.thaiLabel}"></span>
                                                 </span>
+                                                <!--/* การส่งกลับไม่เปลี่ยนสถานะคำร้อง — บอกไว้ว่างานรอผู้ยื่นอยู่ */-->
+                                                <div th:if="${sentBackMap.containsKey(req.id)}" class="mt-1"
+                                                     th:with="sb=${sentBackMap.get(req.id)}">
+                                                    <span class="at-status" th:data-bg="${sb.color}">
+                                                        <i class="fas fa-pen-to-square"></i>
+                                                        <span th:text="${sb.statusLabel}"></span>
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td>
                                                 <a th:href="'/admin/academic/request/' + ${req.id}"
@@ -362,6 +378,14 @@
                                                 <i class="fas" th:classappend="${req.currentStatus.icon}"></i>
                                                 <span th:text="${req.currentStatus.thaiLabel}"></span>
                                             </span>
+                                            <!--/* ส่งกลับบางขั้นสถานะไม่เปลี่ยนตาม — บอกไว้ว่างานรอผู้ยื่นอยู่ */-->
+                                            <div th:if="${posSentBackMap.containsKey(req.id)}" class="mt-1"
+                                                 th:with="sb=${posSentBackMap.get(req.id)}">
+                                                <span class="at-status" th:data-bg="${sb.color}">
+                                                    <i class="fas fa-pen-to-square"></i>
+                                                    <span th:text="${sb.statusLabel}"></span>
+                                                </span>
+                                            </div>
                                         </td>
                                         <td>
                                             <a th:href="'/admin/position/request/' + ${req.id}"

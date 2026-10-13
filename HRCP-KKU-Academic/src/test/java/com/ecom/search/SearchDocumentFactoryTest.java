@@ -2,6 +2,8 @@ package com.ecom.search;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -9,7 +11,15 @@ import org.junit.jupiter.api.Test;
 import com.ecom.academic.model.AcademicAttachment;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.AcademicRevisionFile;
+import com.ecom.academic.model.AdminFile;
+import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.model.PositionStatusHistory;
 import com.ecom.academic.model.RequestStatus;
+import com.ecom.academic.model.SignatureRequest;
+import com.ecom.academic.model.SignatureStep;
+import com.ecom.external.model.KkuRegulationDoc;
 import com.ecom.model.UserDtls;
 import com.ecom.search.index.JsonFormTextExtractor;
 import com.ecom.search.index.SearchDocumentFactory;
@@ -189,6 +199,116 @@ class SearchDocumentFactoryTest {
             assertThat(d.getExtractionState()).isEqualTo(ExtractionState.PENDING);
             assertThat(d.getFilePath()).endsWith("หลักฐาน.pdf");
             assertThat(d.isExternal()).isFalse();
+        }
+    }
+
+    /**
+     * Sources added after the first cut of the index, each one a gap someone
+     * could fall into: a search that found nothing for a record that exists.
+     */
+    @Nested
+    @DisplayName("แหล่งข้อมูลที่เพิ่มเข้า index ภายหลัง")
+    class LaterSources {
+
+        private PositionRequest positionRequest() {
+            PositionRequest r = new PositionRequest();
+            r.setId(11L);
+            r.setRequestCode("KKU-POS-256801-0001");
+            r.setApplicant(applicant());
+            r.setCurrentStatus(PositionRequestStatus.DOCUMENT_RECEIVED);
+            return r;
+        }
+
+        @Test
+        @DisplayName("เอกสารลงนามลิงก์ไปหน้า /esign/inbox ที่มีอยู่จริง และค้นด้วยชื่อผู้ลงนามได้")
+        void signatureRequestLinksToRealInboxAndCarriesSigners() {
+            SignatureRequest envelope = new SignatureRequest();
+            envelope.setId(5L);
+            envelope.setDocumentLabel("บันทึกข้อความขอประเมิน");
+            SignatureStep step = new SignatureStep();
+            step.setSignatureRequest(envelope);
+            step.setSignerNameSnapshot("รศ.ดร.มาลี ทองดี");
+            step.setRoleLabel("คณบดี");
+            envelope.getSteps().add(step);
+
+            SearchDocument d = factory.fromSignatureRequest(envelope);
+
+            assertThat(d.getUrl())
+                    .as("/user/esign/inbox กับ /admin/esign/inbox ไม่มีอยู่จริง กดแล้วเจอ 404")
+                    .isEqualTo("/esign/inbox");
+            assertThat(d.getAdminUrl()).isEqualTo("/esign/inbox");
+            assertThat(d.getKeywords()).contains("มาลี").contains("คณบดี");
+        }
+
+        @Test
+        @DisplayName("ประวัติสถานะคำร้องตำแหน่งผูกกับผู้ยื่น และลิงก์ไปหน้าคำร้องนั้น")
+        void positionStatusHistoryIsScopedAndLinked() {
+            PositionStatusHistory h = new PositionStatusHistory();
+            h.setId(3L);
+            h.setRequest(positionRequest());
+            h.setNewStatus(PositionRequestStatus.REVISION_REQUESTED);
+            h.setNote("ขอให้แก้ไขรายชื่อผลงานในเอกสารฉบับที่ 2");
+
+            SearchDocument d = factory.fromPositionStatusHistory(h);
+
+            assertThat(d.getVisibility()).isEqualTo(SearchVisibility.OWNER_OR_ADMIN);
+            assertThat(d.getOwnerUserId()).isEqualTo(42);
+            assertThat(d.getUrl()).isEqualTo("/user/position/request/11");
+            assertThat(d.getBody()).contains("รายชื่อผลงาน");
+            assertThat(d.getKeywords()).contains("KKU-POS-256801-0001");
+        }
+
+        @Test
+        @DisplayName("ไฟล์ฉบับแก้ไขเข้าคิวสกัดข้อความ ส่วนลิงก์ไม่เข้า")
+        void revisionFileIsQueuedUnlessItIsALink() {
+            AcademicRevisionFile f = new AcademicRevisionFile();
+            f.setId(9L);
+            f.setRequest(request(applicant()));
+            f.setRound(2);
+            f.setOriginalFilename("มคอ3-แก้ไข.pdf");
+            f.setFileType("PDF");
+            f.setStoredPath("uploads/academic/7/revisions/มคอ3-แก้ไข.pdf");
+
+            SearchDocument file = factory.fromRevisionFile(f);
+            assertThat(file.getExtractionState()).isEqualTo(ExtractionState.PENDING);
+            assertThat(file.getSubtitle()).contains("แก้ไขรอบที่ 2");
+            assertThat(file.getOwnerUserId()).isEqualTo(42);
+
+            f.setFileType(AcademicRevisionFile.LINK);
+            f.setStoredPath("https://drive.google.com/file/y");
+            SearchDocument link = factory.fromRevisionFile(f);
+            assertThat(link.getExtractionState()).isEqualTo(ExtractionState.NONE);
+            assertThat(link.isExternal()).isTrue();
+        }
+
+        @Test
+        @DisplayName("ชื่อผลงานที่แนบกับคำร้องตำแหน่งค้นเจอคำร้องนั้น")
+        void positionRequestCarriesLinkedPublicationTitles() {
+            SearchDocument d = factory.fromPositionRequest(positionRequest(),
+                    List.of("Deep Learning for Thai OCR"));
+
+            assertThat(d.getBody()).contains("Deep Learning for Thai OCR");
+            assertThat(factory.fromPositionRequest(positionRequest()).getBody()).isNull();
+        }
+
+        @Test
+        @DisplayName("ไฟล์ระบบและเอกสารข้อบังคับเข้าคิวสกัดเนื้อหา")
+        void storedFilesAndRegulationsAreQueued() {
+            AdminFile f = new AdminFile();
+            f.setId(1L);
+            f.setOriginalFilename("ประกาศ.pdf");
+            f.setStoredFilePath("uploads/admin-storage/abc.pdf");
+            SearchDocument stored = factory.fromAdminFile(f);
+            assertThat(stored.getExtractionState()).isEqualTo(ExtractionState.PENDING);
+            assertThat(stored.getFilePath()).isEqualTo("uploads/admin-storage/abc.pdf");
+
+            KkuRegulationDoc doc = new KkuRegulationDoc();
+            doc.setId(2L);
+            doc.setTitle("ข้อบังคับ มข. ว่าด้วยตำแหน่งทางวิชาการ 2569");
+            doc.setFileUrl("https://hr2.kku.ac.th/files/reg-2569.pdf");
+            SearchDocument regulation = factory.fromRegulationDoc(doc);
+            assertThat(regulation.getExtractionState()).isEqualTo(ExtractionState.PENDING);
+            assertThat(regulation.getFilePath()).isEqualTo("https://hr2.kku.ac.th/files/reg-2569.pdf");
         }
     }
 }

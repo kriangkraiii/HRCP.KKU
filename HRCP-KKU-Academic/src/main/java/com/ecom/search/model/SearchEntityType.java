@@ -43,6 +43,12 @@ public enum SearchEntityType {
     STATUS_HISTORY("ประวัติสถานะคำร้อง", "fas fa-clock-rotate-left text-secondary", 0.7f,
             "/user/academic/history", "/admin/academic/requests"),
 
+    POSITION_STATUS_HISTORY("ประวัติสถานะคำร้องตำแหน่ง", "fas fa-clock-rotate-left text-secondary", 0.7f,
+            "/user/position/request/{parentId}", "/admin/academic/requests?type=position#pos-req-{parentId}"),
+
+    REVISION_FILE("ไฟล์ฉบับแก้ไขคำร้องประเมิน", "fas fa-file-pen text-secondary", 0.9f,
+            "/user/academic/dashboard", "/admin/academic/requests/{parentId}"),
+
     COMMITTEE_MEMBER("คณะกรรมการ / ผู้ทรงคุณวุฒิ", "fas fa-user-graduate text-success", 1.2f,
             null, "/admin/academic/committee#committee-{id}"),
 
@@ -65,7 +71,7 @@ public enum SearchEntityType {
             "/user/academic/documents", "/user/academic/documents"),
 
     SIGNATURE_REQUEST("เอกสารลงนาม", "fas fa-file-signature text-info", 1.0f,
-            "/user/esign/inbox", "/admin/esign/inbox"),
+            "/esign/inbox", "/esign/inbox"),
 
     NAVIGATION("เมนูระบบ", "fas fa-compass text-secondary", 1.3f,
             null, null);

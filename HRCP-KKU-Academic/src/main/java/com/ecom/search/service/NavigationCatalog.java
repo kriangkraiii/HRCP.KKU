@@ -114,7 +114,40 @@ public class NavigationCatalog {
                     "/admin/academic/settings/login-announcement", "fas fa-bullhorn text-warning", true),
             new Entry("สถานะดัชนีการค้นหา", "ตรวจสอบความครบถ้วนของ index และสั่งสร้างใหม่",
                     "index ดัชนี ค้นหา search reindex สถานะการค้นหา",
-                    "/admin/search/status", "fas fa-magnifying-glass-chart text-secondary", true));
+                    "/admin/search/status", "fas fa-magnifying-glass-chart text-secondary", true),
+
+            // Appended rather than slotted into their groups: ids follow position,
+            // and inserting above would rename every row below it.
+            new Entry("คำร้องทั้งหมด (ผู้ดูแลระบบ)", "รายการคำร้องทุกประเภทในที่เดียว",
+                    "คำร้องทั้งหมด รายการคำร้อง จัดการคำร้อง requests all",
+                    "/admin/academic/requests", "fas fa-inbox text-primary", true),
+            new Entry("จัดการผู้ทรงคุณวุฒิภายนอก", "รายชื่อผู้ทรงคุณวุฒิและกรรมการจากภายนอก",
+                    "ผู้ทรงคุณวุฒิ กรรมการ คณะกรรมการ ภายนอก committee reviewer",
+                    "/admin/academic/committee", "fas fa-user-graduate text-success", true),
+            new Entry("ผู้ลงนามภายนอก", "บัญชีผู้ลงนามเอกสารจากนอกวิทยาลัย",
+                    "ผู้ลงนามภายนอก ผู้ลงนาม external signer บัญชี",
+                    "/admin/users?type=3", "fas fa-user-tie text-secondary", true),
+            new Entry("งานวิจัยและผลงานตีพิมพ์", "ผลงานตีพิมพ์ที่ดึงมาจาก Scopus และระบบภายนอก",
+                    "งานวิจัย ผลงานตีพิมพ์ ผลงาน publication scopus research",
+                    "/admin/publications", "fas fa-book text-primary", true),
+            new Entry("ดึงข้อมูลจากระบบภายนอก", "ซิงค์บุคลากร ผลงานตีพิมพ์ และคลังเอกสาร",
+                    "ดึงข้อมูล ซิงค์ sync ระบบภายนอก external นำเข้า",
+                    "/admin/external-sync", "fas fa-rotate text-secondary", true),
+            new Entry("การแจ้งเตือน (ผู้ดูแลระบบ)", "รายการแจ้งเตือนของผู้ดูแลระบบ",
+                    "แจ้งเตือน notification กล่องข้อความ",
+                    "/admin/notifications", "fas fa-bell text-warning", true),
+            new Entry("ตั้งค่าผู้ลงนามเอกสาร", "กำหนดผู้ลงนามและลำดับการลงนามของเอกสารแต่ละชนิด",
+                    "ผู้ลงนาม ลำดับลงนาม ตั้งค่าผู้ลงนาม signer workflow",
+                    "/admin/academic/settings/signers", "fas fa-signature text-secondary", true),
+            new Entry("เอกสารรอลงนาม", "เอกสารที่ส่งมาให้ท่านลงนาม",
+                    "รอลงนาม ลงนาม เซ็น ลายมือชื่อ signature sign inbox",
+                    "/esign/inbox", "fas fa-file-signature text-info", false),
+            new Entry("ลายเซ็นของฉัน", "จัดการภาพลายเซ็นและ Digital ID (.p12)",
+                    "ลายเซ็น ลายมือชื่อ digital id p12 ใบรับรอง certificate signature",
+                    "/esign/my-signatures", "fas fa-signature text-info", false),
+            new Entry("รายงานปัญหา / ข้อเสนอแนะ", "แจ้งปัญหาการใช้งานหรือเสนอแนะการปรับปรุงระบบ",
+                    "รายงานปัญหา แจ้งปัญหา ข้อเสนอแนะ feedback bug",
+                    "/user/feedback", "fas fa-comment-dots text-secondary", false));
 
     /** The menu entries as index documents, ready to be upserted. */
     public List<SearchDocument> documents() {

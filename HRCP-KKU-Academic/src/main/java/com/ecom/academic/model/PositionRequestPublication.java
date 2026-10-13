@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -37,6 +38,7 @@ import jakarta.persistence.UniqueConstraint;
  * may delete and recreate, and a foreign key would turn that routine event into
  * a failed sync.
  */
+@EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity
 @Table(name = "position_request_publication",
         uniqueConstraints = @UniqueConstraint(name = "uq_pos_req_pub",

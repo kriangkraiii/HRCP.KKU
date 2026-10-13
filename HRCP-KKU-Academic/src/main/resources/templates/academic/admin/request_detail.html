@@ -49,8 +49,10 @@
               <span th:text="${@thaiDateUtil.format(request.submissionDate)}"></span></span>
           </div>
         </div>
-        <span class="detail-hero-status" th:data-bg="${request.currentStatus.color}"
-          th:text="${request.currentStatus.thaiLabel}"></span>
+        <!--/* มีเอกสารถูกส่งกลับ: บอกงานที่รออยู่จริง แทนสถานะคำร้องที่ไม่เปลี่ยนตอนส่งกลับ */-->
+        <span class="detail-hero-status"
+          th:data-bg="${sentBack != null} ? ${sentBack.color} : ${request.currentStatus.color}"
+          th:text="${sentBack != null} ? ${sentBack.statusLabel} : ${request.currentStatus.thaiLabel}"></span>
       </div>
 
       <!--/* อัปเดตสด (request_live.js): ช่องที่มี data-live-region ถูกแทนที่เมื่อคำร้องเปลี่ยน
@@ -66,7 +68,7 @@
         <div class="detail-progress-steps" th:with="cur=${request.currentStatus}">
           <th:block th:each="step, iterStat : ${progressSteps}">
             <div class="detail-progress-step"
-                 th:with="st=${cur.stepStateAt(iterStat.index)}, icon=${st.iconFor(step)}"
+                 th:with="st=${cur.stepStateAt(iterStat.index, sentBack != null)}, icon=${st.iconFor(step)}"
                  th:classappend="${st.detailClass}">
               <div th:if="${!iterStat.last}" class="detail-step-line"
                    th:classappend="${st.reached} ? 'line-done' : ''"></div>
@@ -75,7 +77,7 @@
               </div>
               <div class="detail-progress-step-label" th:text="${step.stepLabel}"></div>
               <div class="detail-progress-step-hint" th:if="${iterStat.index == cur.focusIndex()}"
-                   th:text="${cur.stepHint}"></div>
+                   th:text="${sentBack != null} ? ${sentBack.statusLabel} : ${cur.stepHint}"></div>
             </div>
           </th:block>
         </div>

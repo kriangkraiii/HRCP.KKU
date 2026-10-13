@@ -68,6 +68,21 @@ class RequestStatusProgressTest {
         assertThat(RequestStatus.RECEIVED.getStepHint()).isEqualTo("กำลังดำเนินการ");
     }
 
+    /**
+     * การส่งเอกสารกลับไม่เปลี่ยนสถานะคำร้อง — เดิมแถบยังขึ้น "กำลังดำเนินการ" สีน้ำเงิน
+     * ทั้งที่งานหยุดรอผู้ยื่นแก้อยู่
+     */
+    @Test
+    @DisplayName("มีเอกสารถูกส่งกลับ: ขั้นที่กำลังดำเนินการเป็นสีส้ม ไม่ใช่น้ำเงิน")
+    void sentBackDocumentsHoldTheFocusStep() {
+        assertThat(IntStream.range(0, RequestStatus.getProgressSteps().length)
+                .mapToObj(i -> RequestStatus.RECEIVED.stepStateAt(i, true)))
+                .containsExactly(DONE, REVISE, PENDING, PENDING, PENDING, PENDING);
+        assertThat(RequestStatus.RECEIVED.stepStateAt(1, false)).isEqualTo(CURRENT);
+        // ปิดแล้วไม่มีขั้นที่กำลังดำเนินการ — ไม่มีอะไรให้ทาสีส้ม
+        assertThat(RequestStatus.COMPLETED.stepStateAt(5, true)).isEqualTo(FINAL);
+    }
+
     @Test
     @DisplayName("เสร็จสิ้น: ทุกขั้นเขียว ขั้นสุดท้ายเป็นเขียวเข้ม ไม่มีขั้นที่กำลังดำเนินการ")
     void completedHasNoFocus() {

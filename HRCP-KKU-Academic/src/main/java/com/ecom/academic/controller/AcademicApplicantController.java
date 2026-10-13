@@ -1130,6 +1130,9 @@ public class AcademicApplicantController {
         model.addAttribute("canEditDoc2", canEditDoc2);
         model.addAttribute("revisionNoteDoc1", requestService.getRevisionNote(id, 1));
         model.addAttribute("revisionNoteDoc2", requestService.getRevisionNote(id, 2));
+        // การส่งกลับไม่เปลี่ยนสถานะคำร้อง ป้ายสถานะและแถบความคืบหน้าจึงต้องรู้จากตรงนี้
+        var sentBack = requestService.revisionProgress(request);
+        model.addAttribute("sentBack", sentBack.isEmpty() ? null : sentBack);
         model.addAttribute("committeeSuggestions", requestService.committeeSuggestionsFor(request));
         model.addAttribute("revisionRounds", revisionService.byRound(id));
         model.addAttribute("revisionMaxItems", AcademicRevisionService.MAX_ITEMS);

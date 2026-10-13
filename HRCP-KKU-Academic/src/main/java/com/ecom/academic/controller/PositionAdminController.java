@@ -224,10 +224,15 @@ public class PositionAdminController {
         model.addAttribute("editHistory", positionService.getEditHistory(id));
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
         addCouncilTimeline(model, request);
+        // ส่งกลับในขั้นที่ flow ไม่ให้เปลี่ยนเป็น "ส่งแก้ไข" สถานะคงเดิม ป้ายสถานะและแถบความคืบหน้าจึงต้องรู้จากตรงนี้
+        var sentBack = positionService.revisionProgress(request);
+        model.addAttribute("sentBack", sentBack.isEmpty() ? null : sentBack);
         // กล่อง "ขั้นต่อไป" — งานที่เจ้าหน้าที่ต้องทำตอนนี้ เรียงก่อนหลัง จากสถานะและป้ายของเอกสารชุดเดียวกับรายการเอกสาร
+        java.util.Set<Integer> sentBackDocs = new java.util.TreeSet<>(positionService.documentsAwaitingResign(id));
+        sentBackDocs.addAll(sentBack.documents().keySet());
         model.addAttribute("nextStep", com.ecom.academic.service.NextStepGuide.position(request.getCurrentStatus(),
-                docRows, docProgress, positionService.documentsAwaitingResign(id),
-                positionService.revisionProgress(request).documents().values().stream()
+                docRows, docProgress, sentBackDocs,
+                sentBack.documents().values().stream()
                         .filter(d -> d.stage() == com.ecom.academic.service.RevisionProgress.Stage.SUBMITTED)
                         .map(com.ecom.academic.service.RevisionProgress.SentBackDocument::documentType)
                         .toList(),

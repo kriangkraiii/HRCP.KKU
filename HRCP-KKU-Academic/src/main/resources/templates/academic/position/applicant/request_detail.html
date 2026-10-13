@@ -77,8 +77,11 @@
                     <h3 class="mb-0"><i class="fas fa-university"></i> คำร้องขอตำแหน่งทางวิชาการ</h3>
                     <small class="text-muted">[[${request.requestCode}]]</small>
                 </div>
-                <span class="badge fs-6" th:classappend="'bg-' + ${request.currentStatus.badgeClass}"
+                <!--/* มีเอกสารถูกส่งกลับ: ป้ายบอกงานที่รออยู่จริง แทนสถานะคำร้อง */-->
+                <span th:unless="${sentBack != null}" class="badge fs-6"
+                    th:classappend="'bg-' + ${request.currentStatus.badgeClass}"
                     th:text="${request.currentStatus.thaiLabel}"></span>
+                <th:block th:if="${sentBack != null}"><th:block th:replace="~{academic/_sent_back_alert :: badge(${sentBack})}"></th:block></th:block>
             </div>
 
             <!--/* ข้อมูลตำแหน่ง (จากเอกสารที่ 2) */-->

@@ -395,12 +395,14 @@ public class AcademicAdminController {
                     .filter(r -> r.getCurrentStatus().isTerminal())
                     .count();
             model.addAttribute("positionRequests", positionRequests);
+            model.addAttribute("posSentBackMap", positionRequestService.revisionProgressFor(positionRequests));
             model.addAttribute("positionStatuses", PositionRequestStatus.values());
             model.addAttribute("positionPendingCount", positionPendingCount);
             model.addAttribute("positionCompletedCount", positionCompletedCount);
             model.addAttribute("positionTotalCount", (long) positionRequests.size());
         } catch (Exception e) {
             model.addAttribute("positionRequests", java.util.Collections.emptyList());
+            model.addAttribute("posSentBackMap", java.util.Collections.emptyMap());
             model.addAttribute("posStatusGroups", java.util.Collections.emptyList());
             model.addAttribute("posAllCount", 0L);
             model.addAttribute("positionPendingCount", 0L);
@@ -415,6 +417,7 @@ public class AcademicAdminController {
         // ดึงข้อมูลรายวิชาจาก doc_1 เฉพาะคำร้องที่หน้านี้แสดง ใน query เดียว — มุมมองปกติแสดงเฉพาะ
         // คำร้องที่ยังไม่ปิด เดิมโหลดของทุกคำร้องทีละรายการ รวมคำร้องที่ปิดแล้วซึ่งไม่ได้แสดงเลย
         List<AcademicRequest> shownRequests = model.containsAttribute("activeStatus") ? allRequests : pendingRequests;
+        model.addAttribute("sentBackMap", requestService.revisionProgressFor(shownRequests));
         model.addAttribute("doc1DataMap", requestService.documentDataFor(shownRequests.stream()
                 .filter(r -> !r.getCurrentStatus().isDraft())
                 .map(AcademicRequest::getId)
@@ -480,6 +483,9 @@ public class AcademicAdminController {
         model.addAttribute("awaitingResignDocs", requestService.documentsAwaitingResign(id).stream()
                 .map(t -> "เอกสารที่ " + t + " " + requestService.getDocLabel(t)).toList());
         model.addAttribute("progressSteps", RequestStatus.getProgressSteps());
+        // การส่งกลับไม่เปลี่ยนสถานะคำร้อง ป้ายสถานะและแถบความคืบหน้าจึงต้องรู้จากตรงนี้
+        var sentBack = requestService.revisionProgress(request);
+        model.addAttribute("sentBack", sentBack.isEmpty() ? null : sentBack);
 
         // Progress percentage
         RequestStatus[] steps = RequestStatus.getProgressSteps();
@@ -515,8 +521,15 @@ public class AcademicAdminController {
                         .toList());
         model.addAttribute("docProgress", docProgress);
         // กล่อง "ขั้นต่อไป" — งานที่เจ้าหน้าที่ต้องทำตอนนี้ เรียงก่อนหลัง
+        // การส่งกลับไม่เปลี่ยนสถานะ — เอกสารที่ส่งกลับยังค้าง (รวมฉบับที่ไม่มีช่องลงนามของผู้ยื่น) ขึ้นก่อนงานของขั้น
+        java.util.Set<Integer> sentBackDocs = new java.util.TreeSet<>(requestService.documentsAwaitingResign(id));
+        sentBackDocs.addAll(sentBack.documents().keySet());
         model.addAttribute("nextStep", com.ecom.academic.service.NextStepGuide.academic(request.getCurrentStatus(),
-                DOC_LABELS, docProgress, requestService.appealDeadline(id)));
+                DOC_LABELS, docProgress, requestService.appealDeadline(id), sentBackDocs,
+                sentBack.documents().values().stream()
+                        .filter(d -> d.stage() == com.ecom.academic.service.RevisionProgress.Stage.SUBMITTED)
+                        .map(com.ecom.academic.service.RevisionProgress.SentBackDocument::documentType)
+                        .toList()));
 
         Map<Integer, Long> docTypeToId = documents.stream()
                 .collect(Collectors.toMap(AcademicDocument::getDocumentType, AcademicDocument::getId, (existing, replacement) -> existing));

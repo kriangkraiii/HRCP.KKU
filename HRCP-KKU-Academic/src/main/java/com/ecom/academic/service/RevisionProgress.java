@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureRequest;
 import com.ecom.academic.model.SignatureRequestStatus;
 import com.ecom.academic.model.SignatureStepStatus;
@@ -57,6 +58,17 @@ public final class RevisionProgress {
         }
 
         public boolean isEmpty() { return documents.isEmpty(); }
+
+        /** สถานะที่แสดงแทนสถานะคำร้อง และคำอธิบายใต้ขั้นที่กำลังดำเนินการ */
+        public String getStatusLabel() {
+            return isActionRequired() ? "รอผู้ยื่นแก้ไขเอกสาร" : "ยื่นการแก้ไขแล้ว · รอตรวจสอบ";
+        }
+
+        /** สีเดียวกับวงจรแก้ไขหลังประชุม (แจ้งผล - แก้ไข / ส่งเอกสารแก้ไขแล้ว) */
+        public String getColor() {
+            return isActionRequired() ? RequestStatus.COMPLETED_REVISE.getColor()
+                    : RequestStatus.REVISION_SUBMITTED.getColor();
+        }
     }
 
     /**

@@ -136,23 +136,14 @@ public final class NextStepGuide {
         CouncilDates d = dates == null ? CouncilDates.NONE : dates;
         List<Item> items = new ArrayList<>();
         if (status == PositionRequestStatus.REVISION_REQUESTED) {
-            for (int t : awaitingResign) {
-                if (!resubmitted.contains(t)) {
-                    items.add(new Item("รอผู้ยื่นแก้ไขและลงนามใหม่ — " + docs.name(t), t, State.WAITING));
-                } else if (progress.get(t) == Stage.AWAITING_FORWARD) {
-                    // ผู้ยื่นลงนามแล้ว ผู้ลงนามที่เหลือรอเจ้าหน้าที่ตรวจแล้วส่งเวียน — ไม่ส่ง สถานะไม่มีวันกลับมาเอง
-                    items.add(new Item("ตรวจแล้วส่งเวียนให้ลงนามใหม่ — " + docs.name(t), t, State.TODO));
-                } else {
-                    items.add(new Item("รอผู้ลงนามลงนามใหม่ — " + docs.name(t), t, State.WAITING));
-                }
-            }
+            items.addAll(revisionItems(docs, awaitingResign, resubmitted));
         } else {
             // ขั้นแรกหลังรับคำร้องเห็นทั้งชุด (ที่เสร็จแล้วติ๊กไว้) ขั้นหลังจากนั้นเห็นเฉพาะที่ยังค้าง
             items.addAll(docs.chores(status == PositionRequestStatus.DOCUMENT_RECEIVED));
         }
         String sendBack = "ที่ประชุมให้แก้ไข → กด “ส่งกลับแก้ไข” ในเอกสารที่ต้องแก้";
 
-        return switch (status) {
+        Step step = switch (status) {
             case DOCUMENT_RECEIVED -> {
                 docs.staffDocument(items, P2_CHECKLIST, "ตรวจสอบความถูกต้อง/ครบถ้วน");
                 yield Step.of("ตรวจสอบเอกสารของผู้ยื่น และทำแบบตรวจสอบคุณสมบัติ", items,
@@ -162,12 +153,7 @@ public final class NextStepGuide {
                 docs.staffDocument(items, P2_SUMMARY, "เสนอวาระกลั่นกรองฯ");
                 yield Step.of("สรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ เพื่อเสนอวาระกลั่นกรองฯ", items, null);
             }
-            case REVISION_REQUESTED -> Step.of(
-                    items.stream().anyMatch(i -> i.state() == State.TODO) ? "ส่งเวียนเอกสารที่แก้แล้วให้ลงนามใหม่"
-                            : resubmitted.containsAll(awaitingResign) && !awaitingResign.isEmpty()
-                                    ? "รอผู้ลงนามลงนามเอกสารที่แก้แล้ว"
-                                    : "รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับ",
-                    items,
+            case REVISION_REQUESTED -> Step.of(revisionTitle(items, awaitingResign, resubmitted), items,
                     "แก้และลงนามใหม่ครบทุกช่องแล้ว สถานะกลับเป็น “ตรวจสอบความถูกต้อง/ครบถ้วน” เอง");
             case SCREENING_COMMITTEE -> {
                 items.add(manual("ที่ประชุมกลั่นกรองฯ เห็นชอบ → อัปเดตสถานะเป็น “รับรองมติกลั่นกรองฯ”"));
@@ -207,6 +193,9 @@ public final class NextStepGuide {
             }
             default -> null;
         };
+        // ขั้นที่ flow ไม่ให้เปลี่ยนเป็น "ส่งแก้ไข" สถานะคงเดิม แต่งานยังรอเอกสารที่ส่งกลับอยู่
+        return status == PositionRequestStatus.REVISION_REQUESTED ? step
+                : withRevision(step, docs, awaitingResign, resubmitted);
     }
 
     // =====================================================================
@@ -229,13 +218,23 @@ public final class NextStepGuide {
      */
     public static Step academic(RequestStatus status, Map<Integer, String> docRows, Map<Integer, Stage> progress,
             LocalDate appealBy) {
+        return academic(status, docRows, progress, appealBy, List.of(), List.of());
+    }
+
+    /**
+     * @param awaitingResign เอกสารที่ส่งกลับแก้แล้วยังลงนามใหม่ไม่ครบ — การส่งกลับไม่เปลี่ยนสถานะคำร้องเฟส 1
+     *                       งานจึงรอผู้ยื่นทั้งที่สถานะยังเป็นขั้นเดิม
+     * @param resubmitted    เอกสารที่ส่งกลับซึ่งผู้ยื่นแก้และลงนามใหม่แล้ว ยังรอผู้ลงนามคนอื่น
+     */
+    public static Step academic(RequestStatus status, Map<Integer, String> docRows, Map<Integer, Stage> progress,
+            LocalDate appealBy, Collection<Integer> awaitingResign, Collection<Integer> resubmitted) {
         if (status == null || status == RequestStatus.DRAFT || status == RequestStatus.COMPLETED) {
             return null;
         }
         Docs docs = new Docs(SignatureModule.ACADEMIC, docRows, progress, type -> type);
         List<Item> items = new ArrayList<>(docs.chores(status == RequestStatus.RECEIVED));
 
-        return switch (status) {
+        Step step = switch (status) {
             case RECEIVED -> {
                 docs.staffDocument(items, P1_COMMITTEE_NAMES, null);
                 docs.staffDocument(items, P1_APPOINTMENT, "แต่งตั้งอนุกรรมการ");
@@ -286,6 +285,59 @@ public final class NextStepGuide {
             }
             default -> null;
         };
+        return withRevision(step, docs, awaitingResign, resubmitted);
+    }
+
+    // =====================================================================
+    // เอกสารที่ส่งกลับให้แก้ — ทั้งสองเฟส
+    // =====================================================================
+
+    /** เอกสารที่ส่งกลับแล้วยังลงนามใหม่ไม่ครบ แยกว่าใครต้องทำอะไรต่อ */
+    private static List<Item> revisionItems(Docs docs, Collection<Integer> awaitingResign,
+            Collection<Integer> resubmitted) {
+        List<Item> items = new ArrayList<>();
+        for (int t : awaitingResign) {
+            if (!resubmitted.contains(t)) {
+                items.add(new Item("รอผู้ยื่นแก้ไขและลงนามใหม่ — " + docs.name(t), t, State.WAITING));
+            } else if (docs.stage(t) == Stage.AWAITING_FORWARD) {
+                // ผู้ยื่นลงนามแล้ว ผู้ลงนามที่เหลือรอเจ้าหน้าที่ตรวจแล้วส่งเวียน — ไม่ส่ง สถานะไม่มีวันกลับมาเอง
+                items.add(new Item("ตรวจแล้วส่งเวียนให้ลงนามใหม่ — " + docs.name(t), t, State.TODO));
+            } else {
+                items.add(new Item("รอผู้ลงนามลงนามใหม่ — " + docs.name(t), t, State.WAITING));
+            }
+        }
+        return items;
+    }
+
+    private static String revisionTitle(List<Item> items, Collection<Integer> awaitingResign,
+            Collection<Integer> resubmitted) {
+        return items.stream().anyMatch(i -> i.state() == State.TODO) ? "ส่งเวียนเอกสารที่แก้แล้วให้ลงนามใหม่"
+                : resubmitted.containsAll(awaitingResign) && !awaitingResign.isEmpty()
+                        ? "รอผู้ลงนามลงนามเอกสารที่แก้แล้ว"
+                        : "รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับ";
+    }
+
+    /**
+     * มีเอกสารส่งกลับค้างอยู่ในขั้นที่สถานะไม่เปลี่ยนตาม — งานแก้ไขขึ้นก่อนงานของขั้น
+     *
+     * <p>ระหว่างนี้อัปเดตสถานะไม่ได้ ({@code resignBlocker}) ข้อที่เป็นการอัปเดตสถานะจึงยังไม่ถึง
+     * ส่วนงานเอกสารของขั้นยังทำต่อได้ ข้อของเอกสารที่ส่งกลับเองใช้ข้อแก้ไขแทน
+     */
+    private static Step withRevision(Step step, Docs docs, Collection<Integer> awaitingResign,
+            Collection<Integer> resubmitted) {
+        if (step == null || awaitingResign.isEmpty()) {
+            return step;
+        }
+        List<Item> items = revisionItems(docs, awaitingResign, resubmitted);
+        String title = revisionTitle(items, awaitingResign, resubmitted);
+        for (Item item : step.items()) {
+            if (item.documentType() != null && awaitingResign.contains(item.documentType())) {
+                continue;
+            }
+            boolean actionable = item.state() == State.CURRENT || item.state() == State.TODO;
+            items.add(!actionable ? item : item.as(item.documentType() == null ? State.UPCOMING : State.TODO));
+        }
+        return Step.of(title, items, "เอกสารที่ส่งกลับต้องแก้และลงนามใหม่ครบทุกช่องก่อน จึงอัปเดตสถานะไปขั้นต่อไปได้");
     }
 
     // =====================================================================

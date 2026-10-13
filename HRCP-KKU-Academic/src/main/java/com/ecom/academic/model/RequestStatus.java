@@ -231,6 +231,17 @@ public enum RequestStatus {
         };
     }
 
+    /**
+     * เหมือน {@link #stepStateAt(int)} แต่เมื่อมีเอกสารถูกส่งกลับให้ผู้ยื่นแก้ ขั้นที่กำลังดำเนินการเป็นสีส้ม
+     *
+     * <p>การส่งกลับไม่เปลี่ยนสถานะคำร้อง (สถานะบอกว่าถึงขั้นไหนแล้ว) แต่งานหยุดรอผู้ยื่นอยู่
+     * ถ้ายังขึ้นน้ำเงิน "กำลังดำเนินการ" ทั้งแอดมินและผู้ยื่นจะเข้าใจว่าเรื่องเดินต่อตามปกติ
+     */
+    public ProgressStepState stepStateAt(int index, boolean documentsSentBack) {
+        ProgressStepState state = stepStateAt(index);
+        return documentsSentBack && state == ProgressStepState.CURRENT ? ProgressStepState.REVISE : state;
+    }
+
     /** คำอธิบายใต้ขั้นที่กำลังดำเนินการ ({@link #focusIndex()}) */
     public String getStepHint() {
         return switch (this) {

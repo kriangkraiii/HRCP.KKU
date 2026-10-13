@@ -5,12 +5,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecom.search.model.ExtractionState;
 import com.ecom.search.model.SearchDocument;
 import com.ecom.search.model.SearchEntityType;
 import com.ecom.search.repository.SearchDocumentRepository;
@@ -106,7 +108,6 @@ public class SearchDocumentWriter {
         to.setTitle(from.getTitle());
         to.setSubtitle(from.getSubtitle());
         to.setKeywords(from.getKeywords());
-        to.setBody(from.getBody());
         to.setCategory(from.getCategory());
         to.setUrl(from.getUrl());
         to.setAdminUrl(from.getAdminUrl());
@@ -122,9 +123,31 @@ public class SearchDocumentWriter {
         to.setSourceUpdatedAt(from.getSourceUpdatedAt());
         to.setContentHash(from.getContentHash());
         to.setDeleted(from.isDeleted());
-        // Extraction state is deliberately not copied: it belongs to the file
-        // worker, and overwriting it here would re-queue every file on every
-        // unrelated edit to the row.
+        copyFileText(from, to);
+    }
+
+    /**
+     * Extraction state belongs to the file worker. Copying it on every rewrite
+     * would re-queue every file on every unrelated edit to the row, so it is
+     * only reset when the row now points at a different file.
+     *
+     * <p>The same goes for the text the worker read: a rebuilt document has no
+     * file text of its own, and writing its body over the extracted one would
+     * make a renamed or moved file unsearchable by content.
+     */
+    private static void copyFileText(SearchDocument from, SearchDocument to) {
+        if (!Objects.equals(from.getFilePath(), to.getFilePath())) {
+            to.setFilePath(from.getFilePath());
+            to.setExtractionState(from.getExtractionState());
+            to.setExtractionError(null);
+            to.setFileFingerprint(null);
+            to.setExtractedAt(null);
+            to.setBody(from.getBody());
+            return;
+        }
+        if (to.getExtractionState() != ExtractionState.DONE) {
+            to.setBody(from.getBody());
+        }
     }
 
     private static String hashOf(SearchDocument d) {
@@ -139,7 +162,10 @@ public class SearchDocumentWriter {
                 nullToEmpty(d.getStatus()),
                 String.valueOf(d.getVisibility()),
                 String.valueOf(d.getOwnerUserId()),
-                String.valueOf(d.getWeight()));
+                String.valueOf(d.getWeight()))
+                // Only file-backed rows carry a path; leaving it out otherwise
+                // keeps every other row's hash, and so its tsvector, untouched.
+                + (d.getFilePath() == null ? "" : " " + d.getFilePath());
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                     .digest(material.getBytes(StandardCharsets.UTF_8));

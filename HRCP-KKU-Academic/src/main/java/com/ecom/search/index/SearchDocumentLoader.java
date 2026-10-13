@@ -1,5 +1,7 @@
 package com.ecom.search.index;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -13,10 +15,15 @@ import com.ecom.academic.repository.AcademicAttachmentRepository;
 import com.ecom.academic.repository.AcademicCommitteeMemberRepository;
 import com.ecom.academic.repository.AcademicDocumentRepository;
 import com.ecom.academic.repository.AcademicRequestRepository;
+import com.ecom.academic.repository.AcademicRevisionFileRepository;
 import com.ecom.academic.repository.AdminFileRepository;
 import com.ecom.academic.repository.PositionAttachmentRepository;
 import com.ecom.academic.repository.PositionDocumentRepository;
+import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestPublication;
+import com.ecom.academic.repository.PositionRequestPublicationRepository;
 import com.ecom.academic.repository.PositionRequestRepository;
+import com.ecom.academic.repository.PositionStatusHistoryRepository;
 import com.ecom.academic.repository.RequestStatusHistoryRepository;
 import com.ecom.academic.repository.SignatureRequestRepository;
 import com.ecom.academic.repository.StaffMemberRepository;
@@ -69,6 +76,9 @@ public class SearchDocumentLoader {
     private final RequestStatusHistoryRepository statusHistory;
     private final SignatureRequestRepository signatureRequests;
     private final ScopusPublicationRepository publications;
+    private final PositionStatusHistoryRepository positionStatusHistory;
+    private final AcademicRevisionFileRepository revisionFiles;
+    private final PositionRequestPublicationRepository positionRequestPublications;
 
     public SearchDocumentLoader(SearchDocumentFactory factory,
             AcademicRequestRepository academicRequests,
@@ -85,7 +95,10 @@ public class SearchDocumentLoader {
             PositionAttachmentRepository positionAttachments,
             RequestStatusHistoryRepository statusHistory,
             SignatureRequestRepository signatureRequests,
-            ScopusPublicationRepository publications) {
+            ScopusPublicationRepository publications,
+            PositionStatusHistoryRepository positionStatusHistory,
+            AcademicRevisionFileRepository revisionFiles,
+            PositionRequestPublicationRepository positionRequestPublications) {
         this.factory = factory;
         this.academicRequests = academicRequests;
         this.academicDocuments = academicDocuments;
@@ -102,6 +115,9 @@ public class SearchDocumentLoader {
         this.statusHistory = statusHistory;
         this.signatureRequests = signatureRequests;
         this.publications = publications;
+        this.positionStatusHistory = positionStatusHistory;
+        this.revisionFiles = revisionFiles;
+        this.positionRequestPublications = positionRequestPublications;
     }
 
     /**
@@ -113,7 +129,8 @@ public class SearchDocumentLoader {
         return switch (type) {
             case ACADEMIC_REQUEST -> map(academicRequests.findById(id), factory::fromAcademicRequest);
             case ACADEMIC_DOCUMENT -> map(academicDocuments.findById(id), factory::fromAcademicDocument);
-            case POSITION_REQUEST -> map(positionRequests.findById(id), factory::fromPositionRequest);
+            case POSITION_REQUEST -> map(positionRequests.findById(id),
+                    r -> factory.fromPositionRequest(r, publicationTitlesOf(r)));
             case POSITION_DOCUMENT -> map(positionDocuments.findById(id), factory::fromPositionDocument);
             case COMMITTEE_MEMBER -> map(committeeMembers.findById(id), factory::fromCommitteeMember);
             case STAFF_MEMBER -> map(staffMembers.findById(id), factory::fromStaffMember);
@@ -126,6 +143,9 @@ public class SearchDocumentLoader {
             case POSITION_ATTACHMENT ->
                 map(positionAttachments.findById(id), factory::fromPositionAttachment);
             case STATUS_HISTORY -> map(statusHistory.findById(id), factory::fromStatusHistory);
+            case POSITION_STATUS_HISTORY ->
+                map(positionStatusHistory.findById(id), factory::fromPositionStatusHistory);
+            case REVISION_FILE -> map(revisionFiles.findById(id), factory::fromRevisionFile);
             case SIGNATURE_REQUEST ->
                 map(signatureRequests.findById(id), factory::fromSignatureRequest);
             case PUBLICATION -> publications.findById(id)
@@ -138,6 +158,22 @@ public class SearchDocumentLoader {
                 yield null;
             }
         };
+    }
+
+    /** Titles of the publications attached to a position request as evidence. */
+    private List<String> publicationTitlesOf(PositionRequest request) {
+        List<Long> ids = positionRequestPublications.findByRequestId(request.getId()).stream()
+                .map(PositionRequestPublication::getPublicationId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return publications.findAllById(ids).stream()
+                .map(ScopusPublication::getTitle)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     /**
@@ -169,7 +205,8 @@ public class SearchDocumentLoader {
             case ACADEMIC_REQUEST, ACADEMIC_DOCUMENT, POSITION_REQUEST, POSITION_DOCUMENT,
                     COMMITTEE_MEMBER, STAFF_MEMBER, SYSTEM_USER, NOTIFICATION,
                     ADMIN_FILE, REGULATION_DOC, ACADEMIC_ATTACHMENT, POSITION_ATTACHMENT,
-                    STATUS_HISTORY, SIGNATURE_REQUEST, PUBLICATION ->
+                    STATUS_HISTORY, POSITION_STATUS_HISTORY, REVISION_FILE,
+                    SIGNATURE_REQUEST, PUBLICATION ->
                 true;
             default -> false;
         };

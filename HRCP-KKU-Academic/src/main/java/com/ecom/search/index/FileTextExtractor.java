@@ -124,6 +124,25 @@ public class FileTextExtractor {
         }
     }
 
+    /**
+     * The same reading for a PDF that is not on our disk — the university's
+     * regulation documents, fetched from their site by the caller.
+     */
+    public Extraction extractPdf(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return Extraction.skipped("ไม่มีเนื้อไฟล์");
+        }
+        if (bytes.length > maxFileBytes) {
+            return Extraction.skipped("ไฟล์ใหญ่เกิน " + maxFileBytes + " ไบต์");
+        }
+        try (PDDocument document = Loader.loadPDF(bytes)) {
+            return Extraction.done(cap(readPdf(document)));
+        } catch (Throwable t) {
+            log.debug("สกัดข้อความจาก PDF ในหน่วยความจำไม่สำเร็จ: {}", t.toString());
+            return Extraction.failed(shorten(t.getClass().getSimpleName() + ": " + t.getMessage()));
+        }
+    }
+
     private String readDocx(Path path) throws Exception {
         try (InputStream in = Files.newInputStream(path);
                 XWPFDocument document = new XWPFDocument(in);
@@ -134,16 +153,20 @@ public class FileTextExtractor {
 
     private String readPdf(Path path) throws Exception {
         try (PDDocument document = Loader.loadPDF(path.toFile())) {
-            if (document.isEncrypted()) {
-                // Loader opens some encrypted files with an empty password;
-                // reading them anyway would be going further than the person who
-                // locked the file intended.
-                throw new IllegalStateException("ไฟล์ถูกเข้ารหัส");
-            }
-            PDFTextStripper stripper = new PDFTextStripper();
-            stripper.setSortByPosition(false);
-            return stripper.getText(document);
+            return readPdf(document);
         }
+    }
+
+    private String readPdf(PDDocument document) throws Exception {
+        if (document.isEncrypted()) {
+            // Loader opens some encrypted files with an empty password;
+            // reading them anyway would be going further than the person who
+            // locked the file intended.
+            throw new IllegalStateException("ไฟล์ถูกเข้ารหัส");
+        }
+        PDFTextStripper stripper = new PDFTextStripper();
+        stripper.setSortByPosition(false);
+        return stripper.getText(document);
     }
 
     /** Collapses whitespace and caps the length, so one file cannot dominate the index. */

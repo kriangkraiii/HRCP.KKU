@@ -98,6 +98,44 @@ class NextStepGuideTest {
     }
 
     @Test
+    @DisplayName("เฟส 2 ส่งกลับหลังรับรองมติแล้ว (สถานะไม่เปลี่ยนตาม): งานแก้ไขมาก่อน อัปเดตสถานะยังทำไม่ได้")
+    void positionSentBackWithoutStatusChange() {
+        Step step = NextStepGuide.position(PositionRequestStatus.SCREENING_APPROVED, rows(1),
+                Map.of(1, Stage.AWAITING_SIGNATURE), List.of(1), List.of(), CouncilDates.NONE);
+
+        assertThat(step.title()).isEqualTo("รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับ");
+        assertThat(step.items()).extracting(Item::text, Item::state).containsExactly(
+                tuple("รอผู้ยื่นแก้ไขและลงนามใหม่ — เอกสารที่ 1 ชื่อ1", State.WAITING),
+                tuple("นำเข้าวาระแล้ว → อัปเดตสถานะเป็น “เสนอวาระคณะกรรมการวิทยาลัยฯ”", State.UPCOMING));
+        assertThat(step.hint()).contains("ลงนามใหม่ครบ");
+    }
+
+    @Test
+    @DisplayName("เฟส 1 ส่งเอกสารกลับระหว่างรับคำร้อง: ขึ้นว่ารอผู้ยื่นแก้ งานเอกสารของขั้นยังทำต่อได้")
+    void academicSentBack() {
+        Step step = NextStepGuide.academic(RequestStatus.RECEIVED, rows(2, 3, 4),
+                Map.of(2, Stage.AWAITING_SIGNATURE, 3, Stage.DONE, 4, Stage.NOT_STARTED), null,
+                List.of(2), List.of());
+
+        assertThat(step.title()).isEqualTo("รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับ");
+        assertThat(step.items().get(0)).isEqualTo(
+                new Item("รอผู้ยื่นแก้ไขและลงนามใหม่ — เอกสารที่ 2 ชื่อ2", 2, State.WAITING));
+        assertThat(step.items()).filteredOn(i -> i.state() == State.CURRENT).extracting(Item::text)
+                .containsExactly("กรอกแล้วส่งลงนาม — เอกสารที่ 4 ชื่อ4");
+    }
+
+    @Test
+    @DisplayName("เฟส 1 ผู้ยื่นลงนามฉบับแก้แล้ว: ลูกอยู่ที่เจ้าหน้าที่ ส่งเวียนให้ลงนามใหม่")
+    void academicSentBackResigned() {
+        Step step = NextStepGuide.academic(RequestStatus.RECEIVED, rows(2),
+                Map.of(2, Stage.AWAITING_FORWARD), null, List.of(2), List.of(2));
+
+        assertThat(step.title()).isEqualTo("ส่งเวียนเอกสารที่แก้แล้วให้ลงนามใหม่");
+        assertThat(step.items().get(0)).isEqualTo(
+                new Item("ตรวจแล้วส่งเวียนให้ลงนามใหม่ — เอกสารที่ 2 ชื่อ2", 2, State.CURRENT));
+    }
+
+    @Test
     @DisplayName("เฟส 2 สภาไม่อนุมัติแต่ขอทบทวนไม่ได้แล้ว — ไม่มีงาน บอกเหตุผล")
     void positionRejectedPastAppeal() {
         Step step = NextStepGuide.position(PositionRequestStatus.COUNCIL_REJECTED, rows(1), Map.of(1, Stage.DONE),

@@ -6,6 +6,7 @@ import com.ecom.model.UserDtls;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -25,6 +26,7 @@ import jakarta.persistence.Table;
  * record has to stay true even after the account is renamed, the signature is
  * deleted from its owner's library, or the document is superseded.
  */
+@EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity
 @Table(name = "signature_step", indexes = {
         @Index(name = "idx_sig_step_signer", columnList = "signer_user_id, status"),

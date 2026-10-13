@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecom.external.service.KkuDocumentFileService;
 import com.ecom.search.model.ExtractionState;
 import com.ecom.search.model.SearchDocument;
 import com.ecom.search.repository.SearchDocumentRepository;
@@ -42,16 +43,19 @@ public class SearchFileExtractionWorker {
 
     private final SearchDocumentRepository index;
     private final FileTextExtractor extractor;
+    private final KkuDocumentFileService kkuDocuments;
     private final boolean enabled;
     private final int batchSize;
 
     public SearchFileExtractionWorker(SearchDocumentRepository index,
             FileTextExtractor extractor,
+            KkuDocumentFileService kkuDocuments,
             @Value("${app.search.enabled:true}") boolean searchEnabled,
             @Value("${app.search.file-text.enabled:true}") boolean fileTextEnabled,
             @Value("${app.search.file-text.batch-size:20}") int batchSize) {
         this.index = index;
         this.extractor = extractor;
+        this.kkuDocuments = kkuDocuments;
         this.enabled = searchEnabled && fileTextEnabled;
         this.batchSize = batchSize;
     }
@@ -87,7 +91,9 @@ public class SearchFileExtractionWorker {
 
         int done = 0;
         for (SearchDocument row : pending) {
-            FileTextExtractor.Extraction result = extractor.extract(row.getFilePath());
+            FileTextExtractor.Extraction result = isRemote(row.getFilePath())
+                    ? extractRemote(row.getFilePath())
+                    : extractor.extract(row.getFilePath());
 
             // Only DONE writes text. A skip or a failure must leave whatever the
             // factory put in body alone — for an attachment that is the filename
@@ -100,9 +106,9 @@ public class SearchFileExtractionWorker {
             row.setExtractionError(result.error());
             row.setExtractedAt(java.time.LocalDateTime.now());
             row.setFileFingerprint(fingerprintOf(row.getFilePath()));
-            // content_hash is left stale on purpose: the next reconcile then
-            // sees a difference and rebuilds the row, which is how extracted
-            // text survives a later edit to the source.
+            // content_hash stays the hash of the document the factory built, so
+            // the reconcile does not rewrite the row; when the source does change,
+            // SearchDocumentWriter keeps this text rather than the rebuilt body.
             index.save(row);
         }
 
@@ -112,12 +118,29 @@ public class SearchFileExtractionWorker {
         return pending.size();
     }
 
+    /** A regulation document: a PDF on the university's site rather than on our disk. */
+    private static boolean isRemote(String filePath) {
+        return filePath != null && filePath.regionMatches(true, 0, "https://", 0, 8);
+    }
+
+    private FileTextExtractor.Extraction extractRemote(String url) {
+        try {
+            return extractor.extractPdf(kkuDocuments.bytes(url));
+        } catch (Exception e) {
+            // Their site being down is not this row's fault; FAILED keeps it
+            // visible on the status page instead of retrying every minute.
+            String why = "ดึงไฟล์ไม่สำเร็จ: " + e.getMessage();
+            return new FileTextExtractor.Extraction(null, ExtractionState.FAILED,
+                    why.length() > 480 ? why.substring(0, 480) : why);
+        }
+    }
+
     /**
      * Size and last-modified, so a replaced file is read again and an unchanged
      * one is not.
      */
     private String fingerprintOf(String storedPath) {
-        if (storedPath == null || storedPath.isBlank()) {
+        if (storedPath == null || storedPath.isBlank() || isRemote(storedPath)) {
             return null;
         }
         try {
