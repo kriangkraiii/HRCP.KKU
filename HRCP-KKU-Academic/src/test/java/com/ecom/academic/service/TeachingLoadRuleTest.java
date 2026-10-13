@@ -38,6 +38,16 @@ class TeachingLoadRuleTest {
     }
 
     @Test
+    @DisplayName("กันพิมพ์ผิด: หน่วยกิตของรายวิชาไม่เกิน 30 ชั่วโมงสอนเองไม่เกิน 1000 ต่อปี")
+    void creditsAndHoursHaveACeiling() {
+        assertThat(problems("{\"course_credits\":\"30\",\"teaching_hours\":\"1000\"}")).isEmpty();
+        assertThat(problems("{\"course_credits\":\"100\",\"teaching_hours\":\"45\"}"))
+                .singleElement().asString().contains("ไม่เกิน 30");
+        assertThat(problems("{\"course_credits\":\"3\",\"teaching_hours\":\"4500\"}"))
+                .singleElement().asString().contains("ไม่เกิน 1000");
+    }
+
+    @Test
     @DisplayName("ร่างเก่าที่มีแต่ช่องเทียบหน่วยกิต: 3 หน่วยกิตขึ้นไปผ่าน ต่ำกว่านั้นส่งลงนามไม่ได้ ช่องที่ยังว่างไม่นับ")
     void creditsMustReachThree() {
         assertThat(problems("{\"academic_year\":\"1/2569\",\"teaching_credits\":\"3\"}")).isEmpty();

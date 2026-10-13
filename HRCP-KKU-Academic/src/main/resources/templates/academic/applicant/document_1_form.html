@@ -181,8 +181,9 @@
                                         <input class="form-check-input target-pos-radio" type="radio" name="target_position_choice" id="targetPos2"
                                             value="chk2"
                                             th:checked="${dData != null && dData.getOrDefault('chk2', '') == '✓'}" required
-                                            th:disabled="${associateBlocked}">
-                                        <label class="form-check-label fw-semibold" for="targetPos2">รองศาสตราจารย์</label>
+                                            th:disabled="${associateDisabled}" th:attr="data-rank-blocked=${associateBlocked}">
+                                        <label class="form-check-label fw-semibold" for="targetPos2">รองศาสตราจารย์<span
+                                            th:replace="~{academic/_info_tip :: tip('ผู้ดำรงตำแหน่งอาจารย์ขอประเมินได้เฉพาะตำแหน่งผู้ช่วยศาสตราจารย์')}"></span></label>
                                     </div>
                                 </div>
                                 <!--/* Hidden inputs for backend binding */-->
@@ -223,10 +224,11 @@
                              นับชั่วโมงที่ผู้ยื่นสอนเอง ไม่ใช่หน่วยกิตของวิชา — เซิร์ฟเวอร์ตรวจซ้ำ (DocumentCompleteness) */-->
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label" for="courseCredits">หน่วยกิตของรายวิชา <span class="text-danger">*</span></label>
+                                <label class="form-label" for="courseCredits">หน่วยกิตของรายวิชา <span class="text-danger">*</span><span th:replace="~{academic/_info_tip :: tip('กรอกได้ 0.5–30 หน่วยกิต เกณฑ์ 3 หน่วยกิตตรวจจากชั่วโมงที่ท่านสอนเอง (45 ชม./ปี) ในช่องถัดไป')}"></span></label>
                                 <input type="number" name="course_credits" id="courseCredits" class="form-control"
                                     th:value="${dData != null ? dData.getOrDefault('course_credits', '') : ''}"
                                     min="0.5" max="30" step="0.5" inputmode="decimal" placeholder="เช่น 3" required>
+                                <div class="invalid-feedback">กรอกได้ตั้งแต่ 0.5 ถึง 30 หน่วยกิต</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label" for="teachingHours">ชั่วโมงที่ท่านสอนเองในรายวิชานี้ (ชม./ปีการศึกษา) <span class="text-danger">*</span></label>
@@ -234,7 +236,7 @@
                                     th:value="${dData != null ? dData.getOrDefault('teaching_hours', '') : ''}"
                                     min="45" max="1000" step="0.5" inputmode="decimal" placeholder="เช่น 45" required>
                                 <div class="form-text" id="teachingHoursEquiv"></div>
-                                <div class="invalid-feedback">ต้องไม่น้อยกว่า 45 ชั่วโมงต่อปี (เทียบ 3 หน่วยกิต)</div>
+                                <div class="invalid-feedback">กรอกได้ 45–1000 ชั่วโมงต่อปี (45 ชั่วโมงเทียบ 3 หน่วยกิต)</div>
                             </div>
                             <div class="col-md-4 d-flex align-items-end">
                                 <small class="text-muted">นับเฉพาะชั่วโมงที่ท่านสอนเอง (กรณีสอนร่วม นับเฉพาะส่วนของท่าน)
@@ -406,6 +408,17 @@
                                     }
                                 }
 
+                                // อาจารย์ขอได้เฉพาะ ผศ. — ปิด รศ. ทันทีที่เลือกตำแหน่งปัจจุบัน (server ตรวจซ้ำตอนบันทึก)
+                                if (r2 && r2.dataset.rankBlocked !== 'true') {
+                                    var lecturer = pos === 'อาจารย์';
+                                    r2.disabled = lecturer;
+                                    if (lecturer && r2.checked) {
+                                        r2.checked = false;
+                                        r1.checked = true;
+                                        syncTargetPos();
+                                    }
+                                }
+
                                 // Suggest target position if not selected yet
                                 if (r1 && r2 && !r1.checked && !r2.checked) {
                                     if (pos === 'อาจารย์') {
@@ -420,6 +433,19 @@
 
                             posSelect.addEventListener('change', updateTitleOptions);
                             updateTitleOptions(); // run on page load
+                        })();
+
+                        // === หน่วยกิตของรายวิชา: เตือนทันทีเมื่อเกินช่วง 0.5–30 ===
+                        (function() {
+                            var input = document.getElementById('courseCredits');
+                            if (!input) return;
+                            function check() {
+                                var v = parseFloat(input.value);
+                                input.classList.toggle('is-invalid', input.value.trim() !== '' && !(v > 0 && v <= 30));
+                            }
+                            input.addEventListener('input', check);
+                            input.addEventListener('blur', check);
+                            check();
                         })();
 
                         // === ภาค/ปีการศึกษา: บอกทันทีที่พิมพ์ผิดรูปแบบ (ไม่ต้องรอกดส่ง) ===
@@ -448,7 +474,7 @@
                                     return;
                                 }
                                 equiv.textContent = 'เทียบเท่า ' + (Math.round(hours / 15 * 100) / 100) + ' หน่วยกิต';
-                                input.classList.toggle('is-invalid', hours < 45);
+                                input.classList.toggle('is-invalid', hours < 45 || hours > 1000);
                             }
                             input.addEventListener('input', check);
                             input.addEventListener('blur', check);
@@ -506,11 +532,18 @@
                                 }
                                 var courseCredits = form.querySelector('[name="course_credits"]');
                                 var teachingHours = form.querySelector('[name="teaching_hours"]');
-                                if (!courseCredits || !(parseFloat(courseCredits.value) > 0)) errors.push('หน่วยกิตของรายวิชา');
+                                var credits = courseCredits ? parseFloat(courseCredits.value) : NaN;
+                                if (!(credits > 0)) {
+                                    errors.push('หน่วยกิตของรายวิชา');
+                                } else if (credits > 30) {
+                                    errors.push('หน่วยกิตของรายวิชาต้องไม่เกิน 30');
+                                }
                                 if (!teachingHours || !teachingHours.value.trim()) {
                                     errors.push('ชั่วโมงที่ท่านสอนเองในรายวิชานี้');
                                 } else if (!(parseFloat(teachingHours.value) >= 45)) {
                                     errors.push('ชั่วโมงที่ท่านสอนเองต้องไม่น้อยกว่า 45 ชั่วโมงต่อปี');
+                                } else if (parseFloat(teachingHours.value) > 1000) {
+                                    errors.push('ชั่วโมงที่ท่านสอนเองต้องไม่เกิน 1000 ชั่วโมงต่อปี');
                                 }
 
                                 if (errors.length > 0) {

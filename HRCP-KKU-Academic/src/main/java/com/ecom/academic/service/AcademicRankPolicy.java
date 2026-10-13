@@ -6,7 +6,8 @@ import com.ecom.academic.model.AcademicRank;
 import com.ecom.model.UserDtls;
 
 /**
- * ตำแหน่งที่ขอต้องสูงกว่าตำแหน่งที่ถืออยู่ ข้ามขั้นได้ แต่ขอตำแหน่งเดิมหรือต่ำกว่าไม่ได้
+ * ตำแหน่งที่ขอต้องสูงกว่าตำแหน่งที่ถืออยู่ ขอตำแหน่งเดิมหรือต่ำกว่าไม่ได้ ข้ามขั้นได้เฉพาะไปขอ ศ. (วิธีพิเศษ)
+ * ส่วนการประเมินการสอน อาจารย์ขอได้เฉพาะ ผศ. ({@link #evaluationTargetViolation})
  *
  * <p>ใช้ร่วมกันทั้งสองเฟส: ตอนกรอกเอกสารที่ 1 ของการประเมินการสอน และตอนสร้าง/ยื่นคำร้องขอตำแหน่ง
  */
@@ -69,5 +70,18 @@ public final class AcademicRankPolicy {
         return Optional.of("ท่านดำรงตำแหน่ง" + current.thaiLabel()
                 + "อยู่แล้ว ไม่สามารถขอกำหนดตำแหน่ง" + target.thaiLabel()
                 + " ซึ่งเท่ากับหรือต่ำกว่าตำแหน่งปัจจุบันได้");
+    }
+
+    /**
+     * ตำแหน่งที่ขอในเอกสารที่ 1 ของการประเมินการสอน — นอกจากต้องสูงกว่าตำแหน่งปัจจุบันแล้ว
+     * อาจารย์ขอประเมินได้เฉพาะ ผศ. ข้ามไปขอ รศ. ไม่ได้
+     *
+     * @return ข้อความแจ้งเหตุผล ถ้าขอตำแหน่งนี้ไม่ได้
+     */
+    public static Optional<String> evaluationTargetViolation(AcademicRank current, AcademicRank target) {
+        if (current == AcademicRank.LECTURER && target == AcademicRank.ASSOCIATE_PROFESSOR) {
+            return Optional.of("ผู้ดำรงตำแหน่งอาจารย์ขอประเมินการสอนได้เฉพาะตำแหน่งผู้ช่วยศาสตราจารย์");
+        }
+        return rankViolation(current, target);
     }
 }

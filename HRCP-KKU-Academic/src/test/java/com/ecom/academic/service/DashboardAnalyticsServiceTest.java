@@ -224,11 +224,12 @@ class DashboardAnalyticsServiceTest {
         when(userRepo.count()).thenReturn(40L);
 
         Map<String, Long> kpi = analyticsService.getKpiSummary();
-        assertEquals(16L, kpi.get("totalAcad"));
-        assertEquals(7L, kpi.get("totalPos"));
+        assertEquals(14L, kpi.get("totalAcad")); // 16 - DRAFT 2: แบบร่างยังไม่ใช่คำร้อง
+        assertEquals(6L, kpi.get("totalPos")); // 7 - DRAFT 1
+        assertEquals(20L, kpi.get("totalRequests"));
         assertEquals(3L, kpi.get("draftRequests"));
         assertEquals(9L, kpi.get("completedRequests")); // COMPLETED 5 + COMPLETED_FAIL 1 + SENT_TO_HR 3
-        assertEquals(11L, kpi.get("activeRequests")); // 23 - 9 - 3
+        assertEquals(11L, kpi.get("activeRequests")); // 20 - 9
         assertEquals(9L, kpi.get("passedEval")); // COMPLETED_PASS 4 + COMPLETED 5
         assertEquals(3L, kpi.get("sentToHr"));
         assertEquals(40L, kpi.get("totalUsers"));

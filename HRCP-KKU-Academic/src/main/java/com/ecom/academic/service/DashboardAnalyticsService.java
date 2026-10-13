@@ -99,17 +99,18 @@ public class DashboardAnalyticsService {
     public Map<String, Long> getKpiSummary() {
         Map<RequestStatus, Long> acad = academicStatusCounts();
         Map<PositionRequestStatus, Long> pos = positionStatusCounts();
-        long totalAcad = acad.values().stream().mapToLong(Long::longValue).sum();
-        long totalPos = pos.values().stream().mapToLong(Long::longValue).sum();
+        long draftAcad = countOf(acad, RequestStatus.DRAFT);
+        long draftPos = countOf(pos, PositionRequestStatus.DRAFT);
+        // แบบร่างยังไม่ใช่คำร้อง — ผู้ยื่นยังไม่ได้ส่ง จึงไม่นับในยอดคำร้อง (แสดงแยกที่การ์ดกำลังดำเนินการ)
+        long totalAcad = acad.values().stream().mapToLong(Long::longValue).sum() - draftAcad;
+        long totalPos = pos.values().stream().mapToLong(Long::longValue).sum() - draftPos;
 
         long completedAcad = countOf(acad, RequestStatus.COMPLETED, RequestStatus.COMPLETED_FAIL);
         // ส่งออกแล้วและขั้นหลังจากนั้น (มติสภา / ขอทบทวน) ถือว่าจบงานฝั่งวิทยาลัย
         long completedPos = countOf(pos, POSITION_HANDED_OVER);
-        long draftAcad = countOf(acad, RequestStatus.DRAFT);
-        long draftPos = countOf(pos, PositionRequestStatus.DRAFT);
 
         long totalRequests = totalAcad + totalPos;
-        long activeRequests = totalRequests - (completedAcad + completedPos) - (draftAcad + draftPos);
+        long activeRequests = totalRequests - (completedAcad + completedPos);
         long completedRequests = completedAcad + completedPos;
         long totalUsers = userRepo.count();
 

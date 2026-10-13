@@ -262,6 +262,10 @@ public final class DocumentCompleteness {
      */
     public static final int MIN_TEACHING_HOURS_PER_YEAR = 45;
 
+    /** เพดานกันพิมพ์ผิด ไม่ใช่เกณฑ์ตามประกาศ — ตรงกับ max ของช่องในฟอร์มเอกสารที่ 1 */
+    public static final int MAX_COURSE_CREDITS = 30;
+    public static final int MAX_TEACHING_HOURS_PER_YEAR = 1000;
+
     private static boolean meetsTeachingLoad(String credits) {
         return atLeast(credits, MIN_TEACHING_CREDITS);
     }
@@ -333,8 +337,9 @@ public final class DocumentCompleteness {
         }
         String courseCredits = data == null ? null : data.get("course_credits");
         Double courseCreditValue = courseCredits == null ? null : parseNumber(courseCredits);
-        if (courseCredits != null && !courseCredits.isBlank() && (courseCreditValue == null || courseCreditValue <= 0)) {
-            problems.add("หน่วยกิตของรายวิชาต้องเป็นตัวเลขมากกว่า 0");
+        if (courseCredits != null && !courseCredits.isBlank()
+                && (courseCreditValue == null || courseCreditValue <= 0 || courseCreditValue > MAX_COURSE_CREDITS)) {
+            problems.add("หน่วยกิตของรายวิชาต้องเป็นตัวเลขมากกว่า 0 และไม่เกิน " + MAX_COURSE_CREDITS);
         }
         String hours = data == null ? null : data.get("teaching_hours");
         String credits = data == null ? null : data.get("teaching_credits");
@@ -343,6 +348,10 @@ public final class DocumentCompleteness {
                 problems.add("ชั่วโมงที่ท่านสอนเองในรายวิชานี้ต้องไม่น้อยกว่า " + MIN_TEACHING_HOURS_PER_YEAR
                         + " ชั่วโมงต่อปี (เทียบ " + MIN_TEACHING_CREDITS
                         + " หน่วยกิตระบบทวิภาค) ตามประกาศ มข. 1669/2569 ข้อ 7");
+            }
+            Double hoursValue = parseNumber(hours);
+            if (hoursValue != null && hoursValue > MAX_TEACHING_HOURS_PER_YEAR) {
+                problems.add("ชั่วโมงที่ท่านสอนเองในรายวิชานี้ต้องไม่เกิน " + MAX_TEACHING_HOURS_PER_YEAR + " ชั่วโมงต่อปี");
             }
         } else if (credits != null && !credits.isBlank() && !meetsTeachingLoad(credits)) {
             // ร่างที่บันทึกก่อนแยกช่อง — มีแต่ชั่วโมงสอนแบบเทียบหน่วยกิต

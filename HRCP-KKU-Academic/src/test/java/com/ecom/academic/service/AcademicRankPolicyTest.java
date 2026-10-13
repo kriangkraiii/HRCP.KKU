@@ -102,6 +102,35 @@ class AcademicRankPolicyTest {
     }
 
     @Nested
+    @DisplayName("ตำแหน่งที่ขอประเมินการสอน — อาจารย์ขอได้เฉพาะ ผศ.")
+    class EvaluationTarget {
+
+        @Test
+        @DisplayName("อาจารย์ ขอประเมินเพื่อ รศ. — ไม่ได้")
+        void aLecturerCannotSkipToAssociate() {
+            assertThat(AcademicRankPolicy.evaluationTargetViolation(
+                    AcademicRank.LECTURER, AcademicRank.ASSOCIATE_PROFESSOR))
+                    .hasValueSatisfying(message -> assertThat(message).contains("ผู้ช่วยศาสตราจารย์"));
+        }
+
+        @Test
+        @DisplayName("อาจารย์ ขอ ผศ. และ ผศ. ขอ รศ. — ได้")
+        void theNextRankIsAllowed() {
+            assertThat(AcademicRankPolicy.evaluationTargetViolation(
+                    AcademicRank.LECTURER, AcademicRank.ASSISTANT_PROFESSOR)).isEmpty();
+            assertThat(AcademicRankPolicy.evaluationTargetViolation(
+                    AcademicRank.ASSISTANT_PROFESSOR, AcademicRank.ASSOCIATE_PROFESSOR)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("ขอตำแหน่งเดิมหรือต่ำกว่า — ยังไม่ได้เหมือนเดิม")
+        void aRankNotHigherIsStillRefused() {
+            assertThat(AcademicRankPolicy.evaluationTargetViolation(
+                    AcademicRank.ASSISTANT_PROFESSOR, AcademicRank.ASSISTANT_PROFESSOR)).isPresent();
+        }
+    }
+
+    @Nested
     @DisplayName("ศาสตราจารย์ขอตำแหน่งต่อไม่ได้ — สูงสุดแล้ว")
     class HighestRank {
 

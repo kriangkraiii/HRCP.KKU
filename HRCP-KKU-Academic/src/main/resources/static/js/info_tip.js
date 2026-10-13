@@ -58,6 +58,15 @@
     }
   });
 
+  // ปุ่มที่อยู่ใน <label for> — คลิกแล้ว label จะย้าย focus ไปที่ช่องกรอก popover (trigger focus) เลยปิดทันทีที่ปล่อยเมาส์
+  // ผู้ใช้ต้องกดค้างถึงจะอ่านได้ จึงยกเลิกการส่งคลิกต่อให้ label
+  document.addEventListener('click', function (event) {
+    var el = event.target && event.target.closest ? event.target.closest(SELECTOR) : null;
+    if (el && el.closest('label')) {
+      event.preventDefault();
+    }
+  });
+
   document.addEventListener('keydown', function (event) {
     var el = event.target && event.target.closest ? event.target.closest(SELECTOR) : null;
     if (!el) {
