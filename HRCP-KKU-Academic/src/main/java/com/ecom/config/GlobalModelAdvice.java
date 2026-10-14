@@ -26,14 +26,22 @@ public class GlobalModelAdvice {
             AuthModeProperties authProperties,
             com.ecom.academic.service.SignatureWorkflowService signatureWorkflowService,
             com.ecom.sso.KkuSsoProperties ssoProperties,
-            com.ecom.service.DevAccountSwitchService devAccountSwitch) {
+            com.ecom.service.DevAccountSwitchService devAccountSwitch,
+            com.ecom.academic.repository.AcademicRequestRepository evaluationRequests,
+            com.ecom.academic.repository.PositionRequestRepository positionRequests) {
         this.userService = userService;
         this.notificationService = notificationService;
         this.authProperties = authProperties;
         this.signatureWorkflowService = signatureWorkflowService;
         this.ssoProperties = ssoProperties;
         this.devAccountSwitch = devAccountSwitch;
+        this.evaluationRequests = evaluationRequests;
+        this.positionRequests = positionRequests;
     }
+
+    private final com.ecom.academic.repository.AcademicRequestRepository evaluationRequests;
+
+    private final com.ecom.academic.repository.PositionRequestRepository positionRequests;
 
     private final com.ecom.service.DevAccountSwitchService devAccountSwitch;
 
@@ -100,6 +108,18 @@ public class GlobalModelAdvice {
                     model.addAttribute("pendingSignatureCount", signatureWorkflowService.countPending(user));
                 } catch (Exception e) {
                     model.addAttribute("pendingSignatureCount", 0L);
+                }
+
+                // ตัวเลขคำร้องที่กำลังดำเนินการบนเมนูของแอดมิน — นับงาน ไม่ใช่การแจ้งเตือน
+                if ("ROLE_ADMIN".equals(user.getRole())) {
+                    try {
+                        model.addAttribute("activeEvaluationCount",
+                                evaluationRequests.countByCurrentStatusIn(com.ecom.academic.model.RequestStatus.inProgress()));
+                        model.addAttribute("activePositionCount",
+                                positionRequests.countByCurrentStatusIn(com.ecom.academic.model.PositionRequestStatus.inProgress()));
+                    } catch (Exception e) {
+                        // ไม่มีตัวเลขก็ไม่แสดงป้าย หน้าที่เปิดต้องไม่ล่มเพราะเรื่องนี้
+                    }
                 }
 
                 // Dev mode only: the "fill with test data" buttons on document forms.

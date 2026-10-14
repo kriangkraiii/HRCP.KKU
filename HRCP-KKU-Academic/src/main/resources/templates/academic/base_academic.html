@@ -68,21 +68,22 @@
                     <i class="fas fa-list-alt"></i>
                     <span class="sidebar-link-text">คำร้องทั้งหมด</span>
                 </a>
-                <a href="/admin/academic/staff" class="sidebar-link" id="nav-staff" data-title="จัดการบุคลากร">
-                    <i class="fas fa-users-cog"></i>
-                    <span class="sidebar-link-text">จัดการบุคลากร</span>
-                </a>
-                <a href="/admin/academic/committee" class="sidebar-link" id="nav-committee" data-title="จัดการผู้ทรงคุณวุฒิภายนอก">
-                    <i class="fas fa-user-tie"></i>
-                    <span class="sidebar-link-text">จัดการผู้ทรงคุณวุฒิภายนอก</span>
-                </a>
                 <a href="/admin/academic/requests?type=evaluation" class="sidebar-link" id="nav-eval" data-title="คำร้องประเมินผลการสอน">
                     <i class="fas fa-clipboard-check"></i>
                     <span class="sidebar-link-text">คำร้องประเมินผลการสอน</span>
+                    <!--/* จำนวนคำร้องที่กำลังดำเนินการ — สีเป็นกลาง ไม่ใช่แดง/เหลืองแบบการแจ้งเตือน */-->
+                    <span class="badge rounded-pill sidebar-count-badge ms-auto"
+                          th:if="${activeEvaluationCount != null && activeEvaluationCount > 0}"
+                          th:text="${activeEvaluationCount}"
+                          th:title="|กำลังดำเนินการ ${activeEvaluationCount} คำร้อง|">0</span>
                 </a>
                 <a href="/admin/academic/requests?type=position" class="sidebar-link" id="nav-position" data-title="คำร้องขอตำแหน่งทางวิชาการ">
                     <i class="fas fa-university"></i>
                     <span class="sidebar-link-text">คำร้องขอตำแหน่งทางวิชาการ</span>
+                    <span class="badge rounded-pill sidebar-count-badge ms-auto"
+                          th:if="${activePositionCount != null && activePositionCount > 0}"
+                          th:text="${activePositionCount}"
+                          th:title="|กำลังดำเนินการ ${activePositionCount} คำร้อง|">0</span>
                 </a>
 
                 <div class="sidebar-section-title">จัดการผู้ใช้งาน</div>
@@ -97,6 +98,14 @@
                 <a href="/admin/users?type=3" class="sidebar-link" id="nav-externals" data-title="ผู้ลงนามภายนอก">
                     <i class="fas fa-user-tie"></i>
                     <span class="sidebar-link-text">ผู้ลงนามภายนอก</span>
+                </a>
+                <a href="/admin/academic/staff" class="sidebar-link" id="nav-staff" data-title="จัดการบุคลากร">
+                    <i class="fas fa-users-cog"></i>
+                    <span class="sidebar-link-text">จัดการบุคลากร</span>
+                </a>
+                <a href="/admin/academic/committee" class="sidebar-link" id="nav-committee" data-title="จัดการผู้ทรงคุณวุฒิภายนอก">
+                    <i class="fas fa-user-tie"></i>
+                    <span class="sidebar-link-text">จัดการผู้ทรงคุณวุฒิภายนอก</span>
                 </a>
 
                 <div class="sidebar-section-title">ข้อมูลจากระบบภายนอก</div>
@@ -247,7 +256,7 @@
         <script src="/js/auto_draft.js?v=4.1"></script>
         <!--/* ตรวจช่องที่ยังไม่ได้กรอก แล้วบันทึกเอกสารให้ก่อนส่งไปลงนาม */-->
         <script src="/js/doc_required_validate.js?v=1.2"></script>
-        <script src="/js/sign_presave.js?v=1.4"></script>
+        <script src="/js/sign_presave.js?v=1.5"></script>
         <!--/* พาผู้ใช้จาก "บันทึกแล้ว" ไปยังแผงลงนามท้ายหน้า */-->
         <script src="/js/doc_step_guide.js?v=1.0"></script>
         <script src="/js/checkbox_defaults.js"></script>
@@ -822,14 +831,24 @@
         });
 
         // Active link highlighting + aria-current
+        // เลือกลิงก์ที่ตรงยาวที่สุดลิงก์เดียว — /admin/academic/requests?type=evaluation ขึ้นต้นด้วย
+        // /admin/academic/requests ด้วย ถ้าเทียบแค่ขึ้นต้น "คำร้องทั้งหมด" จะติด active พร้อมกัน
         const path = window.location.pathname + window.location.search;
+        let bestHref = null;
         document.querySelectorAll('.sidebar-link').forEach(link => {
             var href = link.getAttribute('href');
-            if (href && path.startsWith(href) && href !== '/') {
-                link.classList.add('active');
-                link.setAttribute('aria-current', 'page');
+            if (href && href !== '/' && path.startsWith(href) && (!bestHref || href.length > bestHref.length)) {
+                bestHref = href;
             }
         });
+        if (bestHref) {
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                if (link.getAttribute('href') === bestHref) {
+                    link.classList.add('active');
+                    link.setAttribute('aria-current', 'page');
+                }
+            });
+        }
 
         // Auto-open sidebar dropdowns if a child link is active
         document.querySelectorAll('.sidebar-dropdown-menu').forEach(menu => {
@@ -868,27 +887,27 @@
 <script src="/js/thai_date_autofill.js"></script>
 <script src="/js/theme-switcher.js"></script>
 
-<!--/* ===== Floating Buttons สำหรับทุกหน้าฟอร์มเอกสาร ===== */-->
+<!--/* ===== Floating Buttons: ปุ่มกลับลอยทุกหน้า, ปุ่มดูตัวอย่างลอยเฉพาะหน้าฟอร์มเอกสาร ===== */-->
 <script>
-    // Auto-create floating buttons for doc form pages ONLY (Evaluation & Position docs)
+    // ปุ่มกลับลอยใช้ทุกหน้าที่มี .btn-back-pill — หน้าที่ไม่เหมาะใส่ .no-floating-back ที่ปุ่มกลับของหน้านั้น
+    // ปุ่มดูตัวอย่างลอยยังจำกัดที่หน้าฟอร์มเอกสาร (Evaluation & Position docs)
     (function() {
         function findButtons() {
             var docForm = document.querySelector('form[id^="doc"], form[data-auto-draft], form[action*="/document"], .doc-form-wrapper, .card-doc-form');
-            if (!docForm) {
-                return { preview: null, back: null };
-            }
 
             var previewBtn = null, backBtn = null;
 
             document.querySelectorAll('button, a, [role="button"]').forEach(function(el) {
                 var txt = (el.textContent || '').trim();
                 // ข้ามปุ่ม .btn-doc-preview (ปุ่มดูตัวอย่างในหน้ารายการเอกสาร) และ floating buttons
-                if (!previewBtn && !el.classList.contains('btn-doc-preview') && !el.classList.contains('floating-doc-btn')) {
+                if (docForm && !previewBtn && !el.classList.contains('btn-doc-preview') && !el.classList.contains('floating-doc-btn')) {
                     if (el.getAttribute('data-action') === 'docPreviewShow' || (txt.indexOf('ดูตัวอย่าง') !== -1 && (el.querySelector('.fa-eye') || el.classList.contains('btn-outline-primary')))) {
                         previewBtn = el;
                     }
                 }
-                if (!backBtn && txt.indexOf('กลับ') !== -1 && el.querySelector('.fa-arrow-left') && !el.classList.contains('no-floating-back') && !el.classList.contains('floating-doc-btn')) {
+                // นอกหน้าฟอร์มเอกสาร รับเฉพาะ .btn-back-pill — กันปุ่มอื่นที่มีคำว่า "กลับ" เช่น "ส่งกลับแก้ไข"
+                if (!backBtn && (docForm || el.classList.contains('btn-back-pill'))
+                        && txt.indexOf('กลับ') !== -1 && el.querySelector('.fa-arrow-left') && !el.classList.contains('no-floating-back') && !el.classList.contains('floating-doc-btn')) {
                     backBtn = el;
                 }
             });
@@ -934,7 +953,7 @@
                     }
                 }
 
-                document.querySelectorAll('.btn-back-pill:not(.floating-doc-btn)').forEach(function(b) {
+                document.querySelectorAll('.btn-back-pill:not(.floating-doc-btn):not(.no-floating-back)').forEach(function(b) {
                     if (!b.closest('form')) {
                         var parent = b.closest('.mb-3, .mb-4, div');
                         if (parent && parent.children.length === 1 && !parent.closest('form')) {

@@ -257,7 +257,7 @@ public class SignatureWorkflowService {
      *
      * <p>สองแบบ: ซองปิดแล้วแต่ยังมีช่องที่ไม่ได้ส่งต่อ ({@link #awaitsMoreSigners}) หรือซองยังเปิด
      * ผู้ลงนามที่เหลือติดด่านตรวจ (ยังไม่ส่งเวียน) และไม่มีใครถือขั้นที่ต้องลงนามอยู่
-     * ด่านตรวจเปิดหลังผู้ยื่นส่งคำร้อง ฝั่งผู้ยื่นจึงอ่านได้ว่า "รอยื่นคำร้อง"
+     * ด่านตรวจเปิดหลังผู้ยื่นส่งคำร้อง ฝั่งผู้ยื่นจึงอ่านได้ว่า "พร้อมยื่น"
      */
     public boolean awaitsStaffRelease(SignatureModule module, Long requestId, int documentType) {
         SignatureRequest envelope = findBlockingEnvelope(module, requestId, documentType).orElse(null);
@@ -551,6 +551,11 @@ public class SignatureWorkflowService {
 
     public List<SignatureAuditEvent> auditTrail(Long signatureRequestId) {
         return auditRepository.findBySignatureRequestIdOrderByCreatedAtAsc(signatureRequestId);
+    }
+
+    /** ประวัติการลงนามทั้งคำร้อง — ทุกเอกสาร ทุกซอง ใหม่สุดก่อน */
+    public List<SignatureAuditEvent> auditTrailOf(SignatureModule module, Long requestId) {
+        return auditRepository.findTrailOfRequest(module, requestId);
     }
 
     /** One envelope with its steps, for permission checks and detail views. */

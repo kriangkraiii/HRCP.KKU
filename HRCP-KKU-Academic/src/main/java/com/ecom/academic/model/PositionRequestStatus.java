@@ -216,6 +216,11 @@ public enum PositionRequestStatus {
         return set;
     }
 
+    /** ยื่นแล้วและวิทยาลัยยังทำไม่จบ — ตัวเลขบนเมนูคำร้องขอตำแหน่งของแอดมิน */
+    public static java.util.List<PositionRequestStatus> inProgress() {
+        return java.util.Arrays.stream(values()).filter(s -> !s.isDraft() && !s.isTerminal()).toList();
+    }
+
     /** Draft — not yet submitted */
     public boolean isDraft() {
         return this == DRAFT;

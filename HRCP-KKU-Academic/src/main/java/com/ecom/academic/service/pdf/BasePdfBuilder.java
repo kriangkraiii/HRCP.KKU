@@ -395,15 +395,18 @@ public final class BasePdfBuilder {
                                     if (parenAfter >= 0 && tail.substring(0, parenAfter).isBlank()) {
                                         tail = tail.substring(parenAfter + 1);
                                     }
-                                } else if (textBefore.isBlank()) {
+                                } else if (textBefore.isBlank() && pStart >= 0) {
+                                    // หาวงเล็บเปิดเฉพาะในย่อหน้าของช่องนี้ — ถ้าหาทั้งเอกสารจะไปตัด "(" ตัวแรก
+                                    // ที่อยู่ run เดี่ยว ๆ ของย่อหน้าอื่น (เอกสารที่ 6: วงเล็บชื่อผู้ขอหายแทนของคณบดี)
+                                    String before = prefix.substring(0, pStart);
                                     java.util.regex.Matcher mPre = java.util.regex.Pattern.compile(
                                             "(<w:r(?:\\s[^>]*)?>.*?<w:t(?:\\s[^>]*)?>\\s*)\\(\\s*(</w:t>\\s*</w:r>\\s*<w:r(?:\\s[^>]*)?>.*?)$",
-                                            java.util.regex.Pattern.DOTALL).matcher(prefix);
+                                            java.util.regex.Pattern.DOTALL).matcher(prefix.substring(pStart));
                                     java.util.regex.Matcher mPost = java.util.regex.Pattern.compile(
                                             "^(\\s*</w:t>\\s*</w:r>\\s*<w:r(?:\\s[^>]*)?>.*?<w:t(?:\\s[^>]*)?>\\s*)\\)\\s*(</w:t>\\s*</w:r>)",
                                             java.util.regex.Pattern.DOTALL).matcher(tail);
                                     if (mPre.find() && mPost.find()) {
-                                        prefix = mPre.replaceFirst("$1$2");
+                                        prefix = before + mPre.replaceFirst("$1$2");
                                         tail = mPost.replaceFirst("$1$2");
                                     }
                                 }

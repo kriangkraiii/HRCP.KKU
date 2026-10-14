@@ -407,6 +407,14 @@ body {
   max-height: 200px;
 }
 
+/* จำนวนคำร้องที่กำลังดำเนินการ — ขาวโปร่งบนพื้นเมนู แยกจากป้ายแจ้งเตือน (แดง) และรอลงนาม (เหลือง) */
+.sidebar-count-badge {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  font-weight: 600;
+}
+
 .sidebar-link {
   display: flex;
   align-items: center;
@@ -588,8 +596,9 @@ body {
 }
 
 /* ซ่อนปุ่มกลับเดิม (อันเล็ก) เมื่อมีปุ่มลอยทำงานอยู่ */
-body:has(.floating-doc-btn-back) .btn-back-pill:not(.floating-doc-btn):not(form .btn-back-pill),
-body.has-floating-doc-btn .btn-back-pill:not(.floating-doc-btn):not(form .btn-back-pill) {
+/* .no-floating-back = ปุ่มนำทางในเนื้อหา (เช่น ปุ่มในกล่องแจ้งเตือน) ไม่ใช่ปุ่มกลับของหน้า ห้ามซ่อน */
+body:has(.floating-doc-btn-back) .btn-back-pill:not(.floating-doc-btn):not(.no-floating-back):not(form .btn-back-pill),
+body.has-floating-doc-btn .btn-back-pill:not(.floating-doc-btn):not(.no-floating-back):not(form .btn-back-pill) {
   display: none !important;
 }
 
@@ -1602,6 +1611,11 @@ body.modal-open .sidebar-toggle {
 
   html.sidebar-collapsed .sidebar-link.active i {
     color: var(--accent-color, #42a5f5);
+  }
+
+  /* ตัวเลขงานไม่ใช่การแจ้งเตือน — ไม่ต้องเป็นจุดบนไอคอนแบบป้ายแจ้งเตือน */
+  html.sidebar-collapsed .sidebar-link .sidebar-count-badge {
+    display: none;
   }
 
   /* Mini Badge Dot at Top-Right of Icons */
@@ -4721,6 +4735,31 @@ body.modal-open .sidebar-toggle {
 
 .history-entry-badge.hist-act-REVISION_SUBMITTED {
   background-color: #2e7d32;
+}
+
+/* ประวัติการลงนาม (SignatureAuditEventType) — เขียว = ลงนามแล้ว, แดง = ไม่สำเร็จ, ส้ม = ถอน/ขอเวลา, เทา = แจ้งเตือน/เปิดดู */
+.history-entry-badge.hist-sig-SIGNED,
+.history-entry-badge.hist-sig-COMPLETED {
+  background-color: #2e7d32;
+}
+
+.history-entry-badge.hist-sig-DECLINED,
+.history-entry-badge.hist-sig-CANCELLED,
+.history-entry-badge.hist-sig-VOIDED,
+.history-entry-badge.hist-sig-EXPIRED {
+  background-color: #c62828;
+}
+
+.history-entry-badge.hist-sig-WITHDRAWN,
+.history-entry-badge.hist-sig-EXTENSION_REQUESTED,
+.history-entry-badge.hist-sig-DUE_EXTENDED {
+  background-color: #d84315;
+}
+
+.history-entry-badge.hist-sig-NOTIFIED,
+.history-entry-badge.hist-sig-REMINDED,
+.history-entry-badge.hist-sig-VIEWED {
+  background-color: #455a64;
 }
 
 .history-entry-content {

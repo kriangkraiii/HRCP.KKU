@@ -222,6 +222,8 @@ public class PositionAdminController {
                 .map(t -> "เอกสารที่ " + PositionRequestService.docNumber(t) + " " + positionService.getDocLabel(t)).toList());
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
         model.addAttribute("editHistory", positionService.getEditHistory(id));
+        model.addAttribute("signatureHistory",
+                signatureWorkflow.auditTrailOf(com.ecom.academic.model.SignatureModule.POSITION, id));
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
         addCouncilTimeline(model, request);
         // ส่งกลับในขั้นที่ flow ไม่ให้เปลี่ยนเป็น "ส่งแก้ไข" สถานะคงเดิม ป้ายสถานะและแถบความคืบหน้าจึงต้องรู้จากตรงนี้

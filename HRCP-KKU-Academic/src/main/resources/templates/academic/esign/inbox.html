@@ -177,8 +177,10 @@
                 <div class="row g-3" id="inboxCardsGrid" th:unless="${#lists.isEmpty(pendingSteps)}">
                     <div class="col-md-6 col-xl-4 inbox-card-item"
                          th:each="step : ${pendingSteps}"
+                         th:with="summary=${pendingSummaries.get(step.signatureRequest.module.name() + ':' + step.signatureRequest.requestId)}"
                          th:data-overdue="${step.signatureRequest.overdue ? 'true' : 'false'}"
-                         th:data-search="${(step.signatureRequest.documentLabel ?: '') + ' ' + (step.signatureRequest.module.thaiLabel ?: '') + ' ' + (step.roleLabel ?: '')}">
+                         th:data-search="${(step.signatureRequest.documentLabel ?: '') + ' ' + (step.signatureRequest.module.thaiLabel ?: '') + ' ' + (step.roleLabel ?: '')
+                                           + ' ' + (summary?.applicantName ?: '') + ' ' + (summary?.requestCode ?: '')}">
 
                         <div class="card border-0 shadow-sm rounded-4 h-100 transition-hover"
                              th:classappend="${step.signatureRequest.overdue} ? 'border-start border-danger border-4' : 'border-start border-primary border-4'">
@@ -205,6 +207,12 @@
                                         th:text="${step.signatureRequest.documentLabel} ?: ('เอกสารที่ ' + ${step.signatureRequest.documentType})">
                                         ชื่อเอกสาร
                                     </h5>
+
+                                    <!--/* ผู้ยื่นและเลขคำร้อง — แยกการ์ดของเอกสารเดียวกันจากคนละคำร้อง */-->
+                                    <div th:if="${summary != null}" class="small text-secondary mb-2">
+                                        <i class="fas fa-user me-1"></i><span class="text-dark fw-semibold" th:text="${summary.applicantName}">ผู้ยื่น</span>
+                                        <span th:if="${summary.requestCode != null}" th:text="'· ' + ${summary.requestCode}">· รหัสคำร้อง</span>
+                                    </div>
 
                                     <!--/* Role Info */-->
                                     <div class="bg-light rounded-3 p-2 mb-3 small">

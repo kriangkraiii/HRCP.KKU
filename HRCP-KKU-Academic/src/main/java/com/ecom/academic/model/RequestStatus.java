@@ -287,6 +287,11 @@ public enum RequestStatus {
         return this == SUBCOMMITTEE_FAIL || this == COLLEGE_ENDORSED_FAIL || this == COMPLETED_FAIL;
     }
 
+    /** ยื่นแล้วและยังไม่เสร็จสิ้น — ตัวเลขบนเมนูคำร้องประเมินผลการสอนของแอดมิน */
+    public static java.util.List<RequestStatus> inProgress() {
+        return java.util.Arrays.stream(values()).filter(s -> !s.isDraft() && !s.isTerminal()).toList();
+    }
+
     /** สถานะ draft - ยังไม่ส่งคำร้อง */
     public boolean isDraft() {
         return this == DRAFT;

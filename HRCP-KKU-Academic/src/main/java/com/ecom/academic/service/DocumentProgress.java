@@ -45,14 +45,6 @@ public class DocumentProgress {
             return icon;
         }
 
-        /**
-         * ป้ายในหน้าของผู้ยื่นขณะคำร้องยังไม่ส่ง — เจ้าหน้าที่ส่งต่อได้หลังผู้ยื่นส่งคำร้องเท่านั้น
-         * "รอลงนาม" หรือ "รอเจ้าหน้าที่" ทำให้ผู้ยื่นนึกว่าต้องรอคนอื่น ทั้งที่ขั้นถัดไปคือตัวเขาเอง
-         */
-        public String getLabelBeforeSubmit() {
-            return this == AWAITING_FORWARD ? "รอยื่นคำร้อง" : label;
-        }
-
         /** คลาสของกล่องเอกสารในหน้าคำร้อง (dgi-completed = เขียว, dgi-draft = ส้ม) */
         public String getCardClass() {
             return cardClass;
@@ -70,6 +62,42 @@ public class DocumentProgress {
         public boolean isStarted() {
             return this != NOT_STARTED;
         }
+    }
+
+    /** ป้ายสถานะของเอกสารหนึ่งฉบับในหน้าคำร้องของผู้ยื่น */
+    public record ApplicantBadge(String label, String icon, String badgeClass) {
+    }
+
+    private static final String NEUTRAL = "bg-body-secondary text-body-secondary border";
+    private static final String PENDING = "bg-warning-subtle text-warning-emphasis border border-warning-subtle";
+    private static final String SUCCESS = "bg-success-subtle text-success border border-success-subtle";
+
+    /**
+     * ป้ายเดียวของการ์ดเอกสารในหน้าผู้ยื่น เขียนจากมุมของผู้ยื่น
+     *
+     * <p>เดิมการ์ดมีป้าย "ลงนามแล้ว" แยกกับป้ายสถานะ จึงขึ้นคู่ที่ขัดกันได้ เช่น "ลงนามแล้ว" คู่กับ
+     * "รอยื่นคำร้อง" ซึ่งเป็นงานของทั้งคำร้อง ไม่ใช่ของเอกสาร และป้ายพื้นทึบมีไอคอนดูเหมือนปุ่ม
+     * ป้ายจึงเป็นพื้นอ่อนมีขอบ ส่วนคำว่า "ยื่นคำร้อง" มีแค่ปุ่มท้ายหน้า
+     *
+     * <p>ก่อนส่งคำร้อง {@link Stage#AWAITING_FORWARD} ใช้ "พร้อมยื่น" ไม่ใช่ "ลงนามแล้ว" เพราะเอกสารที่ไม่มีช่อง
+     * ของผู้ยื่น (ผู้อื่นลงนามรอส่งต่อ) ก็อยู่ขั้นนี้ได้
+     *
+     * @param submitted       ผู้ยื่นส่งคำร้องแล้ว — ก่อนส่ง เจ้าหน้าที่ยังส่งต่อให้ผู้ลงนามคนอื่นไม่ได้
+     * @param applicantSigned ส่วนของผู้ยื่นลงนามครบแล้ว (หรือเอกสารนี้ไม่มีช่องของผู้ยื่น)
+     */
+    public static ApplicantBadge applicantBadge(Stage stage, boolean submitted, boolean applicantSigned) {
+        return switch (stage) {
+            case NOT_STARTED -> new ApplicantBadge("รอกรอก", "fa-clock", NEUTRAL);
+            case DRAFT -> new ApplicantBadge("ร่าง", "fa-pencil", PENDING);
+            case AWAITING_SIGNATURE -> applicantSigned
+                    ? new ApplicantBadge("รอผู้อื่นลงนาม", "fa-hourglass-half", PENDING)
+                    : new ApplicantBadge("รอท่านลงนาม", "fa-pen-nib", PENDING);
+            case AWAITING_FORWARD -> submitted
+                    ? new ApplicantBadge("รอเจ้าหน้าที่ส่งต่อ", "fa-hourglass-half", PENDING)
+                    : new ApplicantBadge("พร้อมยื่น", "fa-check", SUCCESS);
+            case AWAITING_OFFICE -> new ApplicantBadge("รอออกเลข", "fa-hashtag", PENDING);
+            case DONE -> new ApplicantBadge("เสร็จแล้ว", "fa-check", SUCCESS);
+        };
     }
 
     /** แถวเอกสารหนึ่งแถว ไม่ผูกกับเฟส */

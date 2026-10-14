@@ -127,6 +127,39 @@ class SignerNamePrintingTest {
     }
 
     @Test
+    @DisplayName("ตรวจ real doc_6.docx: ตัดวงเล็บรอบชื่อคณบดี ไม่ใช่วงเล็บเปิดของชื่อผู้ขอที่อยู่ย่อหน้าก่อน")
+    void testDoc6StripsOnlyTheDeanParentheses() throws Exception {
+        com.ecom.academic.service.DocumentGenerationService gen = new com.ecom.academic.service.DocumentGenerationService();
+        byte[] docx = gen.generateSignedP2Docx(6,
+                "{\"applicant_title\":\"อาจารย์\",\"applicant_name\":\"ผู้ยื่นคำขอ ทดสอบ\","
+                        + "\"dean_signature_name\":\"@@OVL_dean_signature_name@@\"}",
+                java.util.List.of(), com.ecom.academic.service.DocumentGenerationService.SIGNATURE_HEIGHTS_EMU.get(0));
+        Map<String, Integer> lengths = Map.of("dean_signature_name", 45);
+        Map<String, Integer> lines = Map.of("dean_signature_name", 1);
+        Map<String, Integer> seen = new LinkedHashMap<>();
+        byte[] reserved = BasePdfBuilder.reserve(docx, lengths, lines, seen,
+                new java.util.ArrayList<>(), new java.util.HashSet<>());
+
+        java.util.List<String> paragraphs = new java.util.ArrayList<>();
+        try (java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(reserved))) {
+            java.util.zip.ZipEntry e;
+            while ((e = zis.getNextEntry()) != null) {
+                if ("word/document.xml".equals(e.getName())) {
+                    String xml = new String(zis.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                    for (String p : xml.split("</w:p>")) {
+                        paragraphs.add(p.replaceAll("<w:tab/>", " ").replaceAll("<[^>]+>", "").trim());
+                    }
+                }
+            }
+        }
+
+        assertThat(seen).containsEntry("dean_signature_name", 1);
+        assertThat(paragraphs).anyMatch(p -> p.equals("(อาจารย์ผู้ยื่นคำขอ ทดสอบ)"));
+        String dean = paragraphs.stream().filter(p -> p.contains(" ".repeat(45))).findFirst().orElseThrow();
+        assertThat(dean).doesNotContain("(").doesNotContain(")");
+    }
+
+    @Test
     @DisplayName("PdfIncrementService: ฟิลด์ที่เป็น centred (เช่นชื่อใต้ลายเซ็น) จะเติมวงเล็บแนบชิดชื่อ")
     void fillFieldWrapsCentredNameWithParentheses() throws Exception {
         try (org.apache.pdfbox.pdmodel.PDDocument doc = new org.apache.pdfbox.pdmodel.PDDocument()) {

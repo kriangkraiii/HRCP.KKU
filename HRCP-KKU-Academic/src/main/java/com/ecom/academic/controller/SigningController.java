@@ -139,6 +139,16 @@ public class SigningController {
         }
 
         model.addAttribute("pendingSteps", pendingSteps);
+        // ผู้ยื่นและเลขคำร้องของแต่ละการ์ด — เอกสารเดียวกันจากคนละคำร้องเคยขึ้นการ์ดเหมือนกันทุกตัวอักษร
+        java.util.Map<String, DocumentSnapshotProvider.RequestSummary> pendingSummaries = new java.util.HashMap<>();
+        for (SignatureStep step : pendingSteps) {
+            SignatureRequest r = step.getSignatureRequest();
+            String key = r.getModule() + ":" + r.getRequestId();
+            if (!pendingSummaries.containsKey(key)) {
+                pendingSummaries.put(key, documentLabelResolver.summaryOf(r.getModule(), r.getRequestId()));
+            }
+        }
+        model.addAttribute("pendingSummaries", pendingSummaries);
         model.addAttribute("sentEnvelopes", sentEnvelopes);
         model.addAttribute("allActiveEnvelopes", allActiveEnvelopes);
         model.addAttribute("signedHistory", signedHistory);
@@ -364,8 +374,9 @@ public class SigningController {
                 return ok.body(pdf);
             }
             // No LibreOffice on this host — hand over the DOCX so the signer can
-            // still read what they are being asked to sign.
-            byte[] docx = renderer.renderDocx(step.getSignatureRequest(), step, previewSig);
+            // still read what they are being asked to sign. Without signature pictures:
+            // a Word file is editable, so it must never carry anyone's signature.
+            byte[] docx = renderer.renderUnsignedDocx(step.getSignatureRequest());
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(
                             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
@@ -752,8 +763,14 @@ public class SigningController {
             return "redirect:" + documentFormLink(module, requestId, documentType, me);
         }
 
-        Result result = workflow.createEnvelope(module, requestId, documentType, documentLabel,
-                frozenJson, assignments, parseDueAt(dueAt), me, actorContext());
+        Result result;
+        try {
+            result = workflow.createEnvelope(module, requestId, documentType, documentLabel,
+                    frozenJson, assignments, parseDueAt(dueAt), me, actorContext());
+        } catch (org.springframework.dao.DataIntegrityViolationException alreadyOpen) {
+            // กดส่งซ้ำหรือส่งจากสองแท็บพร้อมกัน — ซองแรกผ่านไปแล้ว ซองนี้ชน unique index (V45)
+            result = new Result(null, "เอกสารฉบับนี้ถูกส่งไปลงนามแล้ว ไม่ต้องส่งซ้ำ");
+        }
 
         if (result.ok()) {
             documentLabelResolver.markSavedForSigning(module, requestId, documentType, frozenJson);

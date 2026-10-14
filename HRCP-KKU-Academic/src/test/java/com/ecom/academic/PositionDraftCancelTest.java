@@ -21,7 +21,7 @@ import com.ecom.model.UserDtls;
 import com.ecom.support.AbstractFlowTest;
 
 /**
- * ยกเลิกแบบร่างคำร้องขอตำแหน่งจากหน้า /user/position/dashboard
+ * ยกเลิกแบบร่างคำร้องขอตำแหน่งจากหน้า /user/position/dashboard และหน้าคำร้อง /user/position/request/{id}
  *
  * <p>เซิร์ฟเวอร์บังคับพิมพ์ DELETE ก่อนลบ แต่ modal ของหน้านี้เคยไม่มีช่องให้พิมพ์
  * กดยืนยันแล้วจึงได้ข้อความ "กรุณาพิมพ์ยืนยันด้วย 'DELETE'" ทุกครั้ง ลบแบบร่างไม่ได้เลย
@@ -48,6 +48,20 @@ class PositionDraftCancelTest extends AbstractFlowTest {
         draftWithData(applicant);
 
         String html = mvc.perform(get("/user/position/dashboard")
+                .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).containsPattern("<input[^>]*name=\"confirmCode\"");
+    }
+
+    @Test
+    @DisplayName("modal ยกเลิกแบบร่างในหน้าคำร้องก็มีช่องให้พิมพ์ DELETE")
+    void theDetailPageCancelModalAsksForTheConfirmation() throws Exception {
+        UserDtls applicant = data.applicant();
+        PositionRequest draft = draftWithData(applicant);
+
+        String html = mvc.perform(get("/user/position/request/" + draft.getId())
                 .with(user(applicant.getEmail()).roles("USER")))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();

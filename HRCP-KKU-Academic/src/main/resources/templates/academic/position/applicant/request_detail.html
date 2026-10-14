@@ -178,20 +178,14 @@
                                         : (${stage.started} ? 'fas fa-hourglass-half text-warning' : 'fas fa-file-alt'))"></i>
                             เอกสารที่ [[${iterStat.count}]]: [[${entry.value}]]
                         </h5>
-                        <div class="d-flex align-items-center gap-2">
-                            <span th:if="${sentBackCards != null and sentBackCards.contains(entry.key)}" class="badge bg-warning text-dark border border-warning fs-6">
-                                <i class="fas fa-circle-exclamation me-1"></i>ต้องแก้ไข
-                            </span>
-                            <span th:if="${completedDocs.contains(entry.key) and docSignedMap != null and docSignedMap.get(entry.key)}" class="badge bg-success-subtle text-success border border-success-subtle fs-6">
-                                <i class="fas fa-check me-1"></i>ลงนามแล้ว
-                            </span>
-                            <span th:if="${completedDocs.contains(entry.key) and unsignedSigDocs != null and unsignedSigDocs.contains(entry.key)}" class="badge bg-warning-subtle text-warning border border-warning-subtle fs-6">
-                                <i class="fas fa-pen-nib me-1"></i>รอผู้ยื่นลงนาม
-                            </span>
-                            <span class="badge fs-6" th:classappend="${stage.badgeClass}">
-                                <i th:class="|fas ${stage.icon} me-1|"></i>[[${request.currentStatus.draft} ? ${stage.labelBeforeSubmit} : ${stage.label}]]
-                            </span>
-                        </div>
+                        <!--/* ป้ายเดียวต่อการ์ด (DocumentProgress.applicantBadge) — ส่งกลับแก้มาก่อนสถานะอื่น */-->
+                        <span th:if="${sentBackCards != null and sentBackCards.contains(entry.key)}" class="badge bg-warning text-dark border border-warning fs-6">
+                            <i class="fas fa-circle-exclamation me-1"></i>ต้องแก้ไข
+                        </span>
+                        <span th:unless="${sentBackCards != null and sentBackCards.contains(entry.key)}"
+                              th:with="b=${docBadges.get(entry.key)}" class="badge fs-6" th:classappend="${b.badgeClass}">
+                            <i th:class="|fas ${b.icon} me-1|"></i>[[${b.label}]]
+                        </span>
                     </div>
                     <!--/* เอกสารที่ 9: หนึ่งฉบับต่องานวิจัยในเอกสารที่ 1 (PositionDocTypes) */-->
                     <div class="card-body" th:if="${entry.key == 9}">
@@ -202,8 +196,8 @@
                         <th:block th:with="manyWorks=${workCopies != null and workCopies.size() > 3}">
                         <div th:if="${manyWorks}" class="d-flex align-items-center gap-2 flex-wrap">
                             <span class="fw-semibold">งานวิจัย [[${workCopies.size()}]] เรื่อง</span>
-                            <span th:each="st : ${workCopyStages}" class="badge" th:classappend="${st.key.badgeClass}">
-                                <i th:class="|fas ${st.key.icon} me-1|"></i>[[${request.currentStatus.draft} ? ${st.key.labelBeforeSubmit} : ${st.key.label}]] [[${st.value}]]
+                            <span th:each="st : ${workCopyBadges}" class="badge" th:classappend="${st.key.badgeClass}">
+                                <i th:class="|fas ${st.key.icon} me-1|"></i>[[${st.key.label}]] [[${st.value}]]
                             </span>
                             <button type="button" class="btn btn-sm btn-outline-secondary ms-auto work-copy-toggle"
                                     data-bs-toggle="collapse" data-bs-target="#workCopyList"
@@ -216,7 +210,7 @@
                         <!--/* ชื่อผลงานยาว (citation เต็ม) — ตัดเหลือสองบรรทัด ชื่อเต็มดูได้ที่ tooltip
                              ปุ่มรวมเป็นกลุ่มเดียวชิดขวา จอแคบจึงลงมาอยู่ใต้ชื่อพร้อมกันทั้งกลุ่ม */-->
                         <div th:each="w, ws : ${workCopies}" class="work-copy-row py-2"
-                             th:classappend="${!ws.last} ? 'border-bottom'" th:with="cs=${docProgress.get(w.key)}">
+                             th:classappend="${!ws.last} ? 'border-bottom'" th:with="b=${docBadges.get(w.key)}">
                             <div class="work-copy-title">
                                 <div class="fw-semibold">งานวิจัยที่ [[${w.key - 900}]]</div>
                                 <div class="small text-muted work-copy-citation" th:text="${w.value}" th:title="${w.value}">ชื่อผลงาน</div>
@@ -230,11 +224,8 @@
                                       class="badge bg-warning text-dark border border-warning">
                                     <i class="fas fa-circle-exclamation me-1"></i>ต้องแก้ไข
                                 </span>
-                                <span th:if="${unsignedSigDocs != null and completedDocs.contains(w.key) and unsignedSigDocs.contains(w.key)}"
-                                      class="badge bg-warning-subtle text-warning border border-warning-subtle">
-                                    <i class="fas fa-pen-nib me-1"></i>รอผู้ยื่นลงนาม
-                                </span>
-                                <span class="badge" th:classappend="${cs.badgeClass}"><i th:class="|fas ${cs.icon} me-1|"></i>[[${request.currentStatus.draft} ? ${cs.labelBeforeSubmit} : ${cs.label}]]</span>
+                                <span th:unless="${sentBackDocs != null and sentBackDocs.containsKey(w.key)}"
+                                      class="badge" th:classappend="${b.badgeClass}"><i th:class="|fas ${b.icon} me-1|"></i>[[${b.label}]]</span>
                                 <button type="button"
                                     class="btn btn-sm btn-outline-info btn-doc-preview"
                                     th:data-preview-url="|/user/position/request/${request.id}/document/${w.key}/download?format=pdf|"
@@ -335,7 +326,7 @@
                     <th:block th:if="${allDocsCompleted and !applicantSignaturesComplete}">
                         <div class="alert alert-warning mb-3">
                             <i class="fas fa-exclamation-triangle me-2"></i>
-                            กรุณาลงนามเอกสารที่มีสถานะ "รอผู้ยื่นลงนาม" ให้ครบก่อนส่งคำร้อง
+                            กรุณาลงนามเอกสารที่มีสถานะ "รอท่านลงนาม" ให้ครบก่อนส่งคำร้อง
                         </div>
                         <button class="btn btn-secondary btn-lg" disabled title="กรุณาลงนามเอกสารให้ครบถ้วนก่อน">
                             <i class="fas fa-lock me-1"></i> รอดำเนินการลงนาม
@@ -377,11 +368,8 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-3">
-                <a href="/user/position/dashboard" class="btn-back-pill" onclick="if(window.history.length > 1 && document.referrer) { history.back(); return false; }">
-                    <i class="fas fa-arrow-left"></i> กลับ
-                </a>
-                <button th:if="${request.currentStatus.name() == 'DRAFT'}" type="button" 
+            <div th:if="${request.currentStatus.name() == 'DRAFT'}" class="d-flex justify-content-end mt-3">
+                <button type="button" 
                         class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelPosDraftModal">
                     <i class="fas fa-trash-alt me-1"></i> ยกเลิกแบบร่าง
                 </button>
@@ -427,22 +415,46 @@
                                 <i class="fas fa-trash-alt fa-3x"></i>
                             </div>
                             <h5 class="fw-bold mb-2">ยืนยันการยกเลิกแบบร่างคำร้องขอตำแหน่งนี้?</h5>
-                            <p class="text-muted mb-0">ข้อมูลที่กรอกไว้ในแบบร่างนี้จะถูกลบทั้งหมดและกู้คืนไม่ได้</p>
-                        </div>
-                        <div class="modal-footer bg-light d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-1"></i> ไม่ยกเลิก
-                            </button>
-                            <form method="post" th:action="'/user/position/request/' + ${request.id} + '/cancel-draft'">
+                            <p class="text-muted mb-3">ข้อมูลที่กรอกไว้ในแบบร่างนี้จะถูกลบทั้งหมดและกู้คืนไม่ได้</p>
+                            <!--/* เซิร์ฟเวอร์ต้องการ confirmCode เหมือนหน้า dashboard — ไม่มีช่องนี้ การลบจะถูกปฏิเสธ */-->
+                            <form id="cancelPosDraftForm" method="post" th:action="'/user/position/request/' + ${request.id} + '/cancel-draft'">
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                                <button type="submit" class="btn btn-danger">
-                                    <i class="fas fa-trash-alt me-1"></i> ยืนยันการยกเลิก
-                                </button>
+                                <div class="bg-light p-3 rounded-3 border text-start mb-3">
+                                    <label for="confirmPosCodeInput" class="form-label small fw-bold text-danger mb-1">
+                                        <i class="fas fa-keyboard me-1"></i> กรุณาพิมพ์คำว่า <span class="badge bg-danger">DELETE</span> เพื่อยืนยันการลบ:
+                                    </label>
+                                    <input type="text" id="confirmPosCodeInput" name="confirmCode" class="form-control text-center fw-bold" placeholder="DELETE" required autocomplete="off" />
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times me-1"></i> ไม่ยกเลิก
+                                    </button>
+                                    <button type="submit" id="btnConfirmPosDraft" class="btn btn-danger" disabled>
+                                        <i class="fas fa-trash-alt me-1"></i> ยืนยันการลบแบบร่าง
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
                 </div>
             </div>
+            <script th:if="${request.currentStatus.name() == 'DRAFT'}">
+            // ยกเลิกแบบร่าง: ปุ่มยืนยันกดได้เมื่อพิมพ์ DELETE ครบ — เซิร์ฟเวอร์ตรวจซ้ำอีกชั้น
+            (function () {
+                var modal = document.getElementById('cancelPosDraftModal');
+                var input = document.getElementById('confirmPosCodeInput');
+                var btn = document.getElementById('btnConfirmPosDraft');
+                if (!modal || !input || !btn) return;
+                modal.addEventListener('show.bs.modal', function () {
+                    input.value = '';
+                    btn.disabled = true;
+                });
+                modal.addEventListener('shown.bs.modal', function () { input.focus(); });
+                input.addEventListener('input', function () {
+                    btn.disabled = (this.value.trim().toUpperCase() !== 'DELETE');
+                });
+            })();
+            </script>
         </div>
 
         <style>

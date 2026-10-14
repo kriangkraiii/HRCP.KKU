@@ -193,5 +193,26 @@
       }
     }
   });
+
+  /*
+   * ส่งไปลงนามได้ครั้งเดียว — bubble phase จึงเห็นเฉพาะการส่งจริง (การส่งที่ถูกพักไว้ให้บันทึกก่อน
+   * หรือเปิด modal ยืนยัน ถูก preventDefault ไปแล้ว) ปุ่มเปิดกลับเองหลัง flush จึงต้องปิดตรงนี้อีกที
+   * กดซ้ำเร็ว ๆ เคยได้สองซองเวียนคู่กัน เซิร์ฟเวอร์กันไว้อีกชั้นด้วย unique index (V45)
+   */
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (e.defaultPrevented || !form || !form.matches || !form.matches("form[data-presave-doc]")) return;
+    var btn = submitButton(form);
+    if (btn) btn.disabled = true;
+  });
+
+  // กลับมาหน้านี้ด้วยปุ่ม back (bfcache) — ปุ่มต้องกดได้อีก
+  window.addEventListener("pageshow", function (e) {
+    if (!e.persisted) return;
+    document.querySelectorAll("form[data-presave-doc]").forEach(function (form) {
+      var btn = submitButton(form);
+      if (btn) btn.disabled = false;
+    });
+  });
 })();
 

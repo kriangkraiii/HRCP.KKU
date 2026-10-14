@@ -358,12 +358,6 @@ public class PositionApplicantController {
         Map<Integer, String> workCopies = positionService.workCopies(request);
         List<Integer> applicantDocTypes = positionService.applicantDocTypes(request);
 
-        // ตรวจสอบลายเซ็นผู้ยื่นในแต่ละเอกสาร
-        Map<Integer, Boolean> docSignedMap = new HashMap<>();
-        for (Integer docType : applicantDocTypes) {
-            docSignedMap.put(docType, signatureWorkflow.isApplicantSignatureCompleted(
-                    com.ecom.academic.model.SignatureModule.POSITION, id, docType));
-        }
         List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(
                 com.ecom.academic.model.SignatureModule.POSITION, id, applicantDocTypes);
         boolean applicantSignaturesComplete = unsignedSigDocs.isEmpty() && !workCopies.isEmpty();
@@ -387,18 +381,24 @@ public class PositionApplicantController {
                         workCopies.keySet().stream().map(docProgress::get).toList()));
         model.addAttribute("docProgress", docProgress);
         model.addAttribute("workCopies", workCopies);
-        // สรุปของรายการงานวิจัยที่ยุบไว้ — จำนวนฉบับในแต่ละขั้น เรียงตามลำดับขั้น
-        model.addAttribute("workCopyStages", workCopies.keySet().stream()
-                .map(docProgress::get)
-                .collect(java.util.stream.Collectors.groupingBy(s -> s,
-                        () -> new java.util.EnumMap<>(com.ecom.academic.service.DocumentProgress.Stage.class),
-                        java.util.stream.Collectors.counting())));
+        // ป้ายเดียวต่อการ์ด/ฉบับ — การ์ดเอกสารที่ 9 ถือว่าลงนามแล้วเมื่อผู้ยื่นลงนามครบทุกฉบับ
+        boolean submitted = !request.getCurrentStatus().isDraft();
+        Map<Integer, com.ecom.academic.service.DocumentProgress.ApplicantBadge> docBadges = new HashMap<>();
+        docProgress.forEach((type, stage) -> docBadges.put(type,
+                com.ecom.academic.service.DocumentProgress.applicantBadge(stage, submitted,
+                        type == com.ecom.academic.service.PositionDocTypes.WORK_PARTICIPATION
+                                ? workCopies.keySet().stream().noneMatch(unsignedSigDocs::contains)
+                                : !unsignedSigDocs.contains(type))));
+        model.addAttribute("docBadges", docBadges);
+        // สรุปของรายการงานวิจัยที่ยุบไว้ — จำนวนฉบับต่อป้าย เรียงตามลำดับขั้น
+        model.addAttribute("workCopyBadges", workCopies.keySet().stream()
+                .sorted(java.util.Comparator.comparingInt(t -> docProgress.get(t).ordinal()))
+                .collect(java.util.stream.Collectors.groupingBy(docBadges::get,
+                        java.util.LinkedHashMap::new, java.util.stream.Collectors.counting())));
         model.addAttribute("applicantDocs", applicantDocTypes);
         long completedRequired = applicantDocTypes.stream().filter(completedDocs::contains).count();
         model.addAttribute("completedRequiredCount", completedRequired);
         model.addAttribute("allDocsCompleted", !workCopies.isEmpty() && completedRequired == applicantDocTypes.size());
-        model.addAttribute("docSignedMap", docSignedMap);
-        model.addAttribute("unsignedSigDocs", unsignedSigDocs);
         // เอกสารที่เจ้าหน้าที่ส่งกลับมาให้แก้และยังไม่ได้ลงนามใหม่ — ลงนามแล้วเอกสารถูกล็อก จึงหลุดจากรายการเอง
         Map<Integer, String> sentBackDocs = positionService.sentBackDocuments(request);
         model.addAttribute("sentBackDocs", sentBackDocs);

@@ -324,8 +324,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         // ---------- ส่งคำร้อง ----------
         page.navigate(baseUrl() + "/user/position/request/" + id);
         assertThat(page.locator("body").innerText())
-                .as("ลงนามทุกฉบับที่ผู้ยื่นต้องลงแล้ว — ต้องไม่มีป้าย \"รอผู้ยื่นลงนาม\" (เอกสาร 6 ผู้ยื่นไม่ได้ลงนาม)")
-                .doesNotContain("รอผู้ยื่นลงนาม");
+                .as("ลงนามทุกฉบับที่ผู้ยื่นต้องลงแล้ว — ต้องไม่มีป้าย \"รอท่านลงนาม\" (เอกสาร 6 ผู้ยื่นไม่ได้ลงนาม)")
+                .doesNotContain("รอท่านลงนาม");
         Locator openConfirm = page.locator("button[data-bs-target='#confirmSubmitModal']");
         if (openConfirm.count() == 0) {
             shot("no-position-submit");

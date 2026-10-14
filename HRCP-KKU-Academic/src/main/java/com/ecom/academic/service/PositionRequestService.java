@@ -280,6 +280,11 @@ public class PositionRequestService {
         return docNumber(type);
     }
 
+    /** {@link PositionDocTypes#base(int)} สำหรับเทมเพลต — เทมเพลตเรียก {@code T(...)} ไม่ได้ (Thymeleaf restricted mode) */
+    public int baseDocType(int type) {
+        return PositionDocTypes.base(type);
+    }
+
     // ================== Eligibility ==================
 
     /**

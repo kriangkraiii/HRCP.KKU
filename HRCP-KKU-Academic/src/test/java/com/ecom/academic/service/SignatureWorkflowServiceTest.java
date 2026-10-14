@@ -1026,7 +1026,7 @@ class SignatureWorkflowServiceTest {
         assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
         assertThat(stepOf(envelope, "dean").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
         assertThat(workflow.findInbox(head)).isEmpty();
-        // ป้ายสถานะ "รอเจ้าหน้าที่ส่งต่อ" (ฝั่งผู้ยื่นก่อนส่งคำร้อง: "รอยื่นคำร้อง") ไม่ใช่ "รอลงนาม"
+        // ป้ายสถานะ "รอเจ้าหน้าที่ส่งต่อ" (ฝั่งผู้ยื่นก่อนส่งคำร้อง: "พร้อมยื่น") ไม่ใช่ "รอลงนาม"
         assertThat(workflow.awaitsStaffRelease(MODULE, envelope.getRequestId(), envelope.getDocumentType())).isTrue();
     }
 
