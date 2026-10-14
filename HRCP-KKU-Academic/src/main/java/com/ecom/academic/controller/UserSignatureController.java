@@ -42,11 +42,17 @@ public class UserSignatureController {
     private final UserSignatureService signatureService;
     private final UserRepository userRepository;
     private final UserDigitalCertificateService digitalCertificateService;
+    private final com.ecom.academic.service.pdf.SystemSealService systemSeal;
+
+    /** หน้าที่ส่งคนมาสร้างลายเซ็นแล้วรอให้กลับไป — เฉพาะหน้าลงนาม ห้ามเป็นที่อยู่อื่น (open redirect) */
+    private static final java.util.regex.Pattern RETURN_TO = java.util.regex.Pattern.compile("^/esign/sign/\\d+$");
 
     public UserSignatureController(
             UserSignatureService signatureService,
             UserRepository userRepository,
-            UserDigitalCertificateService digitalCertificateService) {
+            UserDigitalCertificateService digitalCertificateService,
+            com.ecom.academic.service.pdf.SystemSealService systemSeal) {
+        this.systemSeal = systemSeal;
         this.signatureService = signatureService;
         this.userRepository = userRepository;
         this.digitalCertificateService = digitalCertificateService;
@@ -54,9 +60,13 @@ public class UserSignatureController {
 
     @GetMapping("/my-signatures")
     public String mySignatures(Principal principal, Model model,
-            @RequestParam(value = "edit", required = false) Long editId) {
+            @RequestParam(value = "edit", required = false) Long editId,
+            @RequestParam(value = "return", required = false) String returnTo) {
         UserDtls me = currentUser(principal);
         model.addAttribute("currentUser", me);
+        // ผู้ลงนามจากนอก มข. ไม่มี .p12 ลงนามด้วยการยืนยันทางอีเมลได้ จึงสร้างลายเซ็นได้โดยไม่ต้องติดตั้ง .p12 ก่อน
+        model.addAttribute("canUseSeal", systemSeal.availableFor(me));
+        model.addAttribute("returnTo", safeReturn(returnTo));
         model.addAttribute("signatures", signatureService.findMine(me));
         model.addAttribute("maxSignatures", UserSignatureService.MAX_PER_USER);
         model.addAttribute("signatureKinds", SignatureKind.values());
@@ -79,7 +89,9 @@ public class UserSignatureController {
             @RequestParam(value = "typedText", required = false) String typedText,
             @RequestParam(value = "typedFont", required = false) String typedFont,
             @RequestParam(value = "makeDefault", required = false) Boolean makeDefault,
+            @RequestParam(value = "return", required = false) String returnTo,
             RedirectAttributes redirectAttributes) {
+        String back = safeReturn(returnTo);
 
         UserDtls me = currentUser(principal);
         SignatureKind parsedKind = SignatureKind.fromValue(kind);
@@ -91,12 +103,17 @@ public class UserSignatureController {
 
         if (!result.ok()) {
             redirectAttributes.addFlashAttribute("errorMsg", result.error());
-            return "redirect:/esign/my-signatures" + (id == null ? "" : "?edit=" + id);
+            return "redirect:/esign/my-signatures" + (id == null ? "" : "?edit=" + id)
+                    + (back == null ? "" : (id == null ? "?" : "&") + "return=" + back);
         }
 
         redirectAttributes.addFlashAttribute("succMsg",
                 id == null ? "บันทึกลายเซ็นเรียบร้อยแล้ว" : "แก้ไขลายเซ็นเรียบร้อยแล้ว");
-        return "redirect:/esign/my-signatures";
+        return "redirect:" + (back != null ? back : "/esign/my-signatures");
+    }
+
+    private static String safeReturn(String returnTo) {
+        return returnTo != null && RETURN_TO.matcher(returnTo).matches() ? returnTo : null;
     }
 
     @PostMapping("/my-signatures/{id}/delete")

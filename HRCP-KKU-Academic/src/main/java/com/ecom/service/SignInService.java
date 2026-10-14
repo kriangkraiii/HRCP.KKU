@@ -77,6 +77,8 @@ public class SignInService {
     public enum Method {
         PASSWORD("รหัสผ่าน"),
         SSO("KKU SSO"),
+        /** ผู้ลงนามภายนอก มข. กดลิงก์ใช้ครั้งเดียวในอีเมล — see ExternalLinkService. */
+        EMAIL_LINK("ลิงก์ทางอีเมล"),
         /** An administrator stepping into a test account in dev mode — see DevAccountSwitchService. */
         DEV_SWITCH("การสลับบัญชีทดสอบ (โหมด dev)");
 

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.system.ApplicationHome;
 import org.springframework.stereotype.Service;
 
+import com.ecom.config.KkuEmailDomains;
 import com.ecom.model.UserDtls;
 
 /**
@@ -23,6 +24,9 @@ import com.ecom.model.UserDtls;
  * รหัสอยู่ในไฟล์ {@code system-seal.p12.password} ข้างกัน — ไม่ต้องตั้งค่าอะไร และไม่พึ่ง environment ของ service
  * จะชี้ไปที่อื่นก็ตั้ง {@code app.esign.system-seal.p12-path} / {@code app.esign.system-seal.password} ได้
  * ไม่มีไฟล์ = ปิดทางสำรองนี้ ผู้ลงนามภายนอกต้องมี .p12 เอง
+ *
+ * <p>ใช้ได้เฉพาะผู้ลงนามจากนอก มข. ({@link KkuEmailDomains#isOutsideKku}) บุคลากร มข. ทุกคน รวมถึงคณะอื่นที่ถูกเชิญ
+ * เป็นผู้ลงนามภายนอก ต้องลงนามด้วย .p12 ของ มข. ซึ่งทุกคนขอได้ที่ i.kku.ac.th (ตัดสิน 14 ต.ค. 2569)
  */
 @Service
 public class SystemSealService {
@@ -34,14 +38,16 @@ public class SystemSealService {
 
     private final Path p12Path;
     private final String password;
+    private final KkuEmailDomains kkuDomains;
 
     @Autowired
     public SystemSealService(@Value("${app.esign.system-seal.p12-path:}") String p12Path,
-            @Value("${app.esign.system-seal.password:}") String password) {
-        this(p12Path, password, new ApplicationHome(SystemSealService.class).getDir().toPath());
+            @Value("${app.esign.system-seal.password:}") String password, KkuEmailDomains kkuDomains) {
+        this(p12Path, password, new ApplicationHome(SystemSealService.class).getDir().toPath(), kkuDomains);
     }
 
-    SystemSealService(String p12Path, String password, Path appHome) {
+    SystemSealService(String p12Path, String password, Path appHome, KkuEmailDomains kkuDomains) {
+        this.kkuDomains = kkuDomains;
         boolean configured = p12Path != null && !p12Path.isBlank();
         this.p12Path = configured ? Path.of(p12Path.strip()) : appHome.resolve(DEFAULT_LOCATION);
         this.password = password == null ? "" : password;
@@ -60,9 +66,9 @@ public class SystemSealService {
         return Files.isReadable(p12Path);
     }
 
-    /** ผู้ลงนามคนนี้ใช้ทางสำรอง (ยืนยันทางอีเมล + ระบบประทับรับรอง) ได้ — เฉพาะผู้ลงนามภายนอก */
+    /** ผู้ลงนามคนนี้ใช้ทางสำรอง (ยืนยันทางอีเมล + ระบบประทับรับรอง) ได้ — เฉพาะผู้ลงนามจากนอก มข. */
     public boolean availableFor(UserDtls signer) {
-        return signer != null && signer.isExternal() && isConfigured();
+        return kkuDomains.isOutsideKku(signer) && isConfigured();
     }
 
     /** กุญแจของระบบสำหรับลงนามหนึ่งครั้ง */

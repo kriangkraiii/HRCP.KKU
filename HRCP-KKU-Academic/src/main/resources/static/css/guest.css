@@ -488,30 +488,37 @@ body {
 
 /* ---------- Divider ---------- */
 .guest-divider {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 14px;
     margin: 22px 0;
-    position: relative;
 }
 
 .guest-divider::before,
 .guest-divider::after {
     content: '';
-    position: absolute;
-    top: 50%;
-    width: 40%;
+    flex: 1;
     height: 1px;
     background: var(--g-border);
 }
 
-.guest-divider::before { left: 0; }
-.guest-divider::after { right: 0; }
-
 .guest-divider span {
-    background: var(--g-white);
-    padding: 0 14px;
     color: var(--g-muted);
     font-size: 0.82rem;
-    position: relative;
+}
+
+/* ---------- Audience label above each sign-in option ---------- */
+.login-audience {
+    margin: 0 0 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--g-muted);
+}
+
+/* ทางเข้าของผู้ลงนามภายนอก — บรรทัดเดียวใต้ปุ่ม SSO ไม่แย่งความสนใจจากปุ่มหลัก */
+.email-link-entry {
+    font-size: 0.88rem;
+    color: var(--g-muted);
 }
 
 /* ---------- Alerts ---------- */

@@ -144,7 +144,8 @@ class ExternalCommitteeMemberTest extends AbstractFlowTest {
         assertThat(ask.body()).contains("รศ.ดร.วิภา ภายนอก")
                 .contains("อนุกรรมการประเมินผลการสอน (ผู้ทรงคุณวุฒิภายนอก)")
                 .contains("ขั้นตอนการลงนาม")
-                .contains("http").contains("/esign/sign/" + steps.get(1).getId())
+                // คนนอก มข.: ปุ่มเป็นลิงก์เข้าสู่ระบบใช้ครั้งเดียว ไม่ใช่หน้าลงนามที่ต้องผ่าน KKU SSO
+                .contains("http").contains("/auth/link/").doesNotContain("/esign/sign/" + steps.get(1).getId())
                 .contains("จึงเรียนมาเพื่อโปรดพิจารณาลงนาม");
 
         assertThat(signatureWorkflow.sendSigningOtp(steps.get(1).getId(), fresh(guest))).isNull();

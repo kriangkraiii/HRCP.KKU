@@ -47,6 +47,12 @@ public class GlobalModelAdvice {
 
     private final com.ecom.sso.KkuSsoProperties ssoProperties;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.sso.ExternalLinkService externalLinks;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private KkuEmailDomains kkuEmailDomains;
+
     @ModelAttribute
     public void addGlobalAttributes(jakarta.servlet.http.HttpServletRequest request, Principal principal, Model model) {
         // อัปเดตสดไม่มีหน้าให้เรนเดอร์ — และ connection ที่หยิบตรงนี้ open-in-view จะถือไว้จนการเชื่อมต่อปิด
@@ -55,6 +61,8 @@ public class GlobalModelAdvice {
         }
         // Drives which sign-in controls the login page renders.
         model.addAttribute("ssoMode", authProperties.isSsoMode());
+        // ทางเข้าสำรองของผู้ลงนามจากนอก มข. บนหน้าเข้าสู่ระบบ (ลิงก์ทางอีเมล)
+        model.addAttribute("emailLinkEntry", externalLinks.isEnabled());
 
         // The four academic ranks, for the position pickers in admin/_academic_position_fields.html.
         // Serving them from the enum is what keeps the Thai option and its English
@@ -99,6 +107,8 @@ public class GlobalModelAdvice {
             UserDtls user = userService.getUserByEmail(principal.getName());
             if (user != null) {
                 model.addAttribute("user", user);
+                // ผู้ลงนามจากนอก มข. — เห็นคู่มือ .p12 ฉบับคนนอก ไม่ใช่ i.kku.ac.th (บุคลากรคณะอื่นของ มข. ไม่นับ)
+                model.addAttribute("outsideKku", kkuEmailDomains.isOutsideKku(user));
                 model.addAttribute("unreadNotificationCount", notificationService.getUnreadCount(user));
 
                 // Drives the "รอลงนาม" sidebar badge. Anyone can be asked to

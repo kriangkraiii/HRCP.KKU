@@ -1,19 +1,89 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<!--/* Modal: คู่มือการขอรับไฟล์ .p12 และรหัสผ่าน Digital ID ของ มข. */-->
+<!--/* Modal: คู่มือการขอรับไฟล์ .p12 และรหัสผ่าน Digital ID
+     บุคลากร มข. (รวมคณะอื่น) เห็นคู่มือ i.kku.ac.th ส่วนผู้ลงนามจากนอก มข. (${outsideKku} จาก GlobalModelAdvice)
+     เห็นฉบับของตัวเอง — ขอ .p12 ของ มข. ไม่ได้ และไม่จำเป็นต้องมี (docs/PLAN-external-magic-link.md ข้อ 4.10) */-->
 <div th:fragment="p12GuideModal" class="modal fade" id="p12GuideModal" tabindex="-1" aria-labelledby="p12GuideModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-academic text-white py-3">
                 <h5 class="modal-title d-flex align-items-center gap-2" id="p12GuideModalLabel">
                     <i class="fas fa-book-open"></i>
-                    <span>คู่มือการขอรับไฟล์ Digital ID (.p12) และรหัสผ่าน มหาวิทยาลัยขอนแก่น</span>
+                    <span th:unless="${outsideKku}">คู่มือการขอรับไฟล์ Digital ID (.p12) และรหัสผ่าน มหาวิทยาลัยขอนแก่น</span>
+                    <span th:if="${outsideKku}">Digital ID (.p12) ของหน่วยงานท่าน (ไม่บังคับ)</span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
 
+                <!--/* ฉบับผู้ลงนามจากนอก มข. */-->
+                <th:block th:if="${outsideKku}">
+                <div class="alert alert-success border-success bg-success bg-opacity-10 d-flex align-items-start gap-3 mb-4" id="p12GuideOptional">
+                    <i class="fas fa-circle-check text-success fs-3 mt-1"></i>
+                    <div>
+                        <strong class="text-success d-block mb-1">ไม่บังคับ</strong>
+                        <div class="small text-secondary">
+                            หากท่านไม่มี Digital ID ท่านลงนามได้โดยยืนยันรหัสที่ระบบส่งไปทางอีเมล
+                            และวิทยาลัยฯ จะรับรองลายมือชื่อในไฟล์ พร้อมระบุชื่อและอีเมลของท่าน
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3 mb-4">
+                    <div class="flex-shrink-0">
+                        <span class="badge rounded-circle bg-academic text-white fs-6 d-flex align-items-center justify-content-center u-size-38">1</span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold text-dark mb-1"><i class="fas fa-building-columns text-primary me-1"></i> ขอใบรับรองจากหน่วยงานของท่าน</h6>
+                        <div class="small text-secondary">
+                            หากต้องการลงนามด้วยใบรับรองของท่านเอง ให้ขอใบรับรองดิจิทัลส่วนบุคคลจากฝ่ายเทคโนโลยีสารสนเทศ
+                            หรือฝ่ายบุคคลของหน่วยงานต้นสังกัด หรือจากผู้ให้บริการออกใบรับรองที่ได้รับอนุญาต
+                            (ดูรายชื่อได้ที่สำนักงานพัฒนาธุรกรรมทางอิเล็กทรอนิกส์ ETDA)
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="text-muted opacity-25 my-3">
+
+                <div class="d-flex gap-3 mb-4">
+                    <div class="flex-shrink-0">
+                        <span class="badge rounded-circle bg-warning text-dark fs-6 d-flex align-items-center justify-content-center u-size-38">2</span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold text-dark mb-1"><i class="fas fa-file-shield text-warning me-1"></i> ไฟล์และรหัสผ่านที่ใช้ได้</h6>
+                        <ul class="small text-secondary ps-3 mb-2">
+                            <li class="mb-1">ไฟล์ <code>.p12</code> หรือ <code>.pfx</code> ที่มี<strong>กุญแจส่วนตัว</strong> และมีชื่อของท่านในใบรับรอง</li>
+                            <li class="mb-1">ใบรับรองที่ติดตั้งไว้ใน Windows หรือ macOS Keychain ใช้ได้ ถ้าส่งออก (export) เป็น .pfx/.p12 พร้อมกุญแจส่วนตัว</li>
+                            <li class="mb-1">รหัสผ่าน คือรหัสของไฟล์ที่ตั้งตอนดาวน์โหลดหรือที่หน่วยงานแจ้ง <strong>ไม่ใช่</strong>รหัสผ่านอีเมล</li>
+                        </ul>
+                        <div class="alert alert-light border py-2 px-3 small mb-0" id="p12GuideUnusable">
+                            <strong>ใช้ไม่ได้:</strong> ไฟล์ .cer / .crt / .pem / .p7b ที่มีแต่ใบรับรอง (ไม่มีกุญแจส่วนตัว),
+                            ใบรับรองใน USB token หรือ smart card และการลงนามผ่านระบบคลาวด์ของผู้ให้บริการ
+                            — กรณีเหล่านี้ กรุณาลงนามด้วยการยืนยันทางอีเมล
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="text-muted opacity-25 my-3">
+
+                <div class="d-flex gap-3 mb-3">
+                    <div class="flex-shrink-0">
+                        <span class="badge rounded-circle bg-success text-white fs-6 d-flex align-items-center justify-content-center u-size-38">3</span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold text-dark mb-1"><i class="fas fa-circle-check text-success me-1"></i> ติดตั้งในระบบ</h6>
+                        <ol class="small text-secondary ps-3 mb-2">
+                            <li class="mb-1">ไปที่เมนู <strong>ลายเซ็นของฉัน</strong> เลือกไฟล์และกรอกรหัสผ่านของไฟล์</li>
+                            <li class="mb-1">กด <strong>ตรวจสอบความถูกต้อง</strong> แล้ว <strong>ติดตั้งและบันทึกใบรับรอง</strong></li>
+                            <li class="mb-1">ระบบเข้ารหัสไฟล์ก่อนเก็บ ไม่เก็บรหัสผ่าน และใช้เฉพาะตอนท่านกดลงนาม ท่านลบออกได้ทุกเมื่อ</li>
+                        </ol>
+                    </div>
+                </div>
+                </th:block>
+
+                <!--/* ฉบับบุคลากร มข. */-->
+                <th:block th:unless="${outsideKku}">
                 <!--/* แนะนำภาพรวม */-->
                 <div class="alert alert-primary border-primary bg-primary bg-opacity-10 d-flex align-items-start gap-3 mb-4">
                     <i class="fas fa-shield-halved text-primary fs-3 mt-1"></i>
@@ -113,6 +183,7 @@
                         <li><strong>ความปลอดภัย:</strong> ไฟล์ .p12 ถูกเข้ารหัสและเก็บในพื้นที่ที่เปิดผ่านเว็บไม่ได้ ระบบไม่เก็บรหัสผ่าน และบันทึกทุกครั้งที่มีการใช้ใบรับรองของท่าน</li>
                     </ul>
                 </div>
+                </th:block>
 
             </div>
             <div class="modal-footer bg-light py-2">

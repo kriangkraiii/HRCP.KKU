@@ -105,6 +105,11 @@
       if (stoppingNow || !confirmModalEl || !window.bootstrap) {
         return;
       }
+      // ปุ่มที่ส่งไปที่อื่นด้วย formaction (เช่น "ส่งรหัสยืนยันทางอีเมล" ของผู้ลงนามภายนอก) ไม่ใช่การลงนาม
+      // ห้ามเปิดหน้าต่างยืนยัน — เดิมกดแล้วขึ้นหน้าต่างลงนาม และกดยอมรับก็ส่งไปลงนามโดยไม่มีรหัส
+      if (event.submitter && event.submitter !== confirmBtn && event.submitter.hasAttribute('formaction')) {
+        return;
+      }
       if (event.submitter === confirmBtn) {
         // กันกดซ้ำระหว่างรอเซิร์ฟเวอร์ ปิดหลังค่า consent ของปุ่มถูกเก็บเข้าฟอร์มแล้ว
         setTimeout(function () { confirmBtn.disabled = true; }, 0);

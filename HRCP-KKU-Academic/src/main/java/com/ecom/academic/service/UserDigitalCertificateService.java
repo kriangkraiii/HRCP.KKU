@@ -182,8 +182,15 @@ public class UserDigitalCertificateService {
         if (password == null || password.isBlank()) {
             return VerifyResult.failed("กรุณากรอก Digital ID Password");
         }
+        String notAKeyFile = CertificateFileKind.problemBeforeOpening(p12Bytes);
+        if (notAKeyFile != null) {
+            return VerifyResult.failed(notAKeyFile);
+        }
         try {
             PdfDigitalSignatureService.ParsedCertificateInfo info = pdfSignatureService.inspect(p12Bytes, password);
+            if (!CertificateFileKind.hasPrivateKey(p12Bytes, password)) {
+                return VerifyResult.failed(CertificateFileKind.NO_PRIVATE_KEY);
+            }
             if (info.validTo() != null && info.validTo().isBefore(LocalDateTime.now())) {
                 return VerifyResult.failed("ใบรับรองดิจิทัลนี้หมดอายุแล้วเมื่อ " + info.validTo().format(DATE_FMT));
             }
@@ -191,7 +198,7 @@ public class UserDigitalCertificateService {
             return VerifyResult.success(info.commonName(), info.issuerDn(), validToStr);
         } catch (Exception e) {
             log.warn("P12 pre-flight verification failed: {}", e.getMessage());
-            return VerifyResult.failed("Digital ID Password ไม่ถูกต้อง หรือไฟล์ .p12 ไม่สมบูรณ์");
+            return VerifyResult.failed(CertificateFileKind.problemOpening(e));
         }
     }
 
@@ -294,12 +301,19 @@ public class UserDigitalCertificateService {
         }
 
         // 1. Inspect and verify with the PIN
+        String notAKeyFile = CertificateFileKind.problemBeforeOpening(p12Bytes);
+        if (notAKeyFile != null) {
+            return SaveResult.failed(notAKeyFile);
+        }
         PdfDigitalSignatureService.ParsedCertificateInfo info;
         try {
             info = pdfSignatureService.inspect(p12Bytes, pin);
+            if (!CertificateFileKind.hasPrivateKey(p12Bytes, pin)) {
+                return SaveResult.failed(CertificateFileKind.NO_PRIVATE_KEY);
+            }
         } catch (Exception e) {
             log.warn("Failed to inspect .p12 certificate for user {}: {}", user.getId(), e.getMessage());
-            return SaveResult.failed("Digital ID Password ไม่ถูกต้อง หรือไฟล์ .p12 ไม่สมบูรณ์ (" + e.getMessage() + ")");
+            return SaveResult.failed(CertificateFileKind.problemOpening(e));
         }
 
         if (info.validTo() != null && info.validTo().isBefore(LocalDateTime.now())) {

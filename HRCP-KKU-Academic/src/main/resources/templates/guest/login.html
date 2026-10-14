@@ -158,6 +158,7 @@
 
 				<!--/* SSO mode: a clean single button without local credentials */-->
 				<th:block th:if="${ssoMode}">
+					<p class="login-audience" th:if="${emailLinkEntry}" id="ssoAudience">สำหรับบุคลากร มข.</p>
 					<a th:href="@{/auth/sso/login}" class="btn-guest-primary" id="ssoLoginBtn">
 						<i class="fas fa-university" aria-hidden="true"></i> เข้าสู่ระบบด้วย KKU SSO
 					</a>
@@ -195,6 +196,14 @@
 						<a th:href="@{/forgot-password}"><i class="fas fa-key"></i> ลืมรหัสผ่าน?</a>
 					</div>
 				</th:block>
+
+				<!--/* ผู้ลงนามจากนอก มข. ไม่มีบัญชี KKU SSO — ทางเข้าหลักคือปุ่มในอีเมล ส่วนนี้สำหรับคนที่มาถึงหน้านี้เอง
+				     (session หมด ออกจากระบบ พิมพ์ที่อยู่เอง) ดู docs/PLAN-external-magic-link.md ข้อ 4.12 */-->
+				<!--/* ลิงก์ตัวอักษร ไม่ใช่ปุ่ม — ผู้ใช้หน้านี้เกือบทั้งหมดเป็นบุคลากร มข. ปุ่มหลักต้องเหลือ SSO ปุ่มเดียว */-->
+				<div class="guest-link email-link-entry" th:if="${emailLinkEntry}">
+					<span>ผู้ลงนามจากหน่วยงานภายนอก?</span>
+					<a th:href="@{/auth/link}" id="emailLinkEntryBtn">รับลิงก์เข้าสู่ระบบทางอีเมล</a>
+				</div>
 			</div>
 		</div>
 	</div>

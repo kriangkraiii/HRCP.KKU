@@ -64,7 +64,9 @@ class ExternalInvitationEmailTest extends AbstractFlowTest {
                 .contains("CP353001")
                 .contains("ร่วมประเมินผลการสอน")
                 .contains("แบบฟอร์มประเมินการสอน ตามประกาศ มข.1669-69")
-                .contains("KKU SSO").contains("wipa@partner.example.invalid")
+                // คนนอก มข. ไม่มีบัญชี KKU SSO — เข้าระบบด้วยลิงก์ในอีเมล ไม่ต้องมี Digital ID
+                .doesNotContain("KKU SSO").contains("ไม่ต้องตั้งรหัสผ่าน").contains("/auth/link")
+                .contains("ไม่จำเป็นต้องมีใบรับรองอิเล็กทรอนิกส์")
                 .contains(officer.getEmail())
                 .contains("จึงเรียนมาเพื่อโปรดพิจารณา");
     }

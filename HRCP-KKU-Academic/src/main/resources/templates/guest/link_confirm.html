@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--/* token อยู่ใน URL ของหน้านี้ — ห้ามส่งต่อใน Referer และห้ามติดเครื่องมือค้นหา */-->
+    <meta name="referrer" content="no-referrer">
+    <meta name="robots" content="noindex, nofollow">
+    <title>เข้าสู่ระบบเพื่อลงนาม - CP HRD | College of Computing Human Resource Development System</title>
+    <link href="/vendor/fonts/prompt.css" rel="stylesheet">
+    <link href="/vendor/fonts/sarabun.css" rel="stylesheet">
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+    <link rel="icon" type="image/png" href="/img/favicon.png?v=2.0">
+    <link rel="stylesheet" href="/css/guest.css">
+</head>
+
+<body>
+    <div class="guest-split">
+        <div class="guest-brand notranslate" translate="no">
+            <div class="guest-brand-title"><span class="brand-cp">CP</span> <span class="brand-hrd">HRD</span></div>
+            <div class="guest-brand-sub">COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM</div>
+            <div class="guest-footer">© <span th:text="${T(java.time.Year).now(T(java.time.ZoneId).of('Asia/Bangkok')).getValue() + 543}">2569</span> วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>
+        </div>
+
+        <div class="guest-form">
+            <div class="guest-card">
+                <th:block th:if="${live}">
+                    <h1 class="guest-card-heading"><i class="fas fa-file-signature u-mr-8px-fs-1-2rem"></i>เข้าสู่ระบบเพื่อลงนาม</h1>
+                    <p class="guest-card-sub">กดปุ่มด้านล่างเพื่อเข้าสู่ระบบและเปิดเอกสารที่รอการลงนามของท่าน</p>
+
+                    <form th:action="@{'/auth/link/' + ${token}}" method="post" id="linkSignInForm">
+                        <button type="submit" class="btn-guest-primary" id="linkSignInBtn">
+                            <i class="fas fa-right-to-bracket"></i> เข้าสู่ระบบ
+                        </button>
+                    </form>
+
+                    <p class="guest-card-sub u-fs-0-9em u-mt-20px-ta-center">
+                        <i class="fas fa-lock"></i> ลิงก์นี้ใช้ได้ครั้งเดียว โปรดอย่าส่งต่ออีเมลที่ได้รับ
+                    </p>
+                </th:block>
+
+                <th:block th:unless="${live}">
+                    <h1 class="guest-card-heading"><i class="fas fa-link-slash u-mr-8px-fs-1-2rem"></i>ลิงก์นี้ใช้ไม่ได้แล้ว</h1>
+                    <div class="alert alert-warning" id="linkExpired">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>ลิงก์นี้หมดอายุหรือถูกใช้ไปแล้ว ท่านขอลิงก์ใหม่ทางอีเมลได้</span>
+                    </div>
+                    <a th:href="@{/auth/link}" class="btn-guest-primary" id="requestNewLinkBtn">
+                        <i class="fas fa-paper-plane"></i> ขอลิงก์ใหม่
+                    </a>
+                </th:block>
+
+                <div class="guest-link">
+                    <a href="/signin"><i class="fas fa-arrow-left"></i> กลับหน้าเข้าสู่ระบบ</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

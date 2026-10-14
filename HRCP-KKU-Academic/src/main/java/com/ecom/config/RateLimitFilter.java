@@ -118,7 +118,9 @@ public class RateLimitFilter implements Filter {
         }
         return "/login".equals(uri)
                 || "/2fa/verify".equals(uri)
-                || "/2fa/resend".equals(uri);
+                || "/2fa/resend".equals(uri)
+                // ลิงก์เข้าสู่ระบบของผู้ลงนามภายนอก: ใช้ token และขอลิงก์ใหม่ทางอีเมล
+                || uri.equals("/auth/link") || uri.startsWith("/auth/link/");
     }
 
     private boolean isStaticResource(String uri) {

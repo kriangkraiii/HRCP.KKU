@@ -322,6 +322,11 @@ public class SecurityConfig {
                                                 // reachable before a session exists.
                                                 .requestMatchers("/auth/sso/**", "/auth/callback/**")
                                                 .permitAll()
+                                                // ทางเข้าของผู้ลงนามภายนอก มข. ด้วยลิงก์ในอีเมล — เปิดทั้งโหมด SSO
+                                                // และโหมดรหัสผ่าน ห้ามย้ายไปไว้ใน passwordLoginPaths() ซึ่งถูกปิดในโหมด SSO
+                                                // ExternalLinkService ปฏิเสธบัญชีของ มข. เอง จึงไม่ใช่ทางเลี่ยง SSO
+                                                .requestMatchers("/auth/link", "/auth/link/", "/auth/link/**")
+                                                .permitAll()
                                                 // The one-time code screen sits between the first
                                                 // factor and a session, so it is by definition
                                                 // reached unauthenticated. It guards itself: with

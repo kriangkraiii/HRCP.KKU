@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ขอลิงก์เข้าสู่ระบบ - CP HRD | College of Computing Human Resource Development System</title>
+    <link href="/vendor/fonts/prompt.css" rel="stylesheet">
+    <link href="/vendor/fonts/sarabun.css" rel="stylesheet">
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+    <link rel="icon" type="image/png" href="/img/favicon.png?v=2.0">
+    <link rel="stylesheet" href="/css/guest.css">
+</head>
+
+<body>
+    <div class="guest-split">
+        <div class="guest-brand notranslate" translate="no">
+            <div class="guest-brand-title"><span class="brand-cp">CP</span> <span class="brand-hrd">HRD</span></div>
+            <div class="guest-brand-sub">COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM</div>
+            <div class="guest-footer">© <span th:text="${T(java.time.Year).now(T(java.time.ZoneId).of('Asia/Bangkok')).getValue() + 543}">2569</span> วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>
+        </div>
+
+        <div class="guest-form">
+            <div class="guest-card">
+                <h1 class="guest-card-heading"><i class="fas fa-envelope-open-text u-mr-8px-fs-1-2rem"></i>รับลิงก์เข้าสู่ระบบทางอีเมล</h1>
+                <p class="guest-card-sub">สำหรับผู้ลงนามจากหน่วยงานนอกมหาวิทยาลัยขอนแก่น กรอกอีเมลที่ได้รับเชิญให้ลงนาม</p>
+
+                <!--/* ผลการขอลิงก์ — เขียวเฉพาะตอนส่งแล้วจริง อีเมล มข. เตือนให้ใช้ SSO ที่เหลือแดง */-->
+                <div th:if="${outcomeMessage}" id="linkRequestResult" th:attr="data-outcome=${outcome}"
+                     th:classappend="${outcomeOk} ? 'alert-success' : (${outcome == 'KKU_ACCOUNT' or outcome == 'NOT_EXTERNAL'} ? 'alert-warning' : 'alert-danger')"
+                     class="alert">
+                    <i class="fas" th:classappend="${outcomeOk} ? 'fa-check-circle' : 'fa-exclamation-circle'"></i>
+                    <span th:text="${outcomeMessage}"></span>
+                </div>
+                <div th:if="${errorMsg}" class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span th:text="${errorMsg}"></span>
+                </div>
+
+                <form th:action="@{/auth/link}" method="post" id="linkRequestForm">
+                    <div class="form-group">
+                        <label for="linkEmail">อีเมล</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="linkEmail" name="email" placeholder="อีเมล" required autocomplete="email"
+                                   th:value="${outcomeOk} ? '' : ${email}">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-guest-primary" id="linkRequestBtn">
+                        <i class="fas fa-paper-plane"></i> ส่งลิงก์เข้าสู่ระบบ
+                    </button>
+                </form>
+
+                <div class="alert alert-warning u-mt-20px-ta-center" id="kkuUsesSso">
+                    <i class="fas fa-university"></i>
+                    <span>บุคลากร มข. กรุณาเข้าสู่ระบบด้วย KKU SSO ที่หน้าเข้าสู่ระบบ</span>
+                </div>
+
+                <div class="guest-link">
+                    <a href="/signin"><i class="fas fa-arrow-left"></i> กลับหน้าเข้าสู่ระบบ</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

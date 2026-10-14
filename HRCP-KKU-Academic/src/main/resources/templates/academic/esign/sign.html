@@ -227,7 +227,12 @@
                                 <span th:if="${myCert == null}"><i class="fas fa-lock me-1"></i> ยังไม่สามารถลงนามได้: จำเป็นต้องติดตั้ง Digital ID (.p12)</span>
                                 <span th:if="${myCert != null and myCert.expired}"><i class="fas fa-calendar-xmark me-1"></i> ยังไม่สามารถลงนามได้: ใบรับรอง Digital ID (.p12) หมดอายุแล้ว</span>
                             </h6>
-                            <p class="mb-2 small text-secondary">
+                            <!--/* ผู้ลงนามจากนอก มข. มาถึงกล่องนี้ได้เฉพาะตอนที่ตราระบบยังไม่พร้อม — ขอ .p12 ของ มข. ไม่ได้ */-->
+                            <p class="mb-2 small text-secondary" th:if="${outsideKku}" id="sealUnavailableOnSign">
+                                ขณะนี้ระบบยังรับรองลายมือชื่อแทนท่านไม่ได้ กรุณาติดต่อเจ้าหน้าที่วิทยาลัยฯ
+                                หรือติดตั้ง Digital ID (.p12) ของหน่วยงานท่านที่หน้าลายเซ็นของฉัน
+                            </p>
+                            <p class="mb-2 small text-secondary" th:unless="${outsideKku}">
                                 <span th:if="${myCert == null}">
                                     กรุณาติดตั้งใบรับรอง Digital ID (.p12) ที่หน้าลายเซ็นของฉันก่อนลงนาม
                                     <span th:replace="~{academic/_info_tip :: tip('ตามนโยบายความปลอดภัยและ พ.ร.บ.ว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์ ผู้ลงนามต้องใช้ใบรับรองดิจิทัลส่วนบุคคลของมหาวิทยาลัยขอนแก่น')}"></span>
@@ -258,8 +263,8 @@
                     <div th:if="${#lists.isEmpty(mySignatures)}" class="alert alert-warning">
                         <i class="fas fa-triangle-exclamation"></i>
                         ยังไม่มีลายเซ็นที่บันทึกไว้ กรุณา
-                        <a href="/esign/my-signatures" class="alert-link">สร้างลายเซ็น</a>
-                        ก่อนลงนาม
+                        <a th:href="@{/esign/my-signatures(return=${'/esign/sign/' + step.id})}" class="alert-link" id="createSignatureLink">สร้างลายเซ็น</a>
+                        ก่อนลงนาม แล้วระบบจะพากลับมาที่เอกสารนี้
                     </div>
 
                     <form th:unless="${#lists.isEmpty(mySignatures)}"
@@ -351,10 +356,11 @@
                             </div>
                             <div class="card-body py-2">
                                 <p class="small text-secondary mb-2">
-                                    ท่านยังไม่มี Digital ID (.p12) — ระบบจะส่งรหัสยืนยันไปที่
+                                    <span th:if="${myCert != null and myCert.expired}">ใบรับรองของท่านหมดอายุแล้ว ท่านลงนามด้วยการยืนยันทางอีเมลได้ทันที —</span>
+                                    <span th:unless="${myCert != null and myCert.expired}">ไม่ต้องติดตั้งอะไร —</span>
+                                    ระบบจะส่งรหัสยืนยันไปที่
                                     <strong th:text="${user != null ? user.email : ''}">อีเมล</strong>
                                     แล้วลงนามลงไฟล์ด้วยใบรับรองของวิทยาลัย พร้อมระบุชื่อและอีเมลของท่าน
-                                    <span th:replace="~{academic/_info_tip :: tip('หากท่านมี Digital ID ของหน่วยงาน สามารถติดตั้งที่หน้าลายเซ็นของฉัน แล้วลงนามด้วยใบรับรองของท่านเองได้')}"></span>
                                 </p>
                                 <button type="submit" class="btn btn-outline-primary btn-sm mb-2"
                                         th:formaction="@{'/esign/sign/' + ${step.id} + '/email-otp'}" formnovalidate>
@@ -363,6 +369,12 @@
                                 <label class="form-label small fw-semibold text-dark mb-1" for="emailOtp">รหัสยืนยันจากอีเมล</label>
                                 <input type="text" class="form-control form-control-sm" id="emailOtp" name="emailOtp"
                                        inputmode="numeric" autocomplete="one-time-code" required placeholder="รหัส 8 หลัก">
+                                <div class="small text-secondary mt-2 pt-2 border-top" id="ownDigitalIdOption">
+                                    <i class="fas fa-id-card me-1"></i>
+                                    มี Digital ID (.p12) ของหน่วยงานท่าน? <a href="/esign/my-signatures" class="fw-semibold">ติดตั้ง</a>
+                                    เพื่อลงนามด้วยใบรับรองของท่านเอง (ไม่บังคับ)
+                                    <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#p12GuideModal">คู่มือ</button>
+                                </div>
                             </div>
                         </div>
 

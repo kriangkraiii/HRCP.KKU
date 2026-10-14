@@ -45,9 +45,14 @@ public class PeopleApiController {
      * @param email       ปิดบางส่วนเมื่อผู้ถามไม่ใช่เจ้าหน้าที่
      * @param recommended มีบทบาทตรงกับตำแหน่งที่ถาม (ทะเบียนบุคลากร) — ขึ้นก่อน
      * @param acting      ผู้รักษาการแทนของช่องที่ถาม — {@code position} เป็นตำแหน่งรักษาการแทนเต็ม
+     * @param notice      สิ่งที่ผู้เชิญควรรู้หลังเพิ่มผู้ลงนามภายนอก (เช่น ต้องใช้ .p12) — null ในผลค้นหา
      */
     public record Person(Integer userId, String name, String position, String affiliation, String email,
-            boolean recommended, boolean external, boolean acting) {
+            boolean recommended, boolean external, boolean acting, String notice) {
+
+        Person withNotice(String text) {
+            return new Person(userId, name, position, affiliation, email, recommended, external, acting, text);
+        }
     }
 
     private final UserRepository users;
@@ -147,10 +152,35 @@ public class PeopleApiController {
                     new ExternalSignerService.Invite(invite.title(), invite.firstName(), invite.lastName(),
                             invite.email(), invite.affiliation()),
                     caller, briefingFor(invite, caller));
-            return ResponseEntity.ok(toPerson(signer, false, STAFF.contains(caller.getRole())));
+            return ResponseEntity.ok(toPerson(signer, false, STAFF.contains(caller.getRole()))
+                    .withNotice(inviteNotice(signer)));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.config.KkuEmailDomains kkuEmailDomains;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.academic.service.pdf.SystemSealService systemSeal;
+
+    /**
+     * สิ่งที่ผู้เชิญควรรู้ทันที — ไม่อย่างนั้นจะรู้ตอนผู้ลงนามถึงคิวแล้วลงนามไม่ได้ คำร้องจะค้าง
+     * (docs/PLAN-external-magic-link.md ข้อ 4.9)
+     */
+    private String inviteNotice(UserDtls signer) {
+        if (signer == null || !signer.isExternal()) {
+            return null;
+        }
+        if (!kkuEmailDomains.isOutsideKku(signer)) {
+            return "บุคลากร มข. ต้องลงนามด้วย Digital ID (.p12) ของ มข. — แจ้งผู้ลงนามให้ติดตั้งก่อนถึงลำดับลงนาม";
+        }
+        if (!systemSeal.isConfigured()) {
+            return "ขณะนี้ระบบยังรับรองลายมือชื่อแทนผู้ลงนามภายนอกไม่ได้ ผู้ลงนามท่านนี้ต้องมี Digital ID (.p12)"
+                    + " ของหน่วยงานตัวเอง หรือแจ้งผู้ดูแลระบบให้ติดตั้งใบรับรองของระบบ";
+        }
+        return null;
     }
 
     /**
@@ -185,14 +215,14 @@ public class PeopleApiController {
 
     private static Person toPerson(UserDtls u, boolean recommended, boolean fullEmail) {
         return new Person(u.getId(), SignerNameResolver.printedName(u), u.getPositionTitle(), u.getAffiliation(),
-                fullEmail ? u.getEmail() : maskEmail(u.getEmail()), recommended, u.isExternal(), false);
+                fullEmail ? u.getEmail() : maskEmail(u.getEmail()), recommended, u.isExternal(), false, null);
     }
 
     /** ตำแหน่งคือ "รักษาการแทน..." เต็ม — ตัวค้นหาชื่อเติมค่านี้ลงช่องตำแหน่งข้างชื่อ */
     private static Person actingPerson(UserDtls u, com.ecom.academic.service.ActingSignerService.Acting acting,
             boolean fullEmail) {
         return new Person(u.getId(), SignerNameResolver.printedName(u), acting.printedPosition(), u.getAffiliation(),
-                fullEmail ? u.getEmail() : maskEmail(u.getEmail()), true, u.isExternal(), true);
+                fullEmail ? u.getEmail() : maskEmail(u.getEmail()), true, u.isExternal(), true, null);
     }
 
     /** ผู้รักษาการแทนของช่องชื่อที่ถาม — ไม่บอกว่าเป็นช่องไหนก็ไม่มี */

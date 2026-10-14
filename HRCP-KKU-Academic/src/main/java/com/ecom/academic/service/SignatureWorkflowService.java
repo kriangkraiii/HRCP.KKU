@@ -1018,11 +1018,14 @@ public class SignatureWorkflowService {
             if (emailOtp == null || emailOtp.isBlank()) {
                 return Result.failed("กรุณากรอกรหัสยืนยันที่ส่งไปทางอีเมล " + actingUser.getEmail());
             }
-            String verified = twoFactorService.verifyOtp(actingUser, emailOtp.strip());
+            String verified = twoFactorService.verifySigningOtp(actingUser, emailOtp.strip());
             if (!"OK".equals(verified)) {
-                return Result.failed("EXPIRED".equals(verified)
-                        ? "รหัสยืนยันหมดอายุแล้ว กรุณากดส่งรหัสใหม่"
-                        : "รหัสยืนยันไม่ถูกต้อง");
+                return Result.failed(switch (verified) {
+                    case "EXPIRED" -> "รหัสยืนยันหมดอายุแล้ว กรุณากดส่งรหัสใหม่";
+                    case "LOCKED" -> "กรอกรหัสยืนยันผิดครบ " + com.ecom.service.TwoFactorService.SIGNING_OTP_MAX_ATTEMPTS
+                            + " ครั้ง รหัสนี้ใช้ไม่ได้แล้ว กรุณากดส่งรหัสใหม่";
+                    default -> "รหัสยืนยันไม่ถูกต้อง";
+                });
             }
             authMethodToUse = SignatureStep.AUTH_METHOD_OTP;
             optCert = java.util.Optional.empty();
@@ -1280,6 +1283,10 @@ public class SignatureWorkflowService {
         }
         if (systemSeal == null || twoFactorService == null || !systemSeal.availableFor(actingUser)) {
             return "บัญชีนี้ต้องลงนามด้วย Digital ID (.p12)";
+        }
+        if (!twoFactorService.claimResend("sign-otp:" + stepId + ":" + actingUser.getId())) {
+            return "ระบบเพิ่งส่งรหัสยืนยันไปที่ " + actingUser.getEmail() + " กรุณาตรวจสอบอีเมล หรือรอ "
+                    + com.ecom.service.TwoFactorService.RESEND_COOLDOWN_SECONDS + " วินาทีแล้วขอรหัสใหม่";
         }
         String otp = twoFactorService.generateOtp(actingUser);
         twoFactorService.sendOtpEmail(actingUser, otp, "SIGN");

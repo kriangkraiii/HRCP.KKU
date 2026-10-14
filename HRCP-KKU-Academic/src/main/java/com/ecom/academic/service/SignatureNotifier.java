@@ -13,11 +13,14 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.ecom.academic.dto.SignatureNotice;
+import com.ecom.academic.model.ExternalSignInLink.Purpose;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureRequest;
+import com.ecom.config.KkuEmailDomains;
 import com.ecom.model.NotificationType;
 import com.ecom.model.UserDtls;
 import com.ecom.service.NotificationService;
+import com.ecom.sso.ExternalLinkService;
 import com.ecom.util.EmailTemplateHelper;
 
 import jakarta.mail.internet.MimeMessage;
@@ -45,6 +48,8 @@ public class SignatureNotifier {
     private final JavaMailSender mailSender;
     private final com.ecom.repository.UserRepository userRepository;
     private final com.ecom.service.OfficerRecipients officerRecipients;
+    private final ExternalLinkService externalLinks;
+    private final KkuEmailDomains kkuDomains;
 
     @Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
     private String senderEmail;
@@ -54,8 +59,11 @@ public class SignatureNotifier {
 
     public SignatureNotifier(NotificationService notificationService, JavaMailSender mailSender,
             com.ecom.repository.UserRepository userRepository,
-            com.ecom.service.OfficerRecipients officerRecipients) {
+            com.ecom.service.OfficerRecipients officerRecipients,
+            ExternalLinkService externalLinks, KkuEmailDomains kkuDomains) {
         this.officerRecipients = officerRecipients;
+        this.externalLinks = externalLinks;
+        this.kkuDomains = kkuDomains;
         this.notificationService = notificationService;
         this.mailSender = mailSender;
         this.userRepository = userRepository;
@@ -113,7 +121,7 @@ public class SignatureNotifier {
                     .para("เอกสาร “" + notice.safeDocumentLabel() + "” ยังรอการลงนามของท่าน และถึงวันที่ท่านตั้งเตือนไว้แล้ว")
                     .note("info", null, "กำหนดนี้เป็นเพียงการแจ้งเตือน เอกสารยังไม่ถูกปิด ท่านลงนามได้ตามปกติ"
                             + " และยื่นคำร้องได้ทันทีที่ลงนามครบทุกฉบับ")
-                    .link("เข้าสู่ระบบเพื่อลงนาม", link("/esign/sign/" + notice.stepId()))
+                    .link("เข้าสู่ระบบเพื่อลงนาม", signLink(recipient, notice.stepId(), Purpose.REMINDER))
                     .close("จึงเรียนมาเพื่อโปรดทราบ");
             email(recipient, "ถึงกำหนดที่ตั้งเตือนไว้: " + notice.safeDocumentLabel(),
                     EmailTemplateHelper.wrapLayout("ถึงกำหนดที่ตั้งเตือนไว้", "แจ้งเตือน", body));
@@ -360,6 +368,8 @@ public class SignatureNotifier {
         String doc = notice.safeDocumentLabel();
         boolean outsider = recipient != null && recipient.isExternal();
         SignerBriefing.Briefing brief = notice.briefing();
+        String signLink = signLink(recipient, notice.stepId(), reminder ? Purpose.REMINDER : Purpose.SIGN_REQUEST);
+        boolean emailLink = signLink.contains(ExternalLinkService.PATH + "/");
 
         EmailTemplateHelper.Letter letter = EmailTemplateHelper.Letter.of(
                 (reminder ? "ขอเตือนการลงนามในเอกสาร “" : "ขอความอนุเคราะห์ลงนามในเอกสาร “") + doc + "”",
@@ -388,20 +398,53 @@ public class SignatureNotifier {
             if (brief != null) {
                 steps.addAll(brief.duties());
             }
-            steps.add("เปิดลิงก์ “เข้าสู่ระบบเพื่อลงนาม” ด้านล่าง แล้วเข้าสู่ระบบด้วย KKU SSO โดยใช้อีเมล "
-                    + recipient.getEmail());
-            steps.add("ตรวจสอบเอกสาร แล้วลงนาม หากท่านมีใบรับรองอิเล็กทรอนิกส์ (Digital ID) ของหน่วยงาน สามารถใช้ลงนามได้"
-                    + " หากไม่มี ระบบจะส่งรหัสยืนยันตัวตนไปยังอีเมลนี้เพื่อใช้ประกอบการลงนาม");
+            if (emailLink) {
+                // คนนอก มข. ไม่มีบัญชี KKU SSO — ลิงก์ในอีเมลนี้พาเข้าระบบเอง
+                steps.add("กดลิงก์ “เข้าสู่ระบบเพื่อลงนาม” ด้านล่าง แล้วกดปุ่ม “เข้าสู่ระบบ” ไม่ต้องใช้รหัสผ่าน"
+                        + " ลิงก์ใช้ได้ครั้งเดียวภายใน " + externalLinks.ttlDays() + " วัน หากหมดอายุ ขอลิงก์ใหม่ได้ที่ "
+                        + link(ExternalLinkService.PATH));
+                steps.add("ตรวจสอบเอกสาร แล้วลงนาม ท่านไม่จำเป็นต้องมีใบรับรองอิเล็กทรอนิกส์ (Digital ID)"
+                        + " ระบบจะส่งรหัสยืนยันตัวตนไปยังอีเมลนี้เพื่อใช้ประกอบการลงนาม"
+                        + " หากท่านมี Digital ID (.p12) ของหน่วยงาน สามารถติดตั้งเพื่อใช้ลงนามแทนได้");
+            } else if (kkuDomains.isOutsideKku(recipient)) {
+                steps.add("เปิดลิงก์ “เข้าสู่ระบบเพื่อลงนาม” ด้านล่าง แล้วเข้าสู่ระบบโดยใช้อีเมล " + recipient.getEmail());
+                steps.add("ตรวจสอบเอกสาร แล้วลงนาม หากท่านมีใบรับรองอิเล็กทรอนิกส์ (Digital ID) ของหน่วยงาน สามารถใช้ลงนามได้"
+                        + " หากไม่มี ระบบจะส่งรหัสยืนยันตัวตนไปยังอีเมลนี้เพื่อใช้ประกอบการลงนาม");
+            } else {
+                // บุคลากร มข. ต่างคณะ: เข้าทาง KKU SSO และต้องลงนามด้วย .p12 ของ มข. (ตราระบบใช้ไม่ได้)
+                steps.add("เปิดลิงก์ “เข้าสู่ระบบเพื่อลงนาม” ด้านล่าง แล้วเข้าสู่ระบบด้วย KKU SSO โดยใช้อีเมล "
+                        + recipient.getEmail());
+                steps.add("ตรวจสอบเอกสาร แล้วลงนามด้วยใบรับรองอิเล็กทรอนิกส์ (Digital ID) ของมหาวิทยาลัยขอนแก่น"
+                        + " หากยังไม่มี กรุณาดาวน์โหลดไฟล์ .p12 จาก i.kku.ac.th แล้วติดตั้งที่เมนู “ลายเซ็นของฉัน” ก่อนลงนาม");
+            }
             letter.steps("ขั้นตอนการลงนาม", steps);
         } else {
             letter.para("ท่านสามารถตรวจสอบเอกสารและลงนามได้ที่ลิงก์ด้านล่าง แล้วเข้าสู่ระบบด้วย KKU SSO");
         }
-        String body = letter
-                .link("เข้าสู่ระบบเพื่อลงนาม", link("/esign/sign/" + notice.stepId()))
-                .close("จึงเรียนมาเพื่อโปรดพิจารณาลงนาม และขอขอบคุณมา ณ โอกาสนี้");
+        letter.link("เข้าสู่ระบบเพื่อลงนาม", signLink);
+        if (emailLink) {
+            letter.note("warn", null, "ลิงก์นี้ใช้ได้ครั้งเดียว โปรดอย่าส่งต่ออีเมลฉบับนี้");
+        }
+        String body = letter.close("จึงเรียนมาเพื่อโปรดพิจารณาลงนาม และขอขอบคุณมา ณ โอกาสนี้");
         return EmailTemplateHelper.wrapLayout(
                 reminder ? "ขอเตือนการลงนามเอกสารอิเล็กทรอนิกส์" : "ขอความอนุเคราะห์ลงนามเอกสารอิเล็กทรอนิกส์",
                 outsider ? "ผู้ลงนามภายนอก" : "รอลงนาม", body);
+    }
+
+    /**
+     * ลิงก์ลงนามในอีเมล — ผู้ลงนามจากนอก มข. ไม่มีบัญชี KKU SSO จึงได้ลิงก์เข้าสู่ระบบใช้ครั้งเดียว
+     * ที่พาไปหน้าลงนามเลย คนอื่นได้หน้าลงนามแล้วเข้าทาง KKU SSO ตามปกติ
+     */
+    private String signLink(UserDtls recipient, Long stepId, Purpose purpose) {
+        if (externalLinks.appliesTo(recipient)) {
+            try {
+                return externalLinks.issue(recipient, stepId, purpose);
+            } catch (RuntimeException e) {
+                log.warn("Could not issue a sign-in link for {} — falling back to the sign page: {}",
+                        recipient.getEmail(), e.toString());
+            }
+        }
+        return link("/esign/sign/" + stepId);
     }
 
     /** ชื่อขึ้นต้นจดหมายของผู้รับ */

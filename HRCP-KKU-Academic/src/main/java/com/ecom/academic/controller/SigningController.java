@@ -540,6 +540,24 @@ public class SigningController {
     @org.springframework.beans.factory.annotation.Autowired
     private com.ecom.academic.service.pdf.SystemSealService systemSeal;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.config.KkuEmailDomains kkuEmailDomains;
+
+    /**
+     * ข้อความเมื่อลงนามไม่ได้เพราะไม่มี .p12 ที่ใช้ได้ — คนนอก มข. ขอ .p12 ของ มข. ไม่ได้ และมาถึงตรงนี้ได้
+     * เฉพาะตอนที่ตราระบบยังไม่พร้อม จึงต้องบอกให้ติดต่อเจ้าหน้าที่ ไม่ใช่ให้ไปดาวน์โหลดจาก i.kku.ac.th
+     */
+    private String noUsableCertificate(UserDtls me, boolean expired) {
+        if (kkuEmailDomains.isOutsideKku(me)) {
+            return (expired ? "ใบรับรอง Digital ID (.p12) ของท่านหมดอายุแล้ว และ" : "")
+                    + "ขณะนี้ระบบยังรับรองลายมือชื่อแทนท่านไม่ได้ กรุณาติดต่อเจ้าหน้าที่วิทยาลัยฯ"
+                    + " หรือติดตั้ง Digital ID (.p12) ของหน่วยงานท่านที่หน้า \"ลายเซ็นของฉัน\"";
+        }
+        return expired
+                ? "ใบรับรอง Digital ID (.p12) ของท่านหมดอายุแล้ว ไม่สามารถใช้ลงนามเอกสารได้ กรุณาดาวน์โหลดไฟล์ใหม่จาก https://i.kku.ac.th และติดตั้งที่หน้า \"ลายเซ็นของฉัน\""
+                : "ท่านยังไม่ได้ติดตั้งใบรับรอง Digital ID (.p12) ของมหาวิทยาลัยขอนแก่น กรุณาติดตั้งที่หน้า \"ลายเซ็นของฉัน\" ก่อนจึงจะได้รับอนุญาตให้ลงนาม";
+    }
+
     /** ส่งรหัสยืนยันทางอีเมลก่อนลงนาม — ผู้ลงนามภายนอกที่ไม่มี Digital ID */
     @PostMapping("/sign/{stepId}/email-otp")
     public String sendSigningOtp(@PathVariable Long stepId, Principal principal,
@@ -586,13 +604,11 @@ public class SigningController {
         // ผู้ลงนามภายนอกที่ไม่มี Digital ID: ยืนยันตัวตนทางอีเมล แล้วระบบประทับรับรองแทน (SystemSealService)
         boolean sealed = (certOpt.isEmpty() || certOpt.get().isExpired()) && systemSeal.availableFor(me);
         if (certOpt.isEmpty() && !sealed) {
-            redirectAttributes.addFlashAttribute("errorMsg",
-                    "ท่านยังไม่ได้ติดตั้งใบรับรอง Digital ID (.p12) ของมหาวิทยาลัยขอนแก่น กรุณาติดตั้งที่หน้า \"ลายเซ็นของฉัน\" ก่อนจึงจะได้รับอนุญาตให้ลงนาม");
+            redirectAttributes.addFlashAttribute("errorMsg", noUsableCertificate(me, false));
             return "redirect:/esign/sign/" + stepId;
         }
         if (!sealed && certOpt.get().isExpired()) {
-            redirectAttributes.addFlashAttribute("errorMsg",
-                    "ใบรับรอง Digital ID (.p12) ของท่านหมดอายุแล้ว ไม่สามารถใช้ลงนามเอกสารได้ กรุณาดาวน์โหลดไฟล์ใหม่จาก https://i.kku.ac.th และติดตั้งที่หน้า \"ลายเซ็นของฉัน\"");
+            redirectAttributes.addFlashAttribute("errorMsg", noUsableCertificate(me, true));
             return "redirect:/esign/sign/" + stepId;
         }
 

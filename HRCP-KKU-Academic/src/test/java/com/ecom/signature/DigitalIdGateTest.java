@@ -20,6 +20,7 @@ import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.UserSignature;
 import com.ecom.academic.repository.DigitalCertificateAuditRepository;
 import com.ecom.academic.repository.SignatureStepRepository;
+import com.ecom.academic.service.ExternalSignerService;
 import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.academic.service.UserDigitalCertificateService;
 import com.ecom.config.BruteForceProtection;
@@ -65,6 +66,9 @@ class DigitalIdGateTest extends AbstractFlowTest {
 
     @Autowired
     private BruteForceProtection pinAttempts;
+
+    @Autowired
+    private ExternalSignerService externalSigners;
 
     /** ลบไฟล์ .p12 ออกจากดิสก์ เหมือนเปิดลงนามจากอีกเครื่องที่ไม่ได้รับไฟล์นี้ */
     private String removeCertificateFromDisk(UserDtls owner) throws Exception {
@@ -122,6 +126,33 @@ class DigitalIdGateTest extends AbstractFlowTest {
         assertThat(signatureSteps.findById(step.getId()).orElseThrow().getSignedAt())
                 .as("ถูกปฏิเสธแล้วต้องไม่มีการบันทึกว่าลงนามเสร็จ")
                 .isNull();
+    }
+
+    @Test
+    @DisplayName("คนนอก มข. ไม่มี .p12 และตราระบบยังไม่พร้อม — ข้อความให้ติดต่อเจ้าหน้าที่ ไม่ใช่ให้ไปโหลดจาก i.kku.ac.th")
+    void anOutsiderWithoutTheSealIsToldToContactStaff() throws Exception {
+        UserDtls guest = externalSigners.invite(new ExternalSignerService.Invite("รศ.ดร.", "วิภา", "ไม่มีตรา",
+                "wipa.noseal@partner.example.invalid", "มหาวิทยาลัยเชียงใหม่"), data.admin());
+        UserDtls applicant = data.applicant();
+        AcademicRequest draft = data.evaluation(applicant, RequestStatus.DRAFT);
+        var created = signatureWorkflow.createEnvelope(SignatureModule.ACADEMIC, draft.getId(), 1,
+                "บันทึกข้อความ ขอรับการประเมินผลการสอน", "{\"applicant_name\":\"วิภา ไม่มีตรา\"}",
+                List.of(new SignatureWorkflowService.SignerAssignment("applicant", guest.getId())),
+                null, applicant, SignatureWorkflowService.ActorContext.none());
+        assertThat(created.ok()).as(created.error()).isTrue();
+        SignatureStep step = signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(created.request().getId()).get(0);
+
+        var refused = mvc.perform(post("/esign/sign/" + step.getId())
+                        .param("userSignatureId", String.valueOf(data.signatureFor(guest).getId()))
+                        .param("consent", "true")
+                        .with(csrf())
+                        .with(user(guest.getEmail()).roles("EXTERNAL")))
+                .andReturn();
+
+        assertThat(refused.getResponse().getRedirectedUrl()).isEqualTo(pageFor(step));
+        assertThat((String) refused.getFlashMap().get("errorMsg"))
+                .contains("ติดต่อเจ้าหน้าที่").contains("หน่วยงานท่าน")
+                .doesNotContain("i.kku.ac.th").doesNotContain("ของมหาวิทยาลัยขอนแก่น");
     }
 
     @Test

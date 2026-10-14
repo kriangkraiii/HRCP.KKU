@@ -13,16 +13,23 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecom.config.KkuEmailDomains;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
+import com.ecom.sso.ExternalLinkService;
 import com.ecom.util.EmailTemplateHelper;
 
 /**
  * ผู้ลงนามจากนอกวิทยาลัย — สร้างบัญชี {@link UserDtls#ROLE_EXTERNAL} จากอีเมล แล้วส่งอีเมลเชิญ
  *
- * <p>ผู้ลงนามภายนอกเข้าระบบด้วย KKU SSO เหมือนทุกคน ({@code SsoAccessPolicy} รับบัญชีนี้) และลงนามผ่าน
- * หน้าลงนามเดิมทั้งหมด: มี Digital ID (.p12) ของหน่วยงานตัวเองก็ใช้ของตัวเอง ไม่มีก็ยืนยันตัวตนทาง
- * อีเมลแล้วระบบประทับรับรองแทน ({@code SystemSealService}) ดู docs/PLAN-external-signer.md
+ * <p>ผู้ลงนามภายนอกมีสองกลุ่ม ({@link KkuEmailDomains}) และลงนามผ่านหน้าลงนามเดิมทั้งคู่:
+ * <ul>
+ * <li>บุคลากร มข. ต่างคณะ (อีเมลโดเมน มข.) — เข้าด้วย KKU SSO ({@code SsoAccessPolicy} รับบัญชีนี้)
+ * และต้องลงนามด้วย .p12 ของ มข.
+ * <li>คนนอก มข. — เข้าด้วยลิงก์ในอีเมล ({@link ExternalLinkService}) มี .p12 ของหน่วยงานตัวเองก็ใช้ได้
+ * ไม่มีก็ยืนยันตัวตนทางอีเมลแล้วระบบประทับรับรองแทน ({@code SystemSealService})
+ * </ul>
+ * ดู docs/PLAN-external-signer.md และ docs/PLAN-external-magic-link.md
  *
  * <p>อีเมลที่มีบัญชีอยู่แล้วไม่สร้างซ้ำ — คืนบัญชีเดิม (คนใน มข. ที่พิมพ์อีเมลเข้ามาก็คือคนในระบบ)
  */
@@ -41,10 +48,15 @@ public class ExternalSignerService {
     private final JavaMailSender mailSender;
     private final String senderEmail;
     private final String publicBaseUrl;
+    private final KkuEmailDomains kkuDomains;
+    private final ExternalLinkService externalLinks;
 
     public ExternalSignerService(UserRepository users, PasswordEncoder passwordEncoder, JavaMailSender mailSender,
             @Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}") String senderEmail,
-            @Value("${app.public-base-url:https://hrd.computing.kku.ac.th}") String publicBaseUrl) {
+            @Value("${app.public-base-url:https://hrd.computing.kku.ac.th}") String publicBaseUrl,
+            KkuEmailDomains kkuDomains, ExternalLinkService externalLinks) {
+        this.kkuDomains = kkuDomains;
+        this.externalLinks = externalLinks;
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.mailSender = mailSender;
@@ -153,18 +165,39 @@ public class ExternalSignerService {
                             + " เมื่อเอกสารพร้อมให้ลงนาม ระบบจะส่งอีเมลแจ้งท่านอีกครั้ง พร้อมรายละเอียดของเอกสาร");
         }
         return letter
-                .steps("การเข้าสู่ระบบและการลงนาม", java.util.List.of(
-                        "วิทยาลัยฯ ได้จัดทำบัญชีผู้ใช้ให้ท่านแล้ว ท่านเข้าสู่ระบบได้ที่ " + publicBaseUrl
-                                + " ด้วย KKU SSO โดยใช้อีเมล " + user.getEmail(),
-                        "เมื่อถึงลำดับการลงนามของท่าน ระบบจะส่งอีเมลแจ้งพร้อมลิงก์สำหรับเปิดเอกสาร",
-                        "หากท่านมีใบรับรองอิเล็กทรอนิกส์ (Digital ID) ของหน่วยงาน สามารถติดตั้งได้ที่เมนู “ลายเซ็นของฉัน”"
-                                + " หากไม่มี ระบบจะส่งรหัสยืนยันตัวตนไปยังอีเมลนี้เพื่อใช้ประกอบการลงนาม"))
+                .steps("การเข้าสู่ระบบและการลงนาม", signInSteps(user))
                 .note("info", null, "ขณะนี้ท่านยังไม่ต้องดำเนินการใด ๆ ในระบบ"
                         + (invitedBy != null && invitedBy.getEmail() != null
                                 ? " หากมีข้อสงสัย กรุณาติดต่อ " + inviter + " อีเมล " + invitedBy.getEmail()
                                 : ""))
                 .close(briefing != null ? "จึงเรียนมาเพื่อโปรดพิจารณา และขอขอบคุณมา ณ โอกาสนี้"
                         : "จึงเรียนมาเพื่อโปรดทราบ");
+    }
+
+    /** วิธีเข้าระบบและลงนาม — คนนอก มข. ใช้ลิงก์ในอีเมล บุคลากร มข. ต่างคณะใช้ KKU SSO และ .p12 ของ มข. */
+    private java.util.List<String> signInSteps(UserDtls user) {
+        if (kkuDomains.isOutsideKku(user) && externalLinks.isEnabled()) {
+            return java.util.List.of(
+                    "วิทยาลัยฯ ได้จัดทำบัญชีผู้ใช้ให้ท่านแล้ว ท่านไม่ต้องตั้งรหัสผ่าน",
+                    "เมื่อถึงลำดับการลงนามของท่าน ระบบจะส่งอีเมลพร้อมลิงก์เข้าสู่ระบบเพื่อเปิดเอกสาร ลิงก์ใช้ได้ครั้งเดียว"
+                            + "ภายใน " + externalLinks.ttlDays() + " วัน หากหมดอายุ ขอลิงก์ใหม่ได้ที่ "
+                            + publicBaseUrl + ExternalLinkService.PATH,
+                    "ท่านไม่จำเป็นต้องมีใบรับรองอิเล็กทรอนิกส์ (Digital ID) ระบบจะส่งรหัสยืนยันตัวตนไปยังอีเมลนี้"
+                            + "เพื่อใช้ประกอบการลงนาม หากท่านมี Digital ID (.p12) ของหน่วยงาน สามารถติดตั้งเพื่อใช้ลงนามแทนได้");
+        }
+        if (kkuDomains.isOutsideKku(user)) {
+            return java.util.List.of(
+                    "วิทยาลัยฯ ได้จัดทำบัญชีผู้ใช้ให้ท่านแล้ว โดยใช้อีเมล " + user.getEmail(),
+                    "เมื่อถึงลำดับการลงนามของท่าน ระบบจะส่งอีเมลแจ้งพร้อมลิงก์สำหรับเปิดเอกสาร",
+                    "หากท่านมีใบรับรองอิเล็กทรอนิกส์ (Digital ID) ของหน่วยงาน สามารถติดตั้งได้ที่เมนู “ลายเซ็นของฉัน”"
+                            + " หากไม่มี ระบบจะส่งรหัสยืนยันตัวตนไปยังอีเมลนี้เพื่อใช้ประกอบการลงนาม");
+        }
+        return java.util.List.of(
+                "วิทยาลัยฯ ได้จัดทำบัญชีผู้ใช้ให้ท่านแล้ว ท่านเข้าสู่ระบบได้ที่ " + publicBaseUrl
+                        + " ด้วย KKU SSO โดยใช้อีเมล " + user.getEmail(),
+                "เมื่อถึงลำดับการลงนามของท่าน ระบบจะส่งอีเมลแจ้งพร้อมลิงก์สำหรับเปิดเอกสาร",
+                "ท่านต้องลงนามด้วยใบรับรองอิเล็กทรอนิกส์ (Digital ID) ของมหาวิทยาลัยขอนแก่น หากยังไม่มี"
+                        + " กรุณาดาวน์โหลดไฟล์ .p12 จาก i.kku.ac.th แล้วติดตั้งที่เมนู “ลายเซ็นของฉัน” ก่อนถึงลำดับลงนาม");
     }
 
     private static String strip(String value) {

@@ -188,6 +188,7 @@
 
     Picker.prototype.mark = function (ok, message) {
         this.input.classList.toggle('is-invalid', !ok);
+        this.hint.classList.remove('text-warning-emphasis');
         this.hint.classList.toggle('text-danger', !ok);
         if (!ok) {
             this.hint.firstChild.textContent = message || 'ชื่อนี้ยังไม่ได้เลือกจากรายชื่อในระบบ — กรุณาค้นหาแล้วเลือกใหม่ ';
@@ -197,6 +198,14 @@
         // ช่องที่ถูกล็อก (เช่น เอกสารที่ 9 ผูกกับผู้ขอ) ไม่มีปุ่มเพิ่มผู้ลงนามให้กด
         this.hint.hidden = this.input.readOnly || this.input.disabled
                 || (ok && !this.allowExternal && !this.tipInHint);
+    };
+
+    /** ข้อความเตือนใต้ช่องหลังเลือกแล้ว — ไม่ใช่ข้อผิดพลาด ชื่อที่เลือกยังใช้ได้ */
+    Picker.prototype.notice = function (message) {
+        this.hint.classList.remove('text-danger');
+        this.hint.classList.add('text-warning-emphasis');
+        this.hint.firstChild.textContent = message + ' ';
+        this.hint.hidden = false;
     };
 
     Picker.prototype.query = function () {
@@ -374,7 +383,9 @@
                 return r.json().then(function (body) { return { ok: r.ok, body: body }; });
             }).then(function (res) {
                 if (res.ok) {
-                    done(self.choose(res.body) ? null : 'คนนี้ถูกเลือกในช่องอื่นแล้ว — แต่ละช่องต้องเป็นคนละคน');
+                    var chosen = self.choose(res.body);
+                    if (chosen && res.body.notice) self.notice(res.body.notice);
+                    done(chosen ? null : 'คนนี้ถูกเลือกในช่องอื่นแล้ว — แต่ละช่องต้องเป็นคนละคน');
                 } else {
                     done((res.body && res.body.error) || 'เพิ่มผู้ลงนามไม่สำเร็จ');
                 }
@@ -401,8 +412,10 @@
         var body = el('div', 'modal-body');
         body.appendChild(el('p', 'small text-muted',
             'ระบบจะสร้างบัญชีผู้ลงนามภายนอก และส่งหนังสือเชิญทางอีเมล ซึ่งระบุคำร้องที่เกี่ยวข้อง ฐานะของผู้ลงนาม '
-            + 'และวิธีลงนาม ผู้ลงนามเข้าระบบด้วย KKU SSO ด้วยอีเมลนี้ และลงนามด้วย Digital ID ของหน่วยงานตัวเอง '
-            + 'หรือยืนยันตัวตนทางอีเมลหากไม่มี'));
+            + 'และวิธีลงนาม ผู้ลงนามจากนอก มข. เข้าระบบด้วยลิงก์ในอีเมล ไม่ต้องมี Digital ID '
+            + 'ส่วนบุคลากร มข. ต่างคณะเข้าด้วย KKU SSO และต้องลงนามด้วย Digital ID (.p12) ของ มข.'));
+        body.appendChild(el('p', 'small text-muted',
+            'บุคลากร มข. กรุณาใช้อีเมลหลัก @kku.ac.th ของผู้ลงนาม ไม่ใช่อีเมลส่วนตัวหรืออีเมลของหน่วยงานย่อย'));
         var fields = [
             ['title', 'คำนำหน้า / ตำแหน่งทางวิชาการ', true, 'เช่น รศ.ดร., นาย, นาง'],
             ['firstName', 'ชื่อ', true, ''],

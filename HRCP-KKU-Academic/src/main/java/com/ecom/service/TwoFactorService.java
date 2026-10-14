@@ -40,6 +40,22 @@ public class TwoFactorService {
             .expireAfterWrite(Duration.ofMinutes(OTP_EXPIRY_MINUTES + 1))
             .build();
 
+    /** รหัสลงนามกรอกผิดได้กี่ครั้งก่อนรหัสนั้นถูกทิ้ง — 8 หลักอายุ 5 นาทีเดาไม่ทันอยู่แล้ว แต่ไม่ควรให้ลองได้ไม่จำกัด */
+    public static final int SIGNING_OTP_MAX_ATTEMPTS = 5;
+
+    /** ขอรหัสใหม่ได้หลังรหัสก่อนหน้ากี่วินาที — กดปุ่มรัวแล้วอีเมลไม่ท่วมกล่องของผู้ลงนาม */
+    public static final int RESEND_COOLDOWN_SECONDS = 60;
+
+    private final Cache<Integer, Integer> failedAttempts = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(Duration.ofMinutes(OTP_EXPIRY_MINUTES + 1))
+            .build();
+
+    private final Cache<String, Boolean> resendCooldown = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(Duration.ofSeconds(RESEND_COOLDOWN_SECONDS))
+            .build();
+
     private final UserRepository userRepository;
 
     private final JavaMailSender mailSender;
@@ -68,6 +84,7 @@ public class TwoFactorService {
 
         // Fast-path for verification (avoids DB round-trip)
         otpCache.put(user.getId(), hashedOtp);
+        failedAttempts.invalidate(user.getId());
 
         return otp;
     }
@@ -148,6 +165,35 @@ public class TwoFactorService {
         }
         clearOtp(user);
         return "OK";
+    }
+
+    /**
+     * จองสิทธิ์ส่งรหัสครั้งนี้ — false เมื่อเพิ่งส่งด้วย key เดียวกันไปไม่ถึง {@link #RESEND_COOLDOWN_SECONDS} วินาที
+     * key เป็นของผู้เรียก เช่น ขั้นลงนามกับผู้ลงนาม การเข้าสู่ระบบมีตัวนับใน session ของตัวเองอยู่แล้ว
+     */
+    public boolean claimResend(String key) {
+        return resendCooldown.asMap().putIfAbsent(key, Boolean.TRUE) == null;
+    }
+
+    /**
+     * ตรวจรหัสที่ใช้ลงนาม — เหมือน {@link #verifyOtp} แต่ผิดครบ {@link #SIGNING_OTP_MAX_ATTEMPTS} ครั้ง
+     * รหัสนั้นถูกทิ้ง ("LOCKED") ต้องขอรหัสใหม่ หน้าลงนามไม่มี session ของการเข้าสู่ระบบให้นับแทน
+     *
+     * @return "OK", "EXPIRED", "INVALID" หรือ "LOCKED"
+     */
+    public String verifySigningOtp(UserDtls user, String inputOtp) {
+        String result = verifyOtp(user, inputOtp);
+        if (!"INVALID".equals(result) || user.getOtpCode() == null) {
+            return result;
+        }
+        int failures = failedAttempts.asMap().merge(user.getId(), 1, Integer::sum);
+        if (failures >= SIGNING_OTP_MAX_ATTEMPTS) {
+            logger.warn("Signing OTP for user {} discarded after {} wrong attempts", user.getEmail(), failures);
+            clearOtp(user);
+            failedAttempts.invalidate(user.getId());
+            return "LOCKED";
+        }
+        return result;
     }
 
     /**

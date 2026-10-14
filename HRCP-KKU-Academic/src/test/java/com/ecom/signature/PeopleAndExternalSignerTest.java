@@ -130,10 +130,23 @@ class PeopleAndExternalSignerTest extends AbstractFlowTest {
         assertThat(created.getRole()).isEqualTo(UserDtls.ROLE_EXTERNAL);
         assertThat(created.getAffiliation()).isEqualTo("มหาวิทยาลัยเชียงใหม่");
         assertThat(person).containsEntry("external", true).containsEntry("userId", created.getId());
+        // เทสนี้ไม่มีใบรับรองของระบบ — ผู้เชิญต้องรู้ทันทีว่าผู้ลงนามต้องมี .p12 ของตัวเอง
+        assertThat((String) person.get("notice")).contains("Digital ID (.p12)").contains("หน่วยงานตัวเอง");
 
         addExternal(officer, "wipa@partner.example.invalid");
         assertThat(users.findAll()).filteredOn(u -> "wipa@partner.example.invalid".equalsIgnoreCase(u.getEmail())).hasSize(1);
         assertThat(addExternal(officer, "ไม่ใช่อีเมล")).contains("อีเมลไม่ถูกต้อง");
+    }
+
+    @Test
+    @DisplayName("เพิ่มบุคลากร มข. ต่างคณะ — ผู้เชิญได้คำเตือนว่าต้องลงนามด้วย .p12 ของ มข.")
+    void invitingAKkuColleagueWarnsAboutTheKkuDigitalId() throws Exception {
+        // "test." — บัญชีทดสอบ ไม่ส่งหนังสือเชิญจริงไปโดเมน kku.ac.th
+        Map<String, Object> person = json.readValue(addExternal(officer, "test.colleague.notice@kku.ac.th"),
+                new TypeReference<>() {
+                });
+
+        assertThat((String) person.get("notice")).contains("บุคลากร มข.").contains(".p12");
     }
 
     @Test

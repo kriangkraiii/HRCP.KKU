@@ -4,7 +4,10 @@
 
 <body>
 <section>
-    <div class="container py-4" th:with="hasValidCert=${activeCertificate != null && !activeCertificate.expired}">
+    <!--/* sealSigner: ผู้ลงนามจากนอก มข. ที่ไม่มี .p12 ใช้ได้ ลงนามด้วยการยืนยันทางอีเมล + ตราระบบ จึงสร้างลายเซ็นได้
+         โดยไม่ต้องติดตั้ง .p12 ก่อน (docs/PLAN-external-magic-link.md ข้อ 4.9) */-->
+    <div class="container py-4" th:with="hasValidCert=${activeCertificate != null && !activeCertificate.expired},
+                                          sealSigner=${canUseSeal && !(activeCertificate != null && !activeCertificate.expired)}">
 
         <!--/* ปุ่มกลับ (ฝั่งซ้ายด้านบน) */-->
         <div class="mb-3">
@@ -38,7 +41,7 @@
         </div>
 
         <!--/* ==================== CASE 1: NO VALID CERTIFICATE (STEP 1: INSTALL P12 FIRST) ==================== */-->
-        <div th:if="${!hasValidCert}">
+        <div th:if="${!hasValidCert && !sealSigner}">
             <!--/* Step 1 Hero Card */-->
             <div class="card card-academic border-primary shadow-sm mb-4">
                 <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -57,16 +60,24 @@
                     <!--/* Expired notice if applicable */-->
                     <div th:if="${activeCertificate != null && activeCertificate.expired}" class="alert alert-danger py-2 px-3 mb-3 small border-danger">
                         <i class="fas fa-triangle-exclamation me-1"></i>
-                        <strong>ใบรับรองเดิมหมดอายุแล้ว</strong> กรุณาดาวน์โหลดไฟล์ .p12 ฉบับใหม่จาก <a href="https://i.kku.ac.th" target="_blank" rel="noopener" class="fw-bold alert-link text-decoration-underline">i.kku.ac.th</a> แล้วติดตั้งด้านล่าง
+                        <strong>ใบรับรองเดิมหมดอายุแล้ว</strong>
+                        <span th:unless="${outsideKku}">กรุณาดาวน์โหลดไฟล์ .p12 ฉบับใหม่จาก <a href="https://i.kku.ac.th" target="_blank" rel="noopener" class="fw-bold alert-link text-decoration-underline">i.kku.ac.th</a> แล้วติดตั้งด้านล่าง</span>
+                        <span th:if="${outsideKku}">กรุณาขอฉบับใหม่จากหน่วยงานที่ออกใบรับรอง แล้วติดตั้งด้านล่าง</span>
                     </div>
 
-                    <p class="text-secondary mb-4">
+                    <p class="text-secondary mb-4" th:unless="${outsideKku}">
                         กรุณาติดตั้งไฟล์ .p12 ก่อน จึงจะสร้างลายเซ็นได้
                         <span th:replace="~{academic/_info_tip :: tip('การลงนามในระบบเป็นลายมือชื่อดิจิทัลแบบ PAdES ตาม พ.ร.บ.ว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์ จึงต้องใช้ใบรับรองดิจิทัลส่วนบุคคล (.p12) ของมหาวิทยาลัยขอนแก่น ดาวน์โหลดได้จาก i.kku.ac.th')}"></span>
                     </p>
+                    <!--/* ผู้ลงนามจากนอก มข. มาถึงตรงนี้ได้เฉพาะตอนที่ตราระบบยังไม่พร้อม */-->
+                    <div class="alert alert-warning small mb-4" th:if="${outsideKku}" id="sealUnavailable">
+                        <i class="fas fa-circle-exclamation me-1"></i>
+                        ขณะนี้ระบบยังรับรองลายมือชื่อแทนท่านไม่ได้ กรุณาติดต่อเจ้าหน้าที่วิทยาลัยฯ
+                        หรือติดตั้ง Digital ID (.p12) ของหน่วยงานท่านด้านล่าง
+                    </div>
 
-                    <!--/* Upload Form */-->
-                    <div class="p-3 bg-light rounded-3 border">
+                    <!--/* Upload Form — ใช้ซ้ำในการ์ดของผู้ลงนามจากนอก มข. (CASE 2) */-->
+                    <div class="p-3 bg-light rounded-3 border" th:fragment="certUploadBlock">
                         <h6 class="fw-bold text-dark mb-3">
                             <i class="fas fa-cloud-arrow-up text-primary me-1"></i> อัปโหลดและติดตั้งไฟล์ใบรับรอง .p12
                         </h6>
@@ -75,10 +86,11 @@
                                 <div class="col-md-6">
                                     <label class="form-label small fw-semibold">เลือกไฟล์ Digital ID (.p12 หรือ .pfx) <span class="text-danger">*</span></label>
                                     <input type="file" id="certFileInput" name="certFile" class="form-control" accept=".p12,.pfx" required>
-                                    <div class="form-text small">ดาวน์โหลดจาก <a href="https://i.kku.ac.th" target="_blank" rel="noopener">i.kku.ac.th</a></div>
+                                    <div class="form-text small" th:unless="${outsideKku}">ดาวน์โหลดจาก <a href="https://i.kku.ac.th" target="_blank" rel="noopener">i.kku.ac.th</a></div>
+                                    <div class="form-text small" th:if="${outsideKku}">ไฟล์ .p12 หรือ .pfx จากหน่วยงานของท่าน</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small fw-semibold">รหัสผ่านของไฟล์ .p12 <span class="text-danger">*</span><span th:replace="~{academic/_info_tip :: tip('ไม่ใช่รหัสผ่านอีเมลหรือ KKU SSO')}"></span></label>
+                                    <label class="form-label small fw-semibold">รหัสผ่านของไฟล์ .p12 <span class="text-danger">*</span><span th:replace="~{academic/_info_tip :: tip(${outsideKku} ? 'รหัสผ่านของไฟล์ที่หน่วยงานของท่านกำหนด ไม่ใช่รหัสผ่านอีเมล' : 'ไม่ใช่รหัสผ่านอีเมลหรือ KKU SSO')}"></span></label>
                                     <div class="input-group">
                                         <input type="password" id="certPasswordInput" name="pin" class="form-control" placeholder="รหัสผ่านของไฟล์ .p12" required autocomplete="off">
                                         <button type="button" class="btn btn-outline-secondary" id="btnToggleCertPwd" tabindex="-1">
@@ -153,7 +165,33 @@
         </div>
 
         <!--/* ==================== CASE 2: HAS VALID CERTIFICATE (SIGNATURE CREATION & MANAGEMENT) ==================== */-->
-        <div th:if="${hasValidCert}">
+        <div th:if="${hasValidCert || sealSigner}">
+            <!--/* ผู้ลงนามจากนอก มข. ไม่มี .p12 — สร้างลายเซ็นได้เลย .p12 ของหน่วยงานเป็นทางเลือก */-->
+            <div th:if="${sealSigner}" class="card card-academic border-success mb-4" id="sealSignerNotice">
+                <div class="card-body d-flex align-items-start gap-3 flex-wrap">
+                    <i class="fas fa-envelope-circle-check text-success fs-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold text-dark mb-1">ไม่จำเป็นต้องมี Digital ID (.p12)</div>
+                        <div class="small text-secondary">
+                            สร้างลายเซ็นด้านล่างได้เลย ตอนลงนามระบบจะส่งรหัสยืนยันไปทางอีเมลของท่าน
+                            Digital ID (.p12) ของหน่วยงานท่านเป็นทางเลือก (ไม่บังคับ)
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse"
+                                data-bs-target="#optionalCertUpload" aria-expanded="false" aria-controls="optionalCertUpload">
+                            <i class="fas fa-id-card me-1"></i> ติดตั้ง Digital ID ของหน่วยงาน (ไม่บังคับ)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-link text-decoration-none" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
+                            <i class="fas fa-book-open me-1"></i> คู่มือ
+                        </button>
+                    </div>
+                    <div class="collapse w-100" id="optionalCertUpload">
+                        <div th:replace="~{:: certUploadBlock}"></div>
+                    </div>
+                </div>
+            </div>
+
             <!--/* ==================== เพิ่ม / แก้ไขลายเซ็น ==================== */-->
             <div class="card card-academic mb-4">
                 <div class="card-header bg-white">
@@ -182,6 +220,11 @@
                           th:data-user-email="${currentUser != null ? currentUser.email : ''}">
 
                         <input type="hidden" name="id" th:if="${editing != null}" th:value="${editing.id}">
+                        <!--/* มาจากหน้าลงนาม — บันทึกแล้วกลับไปที่เอกสารนั้น */-->
+                        <input type="hidden" name="return" th:if="${returnTo != null}" th:value="${returnTo}">
+                        <div class="alert alert-info small py-2" th:if="${returnTo != null}" id="returnToDocument">
+                            <i class="fas fa-circle-info me-1"></i> วาดหรืออัปโหลดลายเซ็น แล้วกดบันทึก ระบบจะพากลับไปที่เอกสารที่รอลงนาม
+                        </div>
                         <input type="hidden" name="imageData" id="sigImageData">
                         <input type="hidden" name="kind" id="sigKind" value="DRAW">
                         <input type="hidden" name="typedFont" id="sigTypedFont">
@@ -339,7 +382,7 @@
             </div>
 
             <!--/* ==================== Modal จัดการใบรับรองดิจิทัล (.p12) ==================== */-->
-            <div class="modal fade" id="p12ManageModal" tabindex="-1" aria-labelledby="p12ManageModalLabel" aria-hidden="true">
+            <div th:if="${hasValidCert}" class="modal fade" id="p12ManageModal" tabindex="-1" aria-labelledby="p12ManageModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header bg-light">
@@ -390,10 +433,11 @@
                                             <div class="col-md-6">
                                                 <label class="form-label small fw-semibold">เลือกไฟล์ Digital ID (.p12 หรือ .pfx) <span class="text-danger">*</span></label>
                                                 <input type="file" id="certFileInputModal" name="certFile" class="form-control form-control-sm" accept=".p12,.pfx" required>
-                                                <div class="form-text small">ดาวน์โหลดจาก <a href="https://i.kku.ac.th" target="_blank" rel="noopener">i.kku.ac.th</a></div>
+                                                <div class="form-text small" th:unless="${outsideKku}">ดาวน์โหลดจาก <a href="https://i.kku.ac.th" target="_blank" rel="noopener">i.kku.ac.th</a></div>
+                                                <div class="form-text small" th:if="${outsideKku}">ไฟล์ .p12 หรือ .pfx จากหน่วยงานของท่าน</div>
                                             </div>
                                             <div class="col-md-6">
-                                                <label class="form-label small fw-semibold">รหัสผ่านของไฟล์ .p12 <span class="text-danger">*</span><span th:replace="~{academic/_info_tip :: tip('ไม่ใช่รหัสผ่านอีเมลหรือ KKU SSO')}"></span></label>
+                                                <label class="form-label small fw-semibold">รหัสผ่านของไฟล์ .p12 <span class="text-danger">*</span><span th:replace="~{academic/_info_tip :: tip(${outsideKku} ? 'รหัสผ่านของไฟล์ที่หน่วยงานของท่านกำหนด ไม่ใช่รหัสผ่านอีเมล' : 'ไม่ใช่รหัสผ่านอีเมลหรือ KKU SSO')}"></span></label>
                                                 <div class="input-group input-group-sm">
                                                     <input type="password" id="certPasswordInputModal" name="pin" class="form-control" placeholder="รหัสผ่านของไฟล์ .p12" required autocomplete="off">
                                                     <button type="button" class="btn btn-outline-secondary" id="btnToggleCertPwdModal" tabindex="-1">
