@@ -30,8 +30,12 @@
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลการประชุม</h5>
                         <div class="row mb-3">
-                            <div class="col-md-4"><label class="form-label">ครั้งที่/ปี</label><input type="text"
-                                    name="meeting_no" class="form-control" placeholder="เช่น 1/2569"></div>
+                            <div class="col-md-4"><label class="form-label">ครั้งที่/ปี</label>
+                                <!--/* รูปแบบเดียวกับ DocumentCompleteness.MEETING_NO_YEAR — เซิร์ฟเวอร์ไม่ให้ส่งลงนามถ้าผิดรูปแบบ */-->
+                                <input type="text" name="meeting_no" id="meetingNoInput" class="form-control"
+                                    placeholder="เช่น 1/2569" pattern="^[0-9]{1,3}/[0-9]{4}$" maxlength="8"
+                                    title="ครั้งที่/ปี เช่น 1/2569">
+                                <div class="invalid-feedback">กรอกเป็น ครั้งที่/ปี พ.ศ. เช่น 1/2569</div></div>
                             <div class="col-md-4"><label class="form-label">วันที่ประชุม</label>
                                 <div class="input-group">
                                     <input type="text" name="meeting_date" class="form-control thai-full-date">
@@ -146,6 +150,20 @@
         <link rel="stylesheet" href="/css/doc_preview.css">
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
         <script>
+            // === ครั้งที่/ปี: บอกทันทีที่พิมพ์ผิดรูปแบบ (ไม่ต้องรอกดส่ง) ===
+            (function() {
+                var input = document.getElementById('meetingNoInput');
+                if (!input) return;
+                function check() {
+                    var v = input.value.trim();
+                    input.classList.toggle('is-invalid', v !== '' && !/^\d{1,3}\/\d{4}$/.test(v));
+                }
+                input.addEventListener('input', check);
+                input.addEventListener('blur', check);
+                // ค่าที่บันทึกไว้ถูกเติมลงฟอร์มหลังโหลดหน้า
+                window.addEventListener('load', check);
+            })();
+
             // แปลงเลขอาราบิกเป็นเลขไทยจะทำฝั่ง server ตอนสร้างเอกสารเท่านั้น
             // ไม่แปลงเลขในฟอร์มเพื่อไม่ให้สับสนตอนกรอก
             (function() {

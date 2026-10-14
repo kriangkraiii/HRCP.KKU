@@ -317,6 +317,9 @@ public final class DocumentCompleteness {
     /** ภาค/ปีการศึกษา: ภาค 1–3 (3 = ภาคฤดูร้อน) ทับปี พ.ศ. สี่หลัก เช่น 1/2569 */
     public static final Pattern SEMESTER_YEAR = Pattern.compile("^[1-3]/\\d{4}$");
 
+    /** ครั้งที่ประชุมทับปี พ.ศ. สี่หลัก เช่น 1/2569 (เอกสารที่ 8) */
+    public static final Pattern MEETING_NO_YEAR = Pattern.compile("^\\d{1,3}/\\d{4}$");
+
     /**
      * ช่องที่กรอกแล้วแต่รูปแบบผิด — ร่างบันทึกได้ตามปกติ (กำลังพิมพ์อยู่) แต่ส่งไปลงนามไม่ได้
      *
@@ -335,6 +338,14 @@ public final class DocumentCompleteness {
         }
         if (module == SignatureModule.POSITION && PositionDocTypes.base(documentType) == PositionDocTypes.WORK_PARTICIPATION) {
             return applicantRoleConflict(parse(json));
+        }
+        if (module == SignatureModule.ACADEMIC && documentType == 8) {
+            Map<String, String> data = parse(json);
+            String meetingNo = data == null ? null : data.get("meeting_no");
+            if (meetingNo != null && !meetingNo.isBlank() && !MEETING_NO_YEAR.matcher(meetingNo.trim()).matches()) {
+                return List.of("ครั้งที่/ปีของการประชุม ต้องกรอกเป็น ครั้งที่/ปี พ.ศ. เช่น 1/2569");
+            }
+            return List.of();
         }
         if (module != SignatureModule.ACADEMIC || documentType != 1) {
             return List.of();
