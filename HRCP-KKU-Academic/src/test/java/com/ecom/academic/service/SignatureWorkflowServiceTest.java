@@ -1028,6 +1028,9 @@ class SignatureWorkflowServiceTest {
         assertThat(workflow.findInbox(head)).isEmpty();
         // ป้ายสถานะ "รอเจ้าหน้าที่ส่งต่อ" (ฝั่งผู้ยื่นก่อนส่งคำร้อง: "พร้อมยื่น") ไม่ใช่ "รอลงนาม"
         assertThat(workflow.awaitsStaffRelease(MODULE, envelope.getRequestId(), envelope.getDocumentType())).isTrue();
+        // หัวหน้า/คณบดีลงนามหลังส่งคำร้อง — ไม่กันการส่งคำร้อง
+        assertThat(workflow.getDocTypesAwaitingApplicantSideSigners(MODULE, envelope.getRequestId(),
+                List.of(envelope.getDocumentType()))).isEmpty();
     }
 
     @Test
@@ -1150,11 +1153,15 @@ class SignatureWorkflowServiceTest {
         assertThat(stepOf(after, "corresponding_author").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
         // ลายเซ็นช่องผู้ประพันธ์ของผู้ขอเอง ไม่ใช่ "ผู้ลงนามท่านอื่น" — ยังถอนกลับไปแก้ได้จนกว่าบรรณกิจจะลงนาม
         assertThat(workflow.applicantWithdrawBlocker(after, applicant)).isEmpty();
+        // บรรณกิจยังไม่ลงนาม — ผู้ขอยังส่งคำร้องไม่ได้
+        assertThat(workflow.getDocTypesAwaitingApplicantSideSigners(MODULE, request.getId(), List.of(9)))
+                .containsExactly(9);
 
         assertThat(signStep(stepOf(after, "corresponding_author").getId(), head,
                 headSignature.getId(), true, ActorContext.none()).ok()).isTrue();
         SignatureRequest done = requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow();
         assertThat(done.getStatus()).isEqualTo(SignatureRequestStatus.COMPLETED);
+        assertThat(workflow.getDocTypesAwaitingApplicantSideSigners(MODULE, request.getId(), List.of(9))).isEmpty();
     }
 
     @Test

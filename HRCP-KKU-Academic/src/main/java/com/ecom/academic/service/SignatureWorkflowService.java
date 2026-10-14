@@ -658,6 +658,31 @@ public class SignatureWorkflowService {
         return unsigned;
     }
 
+    /**
+     * เอกสารที่ผู้ลงนามฝั่งผู้ขอ (เช่น ผู้ประพันธ์บรรณกิจที่ผู้ขอเพิ่มเองในเอกสารการมีส่วนร่วมในผลงาน)
+     * ยังลงนามไม่ครบ — ต้องครบก่อนส่งคำร้อง เจ้าหน้าที่จะได้รับเอกสารที่ผู้ร่วมงานรับรองแล้ว
+     *
+     * <p>ผู้ลงนามหลังด่านตรวจ (หัวหน้าสาขา คณบดี) ไม่นับ — เจ้าหน้าที่ส่งต่อหลังส่งคำร้อง
+     */
+    public List<Integer> getDocTypesAwaitingApplicantSideSigners(SignatureModule module, Long requestId,
+            List<Integer> docTypes) {
+        List<Integer> pending = new ArrayList<>();
+        for (int docType : docTypes) {
+            boolean waiting = findBlockingEnvelope(module, requestId, docType)
+                    .filter(envelope -> envelope.getStatus().isOpen())
+                    .map(envelope -> stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId())
+                            .stream()
+                            .anyMatch(step -> SignatureAnchorRegistry.isApplicantSide(module, docType, step.getSlotKey())
+                                    && (step.getStatus() == SignatureStepStatus.WAITING
+                                            || step.getStatus() == SignatureStepStatus.ACTIVE)))
+                    .orElse(false);
+            if (waiting) {
+                pending.add(docType);
+            }
+        }
+        return pending;
+    }
+
     // =====================================================================
     // Creating an envelope
     // =====================================================================

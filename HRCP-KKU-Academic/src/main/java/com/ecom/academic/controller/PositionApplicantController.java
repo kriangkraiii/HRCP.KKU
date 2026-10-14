@@ -361,6 +361,9 @@ public class PositionApplicantController {
         List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(
                 com.ecom.academic.model.SignatureModule.POSITION, id, applicantDocTypes);
         boolean applicantSignaturesComplete = unsignedSigDocs.isEmpty() && !workCopies.isEmpty();
+        boolean coSignersPending = !signatureWorkflow.getDocTypesAwaitingApplicantSideSigners(
+                com.ecom.academic.model.SignatureModule.POSITION, id, applicantDocTypes).isEmpty();
+        model.addAttribute("coSignersPending", coSignersPending);
 
         model.addAttribute("request", request);
         model.addAttribute("completedDocs", completedDocs);
@@ -680,6 +683,12 @@ public class PositionApplicantController {
                 com.ecom.academic.model.SignatureModule.POSITION, id, applicantDocTypes);
         if (!unsignedSigDocs.isEmpty()) {
             return "redirect:/user/position/request/" + id + "?error=unsigned_docs";
+        }
+
+        // ผู้ร่วมงานที่ผู้ยื่นเพิ่มเอง (ผู้ประพันธ์บรรณกิจ) ต้องลงนามครบก่อน — คณบดีลงนามหลังส่งคำร้องตามเดิม
+        if (!signatureWorkflow.getDocTypesAwaitingApplicantSideSigners(
+                com.ecom.academic.model.SignatureModule.POSITION, id, applicantDocTypes).isEmpty()) {
+            return "redirect:/user/position/request/" + id + "?error=cosigners_pending";
         }
 
         // ผลงานที่ยื่นไปแล้วใช้ซ้ำไม่ได้ — ที่เลือกจากรายการกันด้วยรหัสผลงานแล้ว ตรงนี้กันที่พิมพ์เอง

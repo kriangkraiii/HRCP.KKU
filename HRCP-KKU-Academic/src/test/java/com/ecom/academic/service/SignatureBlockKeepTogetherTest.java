@@ -42,6 +42,21 @@ class SignatureBlockKeepTogetherTest {
     }
 
     @Test
+    @DisplayName("คำลงท้าย \"จึงเรียนมาเพื่อโปรดทราบ\" และบรรทัดว่างคั่น ไปหน้าเดียวกับลายเซ็น (p2doc_6)")
+    void closingLineKeepsWithSignature() {
+        String xml = body(p("ความละเอียดแจ้งแล้วนั้น") + p("จึงเรียนมาเพื่อโปรดทราบ") + p("") + "<w:p/>"
+                + p("..........................") + p("({{applicant_name}})") + p("ผู้ขอกำหนดตำแหน่งทางวิชาการ"));
+
+        String kept = service.keepSignatureBlocksTogether(xml);
+
+        // จึงเรียน + บรรทัดว่างสองบรรทัด + เส้นลงชื่อ + (ชื่อ)
+        assertThat(keeps(kept)).isEqualTo(5);
+        assertThat(kept).contains("<w:keepNext/><w:jc w:val=\"center\"/></w:pPr><w:r><w:t>จึงเรียนมาเพื่อโปรดทราบ")
+                .contains("<w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:t>ความละเอียดแจ้งแล้วนั้น")
+                .contains("<w:p><w:pPr><w:keepNext/></w:pPr></w:p>");
+    }
+
+    @Test
     @DisplayName("บล็อกในตาราง และวงเล็บที่ไม่มีบรรทัดลงชื่อด้านบน ไม่ถูกแตะ")
     void tablesAndProseAreLeftAlone() {
         String table = "<w:tbl><w:tr><w:tc>" + p("ลงชื่อ.......................") + p("({{dean_name}})")

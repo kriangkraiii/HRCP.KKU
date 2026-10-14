@@ -1638,7 +1638,37 @@ public class DocumentGenerationService {
         placeholders.putAll(toAdd);
     }
 
+    /**
+     * เอกสารที่ 6: ตัดแถวผลงานตายตัวของเทมเพลต (1-5) ที่อยู่หลังเรื่องสุดท้ายที่กรอกชื่อไว้
+     * — ยื่น 1 เรื่องก็ไม่ต้องพิมพ์แถว 2-5 ว่าง ๆ แถวแรกคงไว้เสมอ ส่วนแถวว่างคั่นกลางคงไว้
+     * เพราะเลขลำดับพิมพ์ตายตัวในเทมเพลต
+     */
+    static String trimEmptyResearchRows(String xml, Map<String, String> placeholders) {
+        if (!xml.contains("{{des_research5}}")) {
+            return xml;
+        }
+        int lastFilled = 1;
+        for (Map.Entry<String, String> e : placeholders.entrySet()) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("^des_research(\\d+)$").matcher(e.getKey());
+            if (m.matches() && e.getValue() != null && !e.getValue().isBlank()) {
+                lastFilled = Math.max(lastFilled, Integer.parseInt(m.group(1)));
+            }
+        }
+        for (int n = 5; n > lastFilled; n--) {
+            int at = xml.indexOf("{{des_research" + n + "}}");
+            int trStart = Math.max(xml.lastIndexOf("<w:tr ", at), xml.lastIndexOf("<w:tr>", at));
+            int trEnd = xml.indexOf("</w:tr>", at);
+            if (trStart == -1 || trEnd == -1) {
+                continue;
+            }
+            xml = xml.substring(0, trStart) + xml.substring(trEnd + "</w:tr>".length());
+        }
+        return xml;
+    }
+
     private String expandDynamicRows(String xml, Map<String, String> placeholders) {
+        xml = trimEmptyResearchRows(xml, placeholders);
+
         // Block A: เอกสารที่ 6 — research rows (des_research)
         if (xml.contains("{{des_research5}}")) {
             // หาจำนวน row ที่ต้องการจาก placeholder data
@@ -2147,6 +2177,8 @@ public class DocumentGenerationService {
      * ระหว่าง "ลงชื่อ" ชื่อในวงเล็บ และตำแหน่ง
      */
     static String keepSignatureBlockTogether(String block) {
+        // บรรทัดว่างคั่นคำลงท้ายกับลายเซ็นอาจเป็น <w:p/> — กางออกก่อนจะได้ใส่ keepNext ได้
+        block = block.replaceAll("<w:p(\\s[^>]*)?/>", "<w:p$1></w:p>");
         java.util.regex.Matcher p = java.util.regex.Pattern.compile("<w:p[ >].*?</w:p>", java.util.regex.Pattern.DOTALL)
                 .matcher(block);
         List<int[]> paragraphs = new ArrayList<>();
@@ -2248,7 +2280,18 @@ public class DocumentGenerationService {
                 }
                 last++;
             }
-            blocks.add(new int[] { sign.start(), paras.get(last).end() });
+            // คำลงท้าย "จึงเรียนมาเพื่อ…" (ข้ามบรรทัดว่างคั่น) ไปหน้าเดียวกับลายเซ็น — หน้าสุดท้ายไม่เหลือแต่ลายเซ็น
+            int first = i - 1;
+            for (int j = i - 2; j >= 0 && i - 2 - j <= 3 && !paras.get(j).nested(); j--) {
+                if (paras.get(j).text().startsWith("จึงเรียน")) {
+                    first = j;
+                    break;
+                }
+                if (!paras.get(j).text().isBlank()) {
+                    break;
+                }
+            }
+            blocks.add(new int[] { paras.get(first).start(), paras.get(last).end() });
         }
 
         StringBuilder out = new StringBuilder(xml);

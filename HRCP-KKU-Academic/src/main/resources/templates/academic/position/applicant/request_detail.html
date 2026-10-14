@@ -53,10 +53,15 @@
                     คำร้องที่ข้ามขั้นต้องขอโดยวิธีพิเศษ และขอรองศาสตราจารย์หรือศาสตราจารย์โดยวิธีพิเศษต้องเสนอผลงานตามวิธีที่ ๑
                     กรุณาเปิดเอกสารที่ 1 บันทึกใหม่ แล้วลงนามอีกครั้ง
                 </span>
+                <span th:if="${param.error[0] == 'unsigned_docs'}">กรุณาลงนามเอกสารที่มีสถานะ "รอท่านลงนาม" ให้ครบก่อนส่งคำร้อง</span>
+                <span th:if="${param.error[0] == 'cosigners_pending'}">
+                    ยังส่งคำร้องไม่ได้ เนื่องจากผู้ร่วมงานยังลงนามเอกสารที่มีสถานะ "รอผู้อื่นลงนาม" ไม่ครบ
+                </span>
                 <span th:unless="${param.error[0] == 'incomplete_docs' or param.error[0] == 'rank_not_higher'
                         or param.error[0] == 'evaluation_required' or param.error[0] == 'position_mismatch'
                         or param.error[0] == 'already_professor' or param.error[0] == 'level_below_rank'
-                        or param.error[0] == 'evaluation_unusable' or param.error[0] == 'special_method'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
+                        or param.error[0] == 'evaluation_unusable' or param.error[0] == 'special_method'
+                        or param.error[0] == 'unsigned_docs' or param.error[0] == 'cosigners_pending'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 
@@ -314,7 +319,16 @@
                     <h4 class="mb-0"><i class="fas fa-check-double"></i> ตรวจสอบและส่งคำร้อง</h4>
                 </div>
                 <div class="card-body">
-                    <th:block th:if="${allDocsCompleted and applicantSignaturesComplete}">
+                    <th:block th:if="${allDocsCompleted and applicantSignaturesComplete and coSignersPending}">
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-hourglass-half me-2"></i>
+                            รอผู้ร่วมงานลงนามเอกสารที่มีสถานะ "รอผู้อื่นลงนาม" ให้ครบก่อนส่งคำร้อง
+                        </div>
+                        <button class="btn btn-secondary btn-lg" disabled title="รอผู้ร่วมงานลงนามให้ครบก่อน">
+                            <i class="fas fa-lock me-1"></i> รอผู้ร่วมงานลงนาม
+                        </button>
+                    </th:block>
+                    <th:block th:if="${allDocsCompleted and applicantSignaturesComplete and !coSignersPending}">
                         <div class="alert alert-success mb-3">
                             <i class="fas fa-check-circle me-2"></i> เอกสารและลายเซ็นครบถ้วน พร้อมส่งคำร้อง
                         </div>
