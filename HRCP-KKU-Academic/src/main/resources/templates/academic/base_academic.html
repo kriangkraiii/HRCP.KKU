@@ -173,10 +173,19 @@
                 <a href="/user/academic/new-request" class="sidebar-link" id="nav-new" data-title="ยื่นคำร้องขอประเมินการสอน">
                     <i class="fas fa-clipboard-check"></i>
                     <span class="sidebar-link-text">ยื่นคำร้องขอประเมินการสอน</span>
+                    <!--/* คำร้องของตัวเองที่กำลังดำเนินการ — เสร็จสิ้นแล้วไม่นับ */-->
+                    <span class="badge rounded-pill sidebar-count-badge ms-auto"
+                          th:if="${activeEvaluationCount != null && activeEvaluationCount > 0}"
+                          th:text="${activeEvaluationCount}"
+                          th:title="|กำลังดำเนินการ ${activeEvaluationCount} คำร้อง|">0</span>
                 </a>
                 <a href="/user/position/dashboard" class="sidebar-link" id="nav-position" data-title="ยื่นขอตำแหน่งทางวิชาการ">
                     <i class="fas fa-university"></i>
                     <span class="sidebar-link-text">ยื่นขอตำแหน่งทางวิชาการ</span>
+                    <span class="badge rounded-pill sidebar-count-badge ms-auto"
+                          th:if="${activePositionCount != null && activePositionCount > 0}"
+                          th:text="${activePositionCount}"
+                          th:title="|กำลังดำเนินการ ${activePositionCount} คำร้อง|">0</span>
                 </a>
 
                 <div class="sidebar-section-title">ทรัพยากร & การตั้งค่า</div>

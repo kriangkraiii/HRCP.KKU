@@ -117,6 +117,8 @@ public interface AcademicRequestRepository extends JpaRepository<AcademicRequest
 
     long countByCurrentStatusIn(List<RequestStatus> statuses);
 
+    long countByApplicantIdAndCurrentStatusIn(Integer applicantId, List<RequestStatus> statuses);
+
     @Query("""
             SELECT YEAR(r.createdAt), MONTH(r.createdAt), COUNT(r)
             FROM AcademicRequest r

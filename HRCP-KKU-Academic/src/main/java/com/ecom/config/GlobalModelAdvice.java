@@ -130,6 +130,16 @@ public class GlobalModelAdvice {
                     } catch (Exception e) {
                         // ไม่มีตัวเลขก็ไม่แสดงป้าย หน้าที่เปิดต้องไม่ล่มเพราะเรื่องนี้
                     }
+                } else if ("ROLE_USER".equals(user.getRole())) {
+                    // ฝั่งผู้ยื่น — นับเฉพาะคำร้องของตัวเองที่ยังไม่จบ (ไม่นับฉบับร่างและที่เสร็จสิ้นแล้ว)
+                    try {
+                        model.addAttribute("activeEvaluationCount", evaluationRequests.countByApplicantIdAndCurrentStatusIn(
+                                user.getId(), com.ecom.academic.model.RequestStatus.inProgress()));
+                        model.addAttribute("activePositionCount", positionRequests.countByApplicantIdAndCurrentStatusIn(
+                                user.getId(), com.ecom.academic.model.PositionRequestStatus.inProgress()));
+                    } catch (Exception e) {
+                        // ไม่มีตัวเลขก็ไม่แสดงป้าย หน้าที่เปิดต้องไม่ล่มเพราะเรื่องนี้
+                    }
                 }
 
                 // Dev mode only: the "fill with test data" buttons on document forms.

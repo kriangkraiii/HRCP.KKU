@@ -82,8 +82,9 @@ public class SignerNameResolver {
         Map<String, String> names = new LinkedHashMap<>(namesForEnvelope(envelope));
         // คำตอบของผู้ลงนามเดินทางเส้นเดียวกับชื่อ — เติมตอน render ไม่แตะ frozenJson
         names.putAll(choicesForEnvelope(envelope));
-        Map<String, String> actingPositions = actingPositionsForEnvelope(envelope);
-        if (names.isEmpty() && actingPositions.isEmpty()) {
+        Map<String, String> positions = heldPositionsForEnvelope(envelope);
+        positions.putAll(actingPositionsForEnvelope(envelope));
+        if (names.isEmpty() && positions.isEmpty()) {
             return json;
         }
 
@@ -100,7 +101,7 @@ public class SignerNameResolver {
             }
             // ทับค่าในแบบฟอร์ม — ช่องตำแหน่งถูกเติมด้วยตำแหน่งปกติของคนที่เลือก ตอนที่เขาลงนามในฐานะ
             // รักษาการแทน เอกสารต้องพิมพ์ฐานะที่เขาลงนามจริง
-            for (Map.Entry<String, String> entry : actingPositions.entrySet()) {
+            for (Map.Entry<String, String> entry : positions.entrySet()) {
                 if (!entry.getValue().equals(data.get(entry.getKey()))) {
                     data.put(entry.getKey(), entry.getValue());
                     changed = true;
@@ -155,6 +156,47 @@ public class SignerNameResolver {
             }
         }
         return positions;
+    }
+
+    /**
+     * ตำแหน่งจริงของผู้ลงนามตัวจริง สำหรับบรรทัดตำแหน่งในแบบฟอร์ม (เช่นใต้ชื่อหัวหน้าสาขาและคณบดีของ
+     * แบบ ก.พ.ว. มข. ๐๓) — ไม่ปล่อยข้อความในแบบฟอร์มเปล่าไว้ใต้ชื่อคนที่ลงนาม
+     * ขั้นที่ลงนามในฐานะรักษาการแทนใช้ {@link #actingPositionsForEnvelope} แทน
+     */
+    public Map<String, String> heldPositionsForEnvelope(SignatureRequest envelope) {
+        Map<String, String> positions = new LinkedHashMap<>();
+        if (actingSigners == null) {
+            return positions;
+        }
+        for (SignatureStep step : stepRepository.findStepsWithSigner(envelope.getId())) {
+            if (step.getStatus() == SignatureStepStatus.SKIPPED || step.getAnchorPlaceholder() == null
+                    || (step.getActingPosition() != null && !step.getActingPosition().isBlank())) {
+                continue;
+            }
+            String field = SignatureAnchorRegistry.positionLineFor(
+                    envelope.getModule(), envelope.getDocumentType(), step.getAnchorPlaceholder());
+            String position = printedPositionOf(step);
+            if (field != null && position != null) {
+                positions.put(field, position);
+            }
+        }
+        return positions;
+    }
+
+    /**
+     * ตำแหน่งที่พิมพ์ใต้ชื่อผู้ลงนามของขั้นนี้ — ตำแหน่งรักษาการแทนถ้ามี ไม่อย่างนั้นตำแหน่งจริงของผู้ลงนาม
+     *
+     * @return ตำแหน่ง หรือ null เมื่อไม่ใช่ตำแหน่งบริหาร หรือหาไม่ได้
+     */
+    public String printedPositionOf(SignatureStep step) {
+        if (step == null) {
+            return null;
+        }
+        if (step.getActingPosition() != null && !step.getActingPosition().isBlank()) {
+            return step.getActingPosition();
+        }
+        String position = actingSigners == null ? null : actingSigners.heldPosition(step.getSlotKey(), step.getSigner());
+        return position == null || position.isBlank() ? null : position;
     }
 
     /**

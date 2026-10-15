@@ -68,6 +68,7 @@ public class IncrementalSigningService {
     private final org.springframework.beans.factory.ObjectProvider<com.ecom.academic.service.OfficeFieldResolver> officeFields;
     private final com.ecom.academic.repository.SignatureRequestRepository envelopes;
     private final LongTermValidation longTerm;
+    private final com.ecom.academic.service.SignerNameResolver signerNames;
     private final boolean enabled;
     private final Set<String> documents;
     private final PdfIncrementService pdf = new PdfIncrementService(ThaiText.sarabun());
@@ -79,6 +80,7 @@ public class IncrementalSigningService {
             org.springframework.beans.factory.ObjectProvider<com.ecom.academic.service.OfficeFieldResolver> officeFields,
             com.ecom.academic.repository.SignatureRequestRepository envelopes,
             LongTermValidation longTerm,
+            com.ecom.academic.service.SignerNameResolver signerNames,
             @Value("${app.esign.pdf-mode:incremental}") String mode,
             @Value("${app.esign.incremental-docs:ACADEMIC:1,ACADEMIC:2,ACADEMIC:3,ACADEMIC:4,ACADEMIC:5,ACADEMIC:7,ACADEMIC:8,ACADEMIC:9,POSITION:1,POSITION:2,POSITION:3,POSITION:4,POSITION:6,POSITION:7,POSITION:8,POSITION:9}") String documents) {
         this.renderer = renderer;
@@ -87,6 +89,7 @@ public class IncrementalSigningService {
         this.officeFields = officeFields;
         this.envelopes = envelopes;
         this.longTerm = longTerm;
+        this.signerNames = signerNames;
         this.enabled = "incremental".equalsIgnoreCase(mode.trim());
         this.documents = new LinkedHashSet<>();
         for (String d : documents.split(",")) {
@@ -185,6 +188,19 @@ public class IncrementalSigningService {
             }
             slotSpecs.add(new BasePdfBuilder.SlotSpec(s.slotKey(), s.anchorPlaceholder(), own));
         }
+        // ช่องที่ยังไม่มีผู้ลงนามตอนสร้างไฟล์ (แอดมินส่งเวียนต่อหลังผู้ยื่นลงนาม) — ยังไม่รู้ว่าใครจะลงนาม
+        // จองชื่อและตำแหน่งเป็นช่องไว้ให้ผู้ลงนามจริงเติมตอนลงนาม ไม่อย่างนั้นชื่อที่เดาจากการตั้งค่า
+        // (หัวหน้าสาขาตามสาขาของผู้ยื่น) จะติดตายตัวในไฟล์ แม้ซองจะถูกส่งไปให้คนอื่น (ซอง 74, 15 ต.ค. 2569)
+        for (SignatureSlot s : slots) {
+            if (!hasSigner(envelope, s.slotKey())) {
+                for (String f : identityFields(envelope, s)) {
+                    if (seen.add(f)) {
+                        int reserve = f.equals(s.anchorPlaceholder()) ? SIGNER_NAME_RESERVE : POSITION_LINE_RESERVE;
+                        texts.add(new BasePdfBuilder.TextSpec(f, reserve, false));
+                    }
+                }
+            }
+        }
 
         BasePdfBuilder.Result base = builder.build(new BasePdfBuilder.Renderer() {
             @Override
@@ -208,6 +224,40 @@ public class IncrementalSigningService {
         envelope.setFieldLayoutJson(json.writeValueAsString(base.layout()));
         envelope.setPdfMode(PdfMode.INCREMENTAL);
         revisions.append(envelope, null, base.pdf(), SignedPdfRevision.Kind.BASE, null, null, null);
+    }
+
+    /**
+     * The name under a signature line, reserved for a signer not yet known. Full academic titles
+     * run long ("(รองศาสตราจารย์ ดร.หัวหน้าสาขา ทดสอบ)" is about 240 pt at 16 pt); the name is
+     * drawn centred in its box, so a wide reserve does not move it off the middle of the line.
+     */
+    static final int SIGNER_NAME_RESERVE = 75;
+
+    /**
+     * The position line after "ตำแหน่ง", for the same signer. "หัวหน้าสาขาวิชาวิทยาการคอมพิวเตอร์" needs
+     * about 50 at 16 pt. Drawn from the left, so every space beyond the text shifts the line's
+     * centre: wide enough for a programme head, not for the longest acting title.
+     */
+    static final int POSITION_LINE_RESERVE = 55;
+
+    private static boolean hasSigner(SignatureRequest envelope, String slotKey) {
+        return envelope.getSteps().stream().anyMatch(st -> slotKey.equals(st.getSlotKey())
+                && st.getStatus() != com.ecom.academic.model.SignatureStepStatus.SKIPPED);
+    }
+
+    /** The name under a slot's signature line and the position line below it, where the form has one. */
+    static List<String> identityFields(SignatureRequest envelope, SignatureSlot s) {
+        List<String> fields = new ArrayList<>();
+        if (s.anchorPlaceholder() == null) {
+            return fields;
+        }
+        fields.add(s.anchorPlaceholder());
+        String position = com.ecom.academic.service.SignatureAnchorRegistry.positionLineFor(
+                envelope.getModule(), envelope.getDocumentType(), s.anchorPlaceholder());
+        if (position != null) {
+            fields.add(position);
+        }
+        return fields;
     }
 
     /** The template fields a slot's signer fills while signing. */
@@ -325,6 +375,7 @@ public class IncrementalSigningService {
         thaiDateDigits(own, slot, envelope);
         own.keySet().retainAll(fields);
         putNameIfBlank(own, slot, step, fields, filled);
+        putPositionIfBlank(own, envelope, slot, step, fields, filled);
 
         // Frozen by this signature: its own fields, and whatever the office has already
         // filled in between signers (those are the values this signer is agreeing to).
@@ -411,6 +462,26 @@ public class IncrementalSigningService {
         }
     }
 
+    /**
+     * The signer's position on the form's position line (แบบ ก.พ.ว. มข. ๐๓), when the base reserved
+     * it because nobody was assigned to the slot yet.
+     */
+    private void putPositionIfBlank(Map<String, String> own, SignatureRequest envelope, SignatureSlot slot,
+            SignatureStep step, Set<String> fields, Map<String, String> filled) {
+        if (slot.anchorPlaceholder() == null) {
+            return;
+        }
+        String field = com.ecom.academic.service.SignatureAnchorRegistry.positionLineFor(
+                envelope.getModule(), envelope.getDocumentType(), slot.anchorPlaceholder());
+        if (field == null || !fields.contains(field) || !filled.getOrDefault(field, "").isBlank()) {
+            return;
+        }
+        String position = signerNames.printedPositionOf(step);
+        if (position != null) {
+            own.put(field, position);
+        }
+    }
+
     /** The name under a slot's signature, drawn centred in its "( ... )". */
     private static Set<String> nameField(SignatureSlot slot) {
         return slot.anchorPlaceholder() == null ? Set.of() : Set.of(slot.anchorPlaceholder());
@@ -449,7 +520,9 @@ public class IncrementalSigningService {
         Map<String, String> own = ownValues(slot, LocalDateTime.now(ZoneId.of("Asia/Bangkok")), choice, comment);
         thaiDateDigits(own, slot, envelope);
         own.keySet().retainAll(fields);
-        putNameIfBlank(own, slot, step, fields, values(current));
+        Map<String, String> shown = values(current);
+        putNameIfBlank(own, slot, step, fields, shown);
+        putPositionIfBlank(own, envelope, slot, step, fields, shown);
         byte[] preview = pdf.preview(current, "sig_" + slot.slotKey(), own, nameField(slot), imagePng);
 
         // ช่องที่ผู้ขอเป็นเอง (เช่น ผู้ประพันธ์ในเอกสารที่ 9) ลงนามไปพร้อมกันในครั้งนี้ — ตัวอย่างต้องเห็นลายเซ็น
@@ -465,7 +538,9 @@ public class IncrementalSigningService {
             Map<String, String> heldOwn = ownValues(heldSlot, LocalDateTime.now(ZoneId.of("Asia/Bangkok")), null, null);
             thaiDateDigits(heldOwn, heldSlot, envelope);
             heldOwn.keySet().retainAll(fields);
-            putNameIfBlank(heldOwn, heldSlot, held, fields, values(preview));
+            Map<String, String> heldShown = values(preview);
+            putNameIfBlank(heldOwn, heldSlot, held, fields, heldShown);
+            putPositionIfBlank(heldOwn, envelope, heldSlot, held, fields, heldShown);
             preview = pdf.preview(preview, "sig_" + heldSlot.slotKey(), heldOwn, nameField(heldSlot), imagePng);
         }
         return preview;

@@ -120,6 +120,35 @@ public class ActingSignerService {
         return held.size() == 1 ? held.get(0) : role.example();
     }
 
+    /**
+     * ตำแหน่งบริหารของผู้ดำรงตำแหน่งตัวจริงที่ลงนามช่องนี้ — พิมพ์ใต้ชื่อแทนข้อความในแบบฟอร์มเปล่า
+     *
+     * <ol>
+     *   <li>ตำแหน่งในบัญชีของผู้ลงนาม ถ้าขึ้นต้นด้วยชื่อตำแหน่งนั้น เช่น "คณบดีวิทยาลัยการคอมพิวเตอร์"</li>
+     *   <li>หัวหน้าสาขาวิชา: ตามสาขาของผู้ลงนาม (ทะเบียนบุคลากร)</li>
+     *   <li>ตำแหน่งอื่น: ตำแหน่งเต็มตั้งต้นของตำแหน่งนั้น</li>
+     * </ol>
+     *
+     * @return ตำแหน่ง หรือ null เมื่อไม่ใช่ตำแหน่งบริหาร หรือหาสาขาของหัวหน้าสาขาไม่ได้
+     */
+    @Transactional(readOnly = true)
+    public String heldPosition(String slotKey, UserDtls signer) {
+        Role role = role(slotKey).orElse(null);
+        if (role == null || signer == null) {
+            return null;
+        }
+        String own = normalizePosition(signer.getPositionTitle());
+        if (own.startsWith(role.label())) {
+            return own;
+        }
+        if ("head".equals(slotKey)) {
+            return staffMembers.findByUserId(signer.getId())
+                    .map(staff -> headOf(staff.getDepartment()))
+                    .orElse(null);
+        }
+        return role.example();
+    }
+
     /** "สาขาวิชาวิทยาการคอมพิวเตอร์" หรือ "วิทยาการคอมพิวเตอร์" → "หัวหน้าสาขาวิชาวิทยาการคอมพิวเตอร์" */
     public static String headOf(String department) {
         if (department == null || department.isBlank() || NOT_A_PROGRAMME.matcher(department).find()) {

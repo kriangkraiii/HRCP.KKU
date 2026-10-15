@@ -3,6 +3,7 @@ package com.ecom.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import jakarta.servlet.DispatcherType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -305,6 +306,10 @@ public class SecurityConfig {
 
                                 .authenticationProvider(authenticationProvider)
                                 .authorizeHttpRequests(authz -> authz
+                                                // SSE (/request/{id}/live) จบด้วย async dispatch หลังส่ง header ไปแล้ว
+                                                // ถ้า session หมดระหว่างนั้น จะ deny ไม่ได้อยู่ดี (response committed)
+                                                // request แรกผ่านการตรวจสิทธิ์มาแล้ว จึงปล่อย ASYNC ผ่าน
+                                                .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                                                 // "/signin/" เป็นคนละ path กับ "/signin" ในสายตา Spring 6
                                                 // และ KKU SSO ส่ง code กลับมาที่ตัวมี slash ปิดท้าย
                                                 //

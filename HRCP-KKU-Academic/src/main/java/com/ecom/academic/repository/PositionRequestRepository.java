@@ -160,6 +160,8 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
 
     long countByCurrentStatusIn(java.util.List<PositionRequestStatus> statuses);
 
+    long countByApplicantIdAndCurrentStatusIn(Integer applicantId, java.util.List<PositionRequestStatus> statuses);
+
     @Query("""
             SELECT YEAR(r.createdAt), MONTH(r.createdAt), COUNT(r)
             FROM PositionRequest r

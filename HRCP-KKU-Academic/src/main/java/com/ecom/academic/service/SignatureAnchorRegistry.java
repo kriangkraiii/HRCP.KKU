@@ -535,8 +535,8 @@ public class SignatureAnchorRegistry {
     }
 
     /**
-     * ช่องตำแหน่งใต้ชื่อผู้ลงนาม ของเอกสารที่ผู้ลงนามไม่ได้เลือกในแบบฟอร์ม — แบบฟอร์มจริงเว้นจุดไข่ปลาไว้
-     * ให้เขียนเอง ระบบเติมเฉพาะเมื่อลงนามในฐานะรักษาการแทน ({@link SignerNameResolver})
+     * ช่องตำแหน่งใต้ชื่อผู้ลงนาม ของเอกสารที่ผู้ลงนามไม่ได้เลือกในแบบฟอร์ม — แบบฟอร์มจริงเว้นไว้ให้เขียนเอง
+     * ระบบเติมตำแหน่งของผู้ลงนามที่ถูกมอบหมาย หรือตำแหน่งรักษาการแทน ({@link SignerNameResolver})
      */
     private static final Map<DocKey, Map<String, String>> SIGNER_POSITION_LINES = Map.of(
             new DocKey(SignatureModule.POSITION, 1), Map.of(
@@ -553,6 +553,11 @@ public class SignatureAnchorRegistry {
         if (paired != null) {
             return paired;
         }
+        return positionLineFor(module, documentType, nameField);
+    }
+
+    /** บรรทัดตำแหน่งในแบบฟอร์มใต้ช่องชื่อนี้ (ไม่นับช่องตำแหน่งที่คู่กับตัวค้นหาชื่อ) หรือ null */
+    public static String positionLineFor(SignatureModule module, int documentType, String nameField) {
         return SIGNER_POSITION_LINES.getOrDefault(key(module, documentType), Map.of()).get(nameField);
     }
 
