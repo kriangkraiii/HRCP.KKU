@@ -443,5 +443,9 @@ class DocumentFieldOwnershipTest {
         assertThat(DocumentCompleteness.missingAdminFields(P2, 6,
                 "{\"dean_signature_name\":\"ศ.ดร.คณบดี วิทยาลัย\",\"position_title\":\"คณบดีวิทยาลัยการคอมพิวเตอร์\"}"))
                 .as("กรอกคณบดีและตำแหน่งแล้วก็ส่งต่อได้").isEmpty();
+        assertThat(DocumentCompleteness.missingApplicantFields(P2, 6,
+                "{\"applicant_signature_name\":\"\",\"des_research1\":\"งานวิจัย\"}", null))
+                .as("ร่างที่แอดมินเคยบันทึกช่องนี้ไว้ว่าง ๆ ต้องไม่กลายเป็นช่องที่ผู้ขอต้องกรอก — ผู้ขอไม่มีช่องให้กรอก")
+                .doesNotContain("applicant_signature_name");
     }
 }

@@ -137,11 +137,14 @@ public final class DocumentCompleteness {
      *
      * <ul>
      *   <li>เอกสารที่ 1 — หัวข้อ "วิธีที่ ๓" ของ รศ./ศ. (Scopus, h-index, หัวหน้าโครงการวิจัย)</li>
+     *   <li>เอกสารที่ 6 — ชื่อใต้ลายเซ็นผู้ขอที่แอดมินเคยพิมพ์เอง ตอนนี้เอกสารพิมพ์จากข้อมูลผู้ขอ
+     *       ร่างที่แอดมินเคยบันทึกจึงมีคีย์ว่างค้างอยู่ และผู้ขอไม่มีช่องให้กรอก</li>
      *   <li>เอกสารที่ 9 — กลุ่มที่ ๒–๓, ส่วนที่ ๒ การเผยแพร่ และ "ผู้มีส่วนสำคัญทางปัญญา"</li>
      * </ul>
      */
     private static final Map<Integer, Pattern> RETIRED_POSITION_FIELDS = Map.of(
             1, Pattern.compile("^(assoc|prof)_(h_index|scopus_\\w+|m3_\\w+|method3_\\w+|pi_\\w+)$"),
+            6, Pattern.compile("^applicant_signature_name$"),
             9, Pattern.compile("^(chk_essen|group1_research|chkgroup[23]_.*|des_.*)$"));
 
     private static final Pattern TRAILING_INDEX = Pattern.compile("(\\d+)$");

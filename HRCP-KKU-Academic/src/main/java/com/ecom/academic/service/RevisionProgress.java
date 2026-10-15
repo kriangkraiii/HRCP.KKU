@@ -74,6 +74,10 @@ public final class RevisionProgress {
     /**
      * ขั้นของเอกสารหนึ่งฉบับ หรือ null เมื่อจบแล้ว (ลงนามใหม่ครบ)
      *
+     * <p>ผู้ยื่นลงนามแล้วแต่ซองยังเวียนอยู่ (รอเจ้าหน้าที่ตรวจ / ผู้ลงนามคนถัดไป) ยังไม่จบ — ถ้านับว่าจบ
+     * ป้าย "ยื่นการแก้ไขแล้ว" หายไป ผู้ยื่นเห็นแค่ "ส่งแก้ไข" ทั้งที่ส่งไปแล้ว เพราะสถานะคำร้อง
+     * เปลี่ยนตอนซองลงนามครบเท่านั้น
+     *
      * @param hasApplicantSlot เอกสารมีช่องลงนามของผู้ยื่น
      * @param requestedAt      เวลาส่งกลับรอบล่าสุด
      * @param submittedAt      เวลากด "ยื่นการแก้ไข" (ใช้เมื่อไม่มีช่องลงนามของผู้ยื่น)
@@ -89,7 +93,14 @@ public final class RevisionProgress {
         if (!submitted) {
             return locked ? Stage.TO_SIGN : Stage.TO_EDIT;
         }
-        return awaitingResign ? Stage.SUBMITTED : null;
+        return awaitingResign || circulatingSince(envelopes, requestedAt) ? Stage.SUBMITTED : null;
+    }
+
+    /** มีซองที่เปิดหลังการส่งกลับและยังเวียนลงนามไม่จบ */
+    static boolean circulatingSince(List<SignatureRequest> envelopes, LocalDateTime requestedAt) {
+        return envelopes.stream()
+                .anyMatch(e -> e.getCreatedAt() != null && e.getCreatedAt().isAfter(requestedAt)
+                        && e.getStatus() == SignatureRequestStatus.IN_PROGRESS);
     }
 
     /** ผู้ยื่นลงนามในซองที่เปิดหลังการส่งกลับแล้ว */
