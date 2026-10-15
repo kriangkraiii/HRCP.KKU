@@ -187,4 +187,61 @@ class SsoAcademicPositionTest extends AbstractFlowTest {
             assertThat(reload().getAcademicPosition()).isEqualTo("อาจารย์");
         }
     }
+
+    @Nested
+    @DisplayName("สภามหาวิทยาลัยอนุมัติแล้ว — ตำแหน่งอัปเดตจากระบบเรา และ SSO ไม่ลดกลับ")
+    class CouncilApproved {
+
+        @Autowired
+        private com.ecom.academic.service.PositionRequestService positionService;
+
+        private void approveAssistantProfessor() {
+            var request = data.positionRequest(applicant, PositionRequestStatus.SENT_TO_HR, null, "ผู้ช่วยศาสตราจารย์");
+            positionService.updateStatus(request.getId(), PositionRequestStatus.COUNCIL_APPROVED, data.admin(), null,
+                    new com.ecom.academic.service.PositionRequestService.StatusDates(
+                            null, null, java.time.LocalDate.now(), null));
+        }
+
+        @Test
+        @DisplayName("บันทึกมติสภาอนุมัติ: ตำแหน่ง ไทย/อังกฤษ และคำนำหน้า (คงวุฒิ ดร.) เปลี่ยนทันที")
+        void approvalPromotesTheApplicant() {
+            approveAssistantProfessor();
+
+            UserDtls after = reload();
+            assertThat(after.getAcademicPosition()).isEqualTo("ผู้ช่วยศาสตราจารย์");
+            assertThat(after.getAcademicPositionEn()).isEqualTo("Assistant Professor");
+            assertThat(after.getTitle()).isEqualTo("ผศ.ดร.");
+        }
+
+        @Test
+        @DisplayName("ทะเบียน มข. ยังไม่ตามมติ (SSO ส่ง อาจารย์ มา) — ล็อกอินแล้วตำแหน่งต้องไม่ลดกลับ")
+        void aLaggingRegistryDoesNotDemote() {
+            approveAssistantProfessor();
+
+            provisioner.provision(tokenFor(applicant), null, Optional.of(profile("อาจารย์", null)));
+
+            assertThat(reload().getAcademicPosition()).isEqualTo("ผู้ช่วยศาสตราจารย์");
+            assertThat(reload().getTitle()).isEqualTo("ผศ.ดร.");
+        }
+
+        @Test
+        @DisplayName("ทะเบียนให้ตำแหน่งที่สูงกว่าแล้ว — SSO ทับได้ตามปกติ")
+        void aHigherRegistryRankStillWins() {
+            approveAssistantProfessor();
+
+            provisioner.provision(tokenFor(applicant), null, Optional.of(profile("รองศาสตราจารย์", null)));
+
+            assertThat(reload().getAcademicPosition()).isEqualTo("รองศาสตราจารย์");
+        }
+
+        @Test
+        @DisplayName("คำร้องที่สภาอนุมัติไว้ก่อนหน้า — ปรับย้อนหลังตอนเริ่มระบบ")
+        void earlierApprovalsAreBackfilled() {
+            data.positionRequest(applicant, PositionRequestStatus.COUNCIL_APPROVED, null, "ผู้ช่วยศาสตราจารย์");
+
+            assertThat(positionService.backfillApprovedRanks()).isEqualTo(1);
+            assertThat(reload().getAcademicPosition()).isEqualTo("ผู้ช่วยศาสตราจารย์");
+            assertThat(positionService.backfillApprovedRanks()).as("รันซ้ำไม่แตะซ้ำ").isZero();
+        }
+    }
 }

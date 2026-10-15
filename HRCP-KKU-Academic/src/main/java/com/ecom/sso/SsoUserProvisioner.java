@@ -180,9 +180,12 @@ public class SsoUserProvisioner {
                 : AcademicRank.of(profile.positionName(), profile.levelName());
 
         boolean mayOverwrite = positionSyncPolicy.mayOverwrite(user.getId());
+        // สภาอนุมัติตำแหน่งที่สูงกว่าที่ทะเบียนยังส่งมา — ทะเบียนยังไม่ตามมติ อย่าลดตำแหน่งกลับ
+        AcademicRank approved = ssoRank == null ? null : positionSyncPolicy.approvedRankFloor(user.getId());
+        boolean registryBehind = approved != null && approved.isAbove(ssoRank);
         boolean applied = false;
 
-        if (ssoRank != null && mayOverwrite) {
+        if (ssoRank != null && mayOverwrite && !registryBehind) {
             user.setAcademicPosition(ssoRank.thaiLabel());
             user.setAcademicPositionEn(ssoRank.englishLabel());
             user.setTitle(shortTitleFor(ssoRank, storedTitle));
@@ -207,14 +210,14 @@ public class SsoUserProvisioner {
         // ใช้ id ไม่ใช่อีเมล ตามที่คลาสนี้ตั้งใจไม่ log ตัวตนลงไป และไม่แตะ accessToken
         String logLine = "SSO academic position — userId={} positionName={} levelName={}"
                 + " positionTypeName={} workline={} fsFaculty={} stored={} resolved={}"
-                + " titleBefore={} titleAfter={} mayOverwrite={} applied={}";
+                + " titleBefore={} titleAfter={} mayOverwrite={} councilApproved={} applied={}";
         Object[] values = { user.getId(), profile.positionName(), profile.levelName(),
                 profile.positionTypeName(), profile.workline(),
                 faculty == null ? null : faculty.getPositionTitle(),
                 stored, ssoRank == null ? null : ssoRank.thaiLabel(),
-                storedTitle, user.getTitle(), mayOverwrite, applied };
+                storedTitle, user.getTitle(), mayOverwrite, approved == null ? null : approved.thaiLabel(), applied };
 
-        if (ssoRank != null && !mayOverwrite && !ssoRank.thaiLabel().equals(stored)) {
+        if (ssoRank != null && (!mayOverwrite || registryBehind) && !ssoRank.thaiLabel().equals(stored)) {
             // ทะเบียนไม่ตรงกับที่เราถืออยู่ แต่คนนี้มีคำร้องเดินอยู่จึงยังไม่แตะ —
             // ถ้าค้างนาน นักทรัพยากรบุคคลควรเห็นและตัดสินใจเอง
             log.warn(logLine, values);

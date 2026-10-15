@@ -152,7 +152,8 @@
                     </div>
                 </div>
 
-                <!--/* รายชื่อผู้ทรงคุณวุฒิ (10 คน) */-->
+                <!--/* รายชื่อผู้ทรงคุณวุฒิ (สูงสุด 10 คน) — แถวทั้ง 10 อยู่ในหน้าเสมอเพื่อให้ชื่อช่อง name1..name10 ตรงกับแบบฟอร์ม
+                     แสดงเฉพาะแถวที่มีข้อมูล (อย่างน้อย 1 แถว) แล้วกดเพิ่มทีละแถว */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <div>
@@ -171,83 +172,276 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="u-w-4pct">#</th>
-                                        <th class="u-w-16pct">เลือกจากฐานข้อมูล</th>
-                                        <th class="u-w-25p">ชื่อ-นามสกุล (TH / EN)</th>
-                                        <th class="u-w-18pct">สาขาวิชา</th>
-                                        <th class="u-w-17pct">ความเชี่ยวชาญ</th>
-                                        <th class="u-w-20pct">ข้อมูลต้นสังกัด / อีเมล / โทรศัพท์</th>
+                                        <th class="u-w-28pct">ชื่อ-นามสกุล</th>
+                                        <th class="u-w-20pct">สาขาวิชา</th>
+                                        <th class="u-w-20pct">ความเชี่ยวชาญ</th>
+                                        <th class="u-w-25p">ข้อมูลต้นสังกัด / อีเมล / โทรศัพท์</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr th:each="i : ${#numbers.sequence(1, 10)}">
+                                    <tr th:each="i : ${#numbers.sequence(1, 10)}" th:attr="data-expert-row=${i}"
+                                        th:classappend="${i > 1} ? 'd-none' : ''">
                                         <td th:text="${i}" class="text-center fw-bold text-muted"></td>
-                                        <td>
-                                            <select class="form-select form-select-sm expert-selector" th:attr="data-row=${i}" onchange="onExpertSelected(this)">
-                                                <option value="">-- เลือกผู้ทรงคุณวุฒิ --</option>
-                                                <option th:each="exp : ${externalExperts}"
-                                                        th:value="${exp.id}"
-                                                        th:data-fullname="${exp.fullName}"
-                                                        th:data-fullname-en="${exp.fullNameEn}"
-                                                        th:data-title="${exp.title}"
-                                                        th:data-position="${exp.academicPosition}"
-                                                        th:data-position-en="${exp.academicPositionEn}"
-                                                        th:data-affiliation="${exp.affiliation}"
-                                                        th:data-affiliation-en="${exp.affiliationEn}"
-                                                        th:data-email="${exp.email}"
-                                                        th:data-phone="${exp.phoneNumber}"
-                                                        th:data-expert="${exp.expertiseField}"
-                                                        th:data-expert-en="${exp.expertiseFieldEn}"
-                                                        th:text="${exp.fullName + (exp.affiliation != null ? ' (' + exp.affiliation + ')' : '')}">
-                                                </option>
-                                            </select>
-                                        </td>
                                         <td><input type="text" th:name="'name' + ${i}" th:id="'exp_name_' + ${i}" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล ทั้งไทยและอังกฤษ"></td>
                                         <td><input type="text" th:name="'majorcom' + ${i}" th:id="'exp_major_' + ${i}" class="form-control form-control-sm" placeholder="สาขาวิชา"></td>
                                         <td><input type="text" th:name="'major_expert' + ${i}" th:id="'exp_expert_' + ${i}" class="form-control form-control-sm" placeholder="ความเชี่ยวชาญ"></td>
                                         <td><input type="text" th:name="'Information' + ${i}" th:id="'exp_info_' + ${i}" class="form-control form-control-sm" placeholder="สังกัด, อีเมล, เบอร์โทร"></td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-expert-remove title="ลบแถวนี้">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-success" id="btnPickExpert">
+                                <i class="fas fa-address-book me-1"></i> เลือกจากฐานข้อมูล
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddExpert">
+                                <i class="fas fa-plus me-1"></i> เพิ่มแถว (กรอกเอง)
+                            </button>
+                            <small class="text-muted"><span id="expertCount">1</span>/10 คน</small>
+                        </div>
+
+                        <!--/* เลือกผู้ทรงคุณวุฒิจากฐานข้อมูล — ช่องในกล่องนี้ไม่มี name จึงไม่ถูกส่งไปกับฟอร์มเอกสาร */-->
+                        <div class="modal fade" id="expertPickerModal" tabindex="-1" aria-labelledby="expertPickerTitle" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="expertPickerTitle"><i class="fas fa-address-book me-1"></i> เลือกผู้ทรงคุณวุฒิจากฐานข้อมูล</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <input type="search" class="form-control mb-3" id="expertPickerSearch"
+                                               placeholder="ค้นหาชื่อ สังกัด หรือความเชี่ยวชาญ" autocomplete="off">
+                                        <div th:if="${#lists.isEmpty(externalExperts)}" class="text-muted text-center py-4">
+                                            ยังไม่มีรายชื่อในฐานข้อมูล —
+                                            <a th:href="@{/admin/academic/committee}" target="_blank">เพิ่มผู้ทรงคุณวุฒิ</a>
+                                        </div>
+                                        <div class="list-group" id="expertPickerList">
+                                            <label class="list-group-item d-flex gap-3 align-items-start" th:each="exp : ${externalExperts}"
+                                                   th:attr="data-search=${#strings.toLowerCase((exp.fullName ?: '') + ' ' + (exp.fullNameEn ?: '') + ' '
+                                                            + (exp.affiliation ?: '') + ' ' + (exp.expertiseField ?: '') + ' ' + (exp.expertiseFieldEn ?: ''))}">
+                                                <input class="form-check-input mt-1 flex-shrink-0" type="checkbox"
+                                                       th:data-fullname="${exp.fullName}"
+                                                       th:data-fullname-en="${exp.fullNameEn}"
+                                                       th:data-position="${exp.academicPosition}"
+                                                       th:data-affiliation="${exp.affiliation}"
+                                                       th:data-affiliation-en="${exp.affiliationEn}"
+                                                       th:data-email="${exp.email}"
+                                                       th:data-phone="${exp.phoneNumber}"
+                                                       th:data-expert="${exp.expertiseField}"
+                                                       th:data-expert-en="${exp.expertiseFieldEn}">
+                                                <span>
+                                                    <span class="fw-semibold" th:text="${exp.fullName}">ชื่อ</span>
+                                                    <span class="badge text-bg-light border ms-1 d-none" data-already>เพิ่มแล้ว</span>
+                                                    <small class="d-block text-muted" th:text="${exp.affiliation}">สังกัด</small>
+                                                    <small class="d-block text-muted" th:if="${exp.expertiseField}" th:text="${exp.expertiseField}">ความเชี่ยวชาญ</small>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <small class="text-muted me-auto" id="expertPickerRoom"></small>
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                                        <button type="button" class="btn btn-success" id="expertPickerAdd" disabled>
+                                            <i class="fas fa-plus me-1"></i> เพิ่มที่เลือก
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <script>
-                    function onExpertSelected(selectEl) {
-                        const row = selectEl.dataset.row;
-                        const opt = selectEl.options[selectEl.selectedIndex];
-                        if (!opt || !opt.value) return;
-
-                        const nameTh = opt.dataset.fullname || '';
-                        const nameEn = opt.dataset.fullnameen || '';
-                        const combinedName = (nameEn && nameEn !== nameTh) ? `${nameTh} (${nameEn})` : nameTh;
-
-                        const fieldTh = opt.dataset.expert || '';
-                        const fieldEn = opt.dataset.experten || '';
-                        const posTh = opt.dataset.position || '';
-                        const posEn = opt.dataset.positionen || '';
-
-                        const affTh = opt.dataset.affiliation || '';
-                        const affEn = opt.dataset.affiliationen || '';
-                        const email = opt.dataset.email || '';
-                        const phone = opt.dataset.phone || '';
-
+                    /** เติมแถวที่ {@code row} จากผู้ทรงคุณวุฒิที่เลือกในกล่อง (data-* ของช่องติ๊ก) */
+                    function fillExpertRow(row, d) {
+                        const nameTh = d.fullname || '';
+                        const nameEn = d.fullnameEn || '';
+                        const affTh = d.affiliation || '';
+                        const affEn = d.affiliationEn || '';
                         const affText = (affEn && affEn !== affTh) ? `${affTh} (${affEn})` : affTh;
-                        let infoParts = [];
+                        const infoParts = [];
                         if (affText) infoParts.push(affText);
-                        if (email) infoParts.push(`อีเมล: ${email}`);
-                        if (phone) infoParts.push(`โทร: ${phone}`);
+                        if (d.email) infoParts.push(`อีเมล: ${d.email}`);
+                        if (d.phone) infoParts.push(`โทร: ${d.phone}`);
 
-                        const nameInput = document.getElementById('exp_name_' + row);
-                        const majorInput = document.getElementById('exp_major_' + row);
-                        const expertInput = document.getElementById('exp_expert_' + row);
-                        const infoInput = document.getElementById('exp_info_' + row);
-
-                        if (nameInput) nameInput.value = combinedName;
-                        if (majorInput) majorInput.value = fieldTh;
-                        if (expertInput) expertInput.value = fieldEn || posTh;
-                        if (infoInput) infoInput.value = infoParts.join(' | ');
+                        const values = {
+                            exp_name_: (nameEn && nameEn !== nameTh) ? `${nameTh} (${nameEn})` : nameTh,
+                            exp_major_: d.expert || '',
+                            exp_expert_: d.expertEn || d.position || '',
+                            exp_info_: infoParts.join(' | ')
+                        };
+                        Object.entries(values).forEach(([prefix, value]) => {
+                            const el = document.getElementById(prefix + row);
+                            if (!el) return;
+                            el.value = value;
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                            el.dispatchEvent(new Event('change', { bubbles: true }));
+                        });
                     }
+
+                    // ==================== แถวผู้ทรงคุณวุฒิ: เพิ่ม/ลบทีละแถว ====================
+                    (function () {
+                        const MAX = 10;
+                        const rows = () => Array.from(document.querySelectorAll('[data-expert-row]'));
+                        const shown = () => rows().filter(r => !r.classList.contains('d-none'));
+                        const filled = r => Array.from(r.querySelectorAll('input[type="text"]')).some(i => i.value.trim());
+                        // เอกสารที่ส่งลงนามแล้ว / ออกเลขแล้ว ช่องถูกปิด — เพิ่ม/ลบแถวไม่ได้เช่นกัน
+                        const locked = () => {
+                            const el = document.getElementById('exp_name_1');
+                            return !el || el.disabled || el.readOnly;
+                        };
+
+                        // ---------- ประธานกรรมการ: เลือกจากคนในตาราง ----------
+                        function syncChair() {
+                            const picker = document.getElementById('chairPicker');
+                            const field = document.getElementById('committeeName');
+                            const names = [...new Set(rows().map(nameOf).filter(Boolean))];
+                            // ชื่อประธานที่ไม่อยู่ในตารางแล้ว (ลบแถว / แก้ชื่อ) ต้องเลือกใหม่
+                            if (field.value && !names.includes(field.value)) {
+                                field.value = '';
+                                field.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                            picker.replaceChildren(new Option('-- เลือกจากรายชื่อผู้ทรงคุณวุฒิด้านบน --', ''),
+                                    ...names.map(n => new Option(n, n, false, n === field.value)));
+                            picker.disabled = locked();
+                        }
+
+                        function refresh() {
+                            syncChair();
+                            const n = shown().length;
+                            document.getElementById('btnAddExpert').classList.toggle('d-none', locked() || n >= MAX);
+                            document.getElementById('btnPickExpert').classList.toggle('d-none', locked() || freeRows().length === 0);
+                            document.getElementById('expertCount').textContent = n;
+                            rows().forEach(r => r.querySelector('[data-expert-remove]')
+                                    .classList.toggle('invisible', locked() || n <= 1));
+                        }
+
+                        // แถวที่ยังรับคนได้: แถวที่แสดงอยู่แต่ว่าง แล้วต่อด้วยแถวที่ซ่อน
+                        const freeRows = () => rows().filter(r => r.classList.contains('d-none') || !filled(r))
+                                .sort((a, b) => a.classList.contains('d-none') - b.classList.contains('d-none'));
+
+                        function setRow(r, values) {
+                            r.querySelectorAll('input[type="text"]').forEach((el, k) => {
+                                if (el.value === values[k]) return;
+                                el.value = values[k];
+                                el.dispatchEvent(new Event('input', { bubbles: true }));
+                                el.dispatchEvent(new Event('change', { bubbles: true }));
+                            });
+                        }
+                        const valuesOf = r => Array.from(r.querySelectorAll('input[type="text"]')).map(el => el.value);
+
+                        // ---------- กล่องเลือกจากฐานข้อมูล ----------
+                        const nameOf = r => (r.querySelector('[id^="exp_name_"]').value || '').trim();
+                        const pickerItems = () => Array.from(document.querySelectorAll('#expertPickerList > label'));
+                        // ลำดับที่ติ๊ก = ลำดับในเอกสาร (ไม่ใช่ลำดับตัวอักษรของรายการ)
+                        let pickOrder = [];
+
+                        function syncPicker() {
+                            const room = freeRows().length;
+                            const taken = new Set(rows().map(nameOf).filter(Boolean));
+                            const checked = pickerItems().filter(l => l.querySelector('input').checked).length;
+                            pickerItems().forEach(l => {
+                                const box = l.querySelector('input');
+                                const d = box.dataset;
+                                const name = (d.fullnameEn && d.fullnameEn !== d.fullname) ? `${d.fullname} (${d.fullnameEn})` : d.fullname;
+                                const already = taken.has(name) || taken.has(d.fullname);
+                                l.querySelector('[data-already]').classList.toggle('d-none', !already);
+                                // คนที่อยู่ในตารางแล้วเลือกซ้ำไม่ได้ และเลือกได้ไม่เกินจำนวนแถวที่เหลือ
+                                box.disabled = already || (!box.checked && checked >= room);
+                                if (already) box.checked = false;
+                            });
+                            document.getElementById('expertPickerAdd').disabled = checked === 0;
+                            document.getElementById('expertPickerRoom').textContent =
+                                    'เลือกได้อีก ' + Math.max(0, room - checked) + ' คน';
+                        }
+
+                        function addPicked() {
+                            const picked = pickOrder.filter(b => b.checked);
+                            const free = freeRows();
+                            picked.forEach((box, k) => {
+                                const r = free[k];
+                                if (!r) return;
+                                r.classList.remove('d-none');
+                                fillExpertRow(r.dataset.expertRow, box.dataset);
+                                box.checked = false;
+                            });
+                            pickOrder = [];
+                            refresh();
+                        }
+
+                        // ลบกลางรายการ: เลื่อนแถวถัดไปขึ้นมาแทน ลำดับในเอกสารจึงไม่มีช่องว่าง
+                        function remove(r) {
+                            const visible = shown();
+                            const from = visible.indexOf(r);
+                            for (let k = from; k < visible.length - 1; k++) setRow(visible[k], valuesOf(visible[k + 1]));
+                            const last = visible[visible.length - 1];
+                            setRow(last, valuesOf(last).map(() => ''));
+                            last.classList.add('d-none');
+                            refresh();
+                        }
+
+                        document.addEventListener('DOMContentLoaded', function () {
+                            document.getElementById('btnAddExpert').addEventListener('click', function () {
+                                if (locked()) return;
+                                const next = rows().find(r => r.classList.contains('d-none'));
+                                if (!next) return;
+                                next.classList.remove('d-none');
+                                next.querySelector('select, input').focus();
+                                refresh();
+                            });
+                            document.getElementById('chairPicker').addEventListener('change', function () {
+                                const field = document.getElementById('committeeName');
+                                field.value = this.value;
+                                field.dispatchEvent(new Event('input', { bubbles: true }));
+                                field.dispatchEvent(new Event('change', { bubbles: true }));
+                            });
+                            // พิมพ์ชื่อในตารางเอง — รายชื่อให้เลือกเป็นประธานตามไปด้วย
+                            rows().forEach(r => r.querySelector('[id^="exp_name_"]').addEventListener('change', syncChair));
+
+                            const modalEl = document.getElementById('expertPickerModal');
+                            // ย้ายไปไว้ใต้ body: modal ที่ซ้อนในการ์ดของฟอร์มอาจติดอยู่ใต้ฉากหลังมืด
+                            document.body.appendChild(modalEl);
+                            document.getElementById('btnPickExpert').addEventListener('click', function () {
+                                if (locked()) return;
+                                document.getElementById('expertPickerSearch').value = '';
+                                pickerItems().forEach(l => { l.classList.remove('d-none'); l.querySelector('input').checked = false; });
+                                pickOrder = [];
+                                syncPicker();
+                                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                            });
+                            document.getElementById('expertPickerSearch').addEventListener('input', function () {
+                                const q = this.value.trim().toLowerCase();
+                                pickerItems().forEach(l => l.classList.toggle('d-none', q !== '' && !l.dataset.search.includes(q)));
+                            });
+                            document.getElementById('expertPickerList').addEventListener('change', function (e) {
+                                pickOrder = pickOrder.filter(b => b !== e.target);
+                                if (e.target.checked) pickOrder.push(e.target);
+                                syncPicker();
+                            });
+                            document.getElementById('expertPickerAdd').addEventListener('click', function () {
+                                addPicked();
+                                bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                            });
+
+                            rows().forEach(r => r.querySelector('[data-expert-remove]').addEventListener('click', function () {
+                                if (!locked() && shown().length > 1) remove(r);
+                            }));
+                            // หลังสคริปต์ทุกตัวเติมค่าที่บันทึกไว้และล็อกช่องแล้ว: แสดงถึงแถวสุดท้ายที่มีข้อมูล
+                            setTimeout(function () {
+                                const all = rows();
+                                let last = 0;
+                                all.forEach((r, k) => { if (filled(r)) last = k; });
+                                all.forEach((r, k) => r.classList.toggle('d-none', k > last));
+                                refresh();
+                            }, 0);
+                        });
+                    })();
                 </script>
 
                 <!--/* ข้อมูลการประชุม */-->
@@ -289,8 +483,13 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">ชื่อประธานกรรมการ</label>
-                                <input type="text" name="committee_name" class="form-control">
+                                <label class="form-label" for="chairPicker">ชื่อประธานกรรมการ</label>
+                                <!--/* ประธานคือหนึ่งในผู้ทรงคุณวุฒิที่ระบุด้านบน — เลือกจากตาราง พิมพ์เองไม่ได้
+                                     ตัวเลือกไม่มี name ค่าที่ส่งไปคือช่องซ่อน committee_name */-->
+                                <select class="form-select" id="chairPicker">
+                                    <option value="">-- เลือกจากรายชื่อผู้ทรงคุณวุฒิด้านบน --</option>
+                                </select>
+                                <input type="hidden" name="committee_name" id="committeeName">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ผลการประเมิน</label>

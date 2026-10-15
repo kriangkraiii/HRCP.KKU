@@ -1115,6 +1115,10 @@ public class PositionRequestService {
 
         addStatusHistory(request, oldStatus, newStatus, changedBy, note);
 
+        if (newStatus == PositionRequestStatus.COUNCIL_APPROVED && oldStatus != newStatus) {
+            applyApprovedRank(request);
+        }
+
         // Send email notification to applicant if requested
         if (sendNotify) {
             Long notifyId = request.getId();
@@ -1122,6 +1126,69 @@ public class PositionRequestService {
         }
 
         return request;
+    }
+
+    /**
+     * สภามหาวิทยาลัยอนุมัติแล้ว — ตำแหน่งในบัญชีผู้ยื่นเป็นตำแหน่งที่ได้รับทันที ไม่รอทะเบียนบุคลากร มข.
+     *
+     * <p>เดิมตำแหน่งในระบบมาจาก SSO ตอนล็อกอินทางเดียว ทะเบียน มข. อัปเดตช้ากว่ามติสภาเป็นสัปดาห์
+     * ผู้ยื่นจึงยังเห็น "อาจารย์" หลังได้รับอนุมัติ ตรงนี้เขียนตำแหน่ง (ไทย/อังกฤษ) และคำนำหน้า (คงวุฒิ ดร.)
+     * แล้วประทับเวลาไว้เหมือนค่าที่ SSO ยืนยัน งานซิงก์จากเว็บวิทยาลัยจึงไม่ทับกลับ ส่วน SSO ทับได้เฉพาะ
+     * เมื่อทะเบียนให้ตำแหน่งไม่ต่ำกว่านี้ ({@link #approvedRankOf})
+     *
+     * <p>ไม่ลดตำแหน่ง — บัญชีที่ตำแหน่งเท่ากันหรือสูงกว่าอยู่แล้วไม่ถูกแตะ
+     *
+     * @return true เมื่อเปลี่ยนตำแหน่งในบัญชี
+     */
+    boolean applyApprovedRank(PositionRequest request) {
+        UserDtls user = request.getApplicant();
+        AcademicRank approved = AcademicRank.of(request.getTargetPosition());
+        if (user == null || approved == null) {
+            return false;
+        }
+        AcademicRank current = AcademicRank.of(user.getAcademicPosition());
+        if (current != null && !approved.isAbove(current)) {
+            return false;
+        }
+        user.setAcademicPosition(approved.thaiLabel());
+        user.setAcademicPositionEn(approved.englishLabel());
+        user.setTitle(com.ecom.util.AcademicTitleResolver.resolveShortTitle(approved.thaiLabel(), user.getTitle()));
+        user.setAcademicPositionSyncedAt(LocalDateTime.now());
+        return true;
+    }
+
+    /**
+     * ตำแหน่งสูงสุดที่สภามหาวิทยาลัยอนุมัติให้ผู้ใช้คนนี้ผ่านระบบ — null ถ้าไม่มี
+     * ใช้กัน SSO ลดตำแหน่งกลับระหว่างที่ทะเบียน มข. ยังไม่อัปเดตตามมติ
+     */
+    @Transactional(readOnly = true)
+    public AcademicRank approvedRankOf(Integer userId) {
+        if (userId == null) {
+            return null;
+        }
+        return requestRepository.findByApplicantId(userId).stream()
+                .filter(r -> r.getCurrentStatus() == PositionRequestStatus.COUNCIL_APPROVED)
+                .map(r -> AcademicRank.of(r.getTargetPosition()))
+                .filter(java.util.Objects::nonNull)
+                .max(java.util.Comparator.naturalOrder())
+                .orElse(null);
+    }
+
+    /**
+     * คำร้องที่สภาอนุมัติไปก่อนมีการอัปเดตตำแหน่งตอนอนุมัติ ({@link #applyApprovedRank}) — ปรับบัญชีให้ตรง
+     * รันซ้ำได้: บัญชีที่ตำแหน่งถึงแล้วไม่ถูกแตะ
+     *
+     * @return จำนวนบัญชีที่ปรับ
+     */
+    @Transactional
+    public int backfillApprovedRanks() {
+        int changed = 0;
+        for (PositionRequest request : requestRepository.findByStatus(PositionRequestStatus.COUNCIL_APPROVED)) {
+            if (applyApprovedRank(request)) {
+                changed++;
+            }
+        }
+        return changed;
     }
 
     /**
@@ -1316,6 +1383,9 @@ public class PositionRequestService {
 
     /** Edit-log document type for files that belong to the request rather than a numbered document. */
     public static final int REQUEST_FILES_DOC_TYPE = 0;
+
+    /** แบบฟอร์มตรวจสอบคุณสมบัติ (Checklist) — ลงนามครบแล้วคำร้องเข้าขั้น "ตรวจสอบความถูกต้อง/ครบถ้วน" */
+    public static final int CHECKLIST_DOC = 7;
 
     /** Logs a change that isn't a form save (attachment, upload, re-sign…), with what it touched. */
     public void logDocumentChange(PositionRequest request, int documentType, String detail,
@@ -1695,6 +1765,10 @@ public class PositionRequestService {
     /**
      * เอกสารที่ส่งกลับแก้และลงนามใหม่ครบทุกช่องแล้ว — กลับเข้าขั้นตรวจสอบเอกสาร (Flow ข้อ 22 NO → 19)
      *
+     * <p>ขั้นตรวจสอบเอกสารเริ่มที่แบบตรวจสอบคุณสมบัติ (เอกสารที่ 7) ถ้าส่งกลับตั้งแต่ก่อนแบบนั้นลงนามครบ
+     * ต้องกลับไปที่ "รับคำร้อง" — เดิมกลับไป "ตรวจสอบความถูกต้อง/ครบถ้วน" เสมอ ขั้นต่อไปจึงบอกให้ทำเอกสารที่ 8
+     * แล้วเอกสารที่ 7 ไม่เคยถูกทำ
+     *
      * <p>ยังมีฉบับที่ค้าง (ผู้ยื่นยังไม่แก้ หรือผู้ลงนามคนอื่นยังไม่ลงนามซ้ำ) ก็ยังเป็น "ส่งแก้ไข"
      * — {@link #updateStatus} กันไว้ด้วย {@code resignBlocker} อยู่แล้ว ตรงนี้แค่ไม่ไปชนมัน
      */
@@ -1705,7 +1779,9 @@ public class PositionRequestService {
                 || resignBlocker(requestId) != null || revisionProgress(request).isActionRequired()) {
             return;
         }
-        updateStatus(requestId, PositionRequestStatus.DOCUMENT_VERIFICATION, changedBy,
+        PositionRequestStatus back = isSigningComplete(requestId, CHECKLIST_DOC)
+                ? PositionRequestStatus.DOCUMENT_VERIFICATION : PositionRequestStatus.DOCUMENT_RECEIVED;
+        updateStatus(requestId, back, changedBy,
                 "อัพเดตอัตโนมัติ: แก้ไขและลงนามเอกสารที่ส่งกลับครบแล้ว", false);
     }
 

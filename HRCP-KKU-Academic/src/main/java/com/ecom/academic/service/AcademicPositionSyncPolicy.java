@@ -41,4 +41,16 @@ public class AcademicPositionSyncPolicy {
         return !positionRequestService.hasActiveRequest(userId)
                 && !academicRequestService.hasActiveRequest(userId);
     }
+
+    /**
+     * ตำแหน่งที่สภามหาวิทยาลัยอนุมัติให้ผ่านระบบนี้แล้ว — ต้นทางภายนอกห้ามเขียนตำแหน่งที่ต่ำกว่านี้
+     *
+     * <p>ทะเบียนบุคลากร มข. อัปเดตตามมติสภาช้ากว่าระบบเรา ระหว่างนั้น SSO ยังส่งตำแหน่งเดิมมา
+     * ถ้าทับตามปกติ ตำแหน่งที่เพิ่งได้รับจะถูกลดกลับทุกครั้งที่ล็อกอิน พอทะเบียนตามทันแล้ว SSO ก็ทับได้ตามเดิม
+     *
+     * @return null เมื่อไม่มีคำร้องที่สภาอนุมัติ
+     */
+    public com.ecom.academic.model.AcademicRank approvedRankFloor(Integer userId) {
+        return positionRequestService.approvedRankOf(userId);
+    }
 }

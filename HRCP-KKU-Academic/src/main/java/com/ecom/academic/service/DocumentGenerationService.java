@@ -456,6 +456,9 @@ public class DocumentGenerationService {
                         // ก่อนโคลนแถว เพราะแถวที่โคลนจากหัวข้อที่ตัดไปแล้วไม่มีที่อยู่
                         xml = Phase2FullFormPruner.prune(xml, placeholders);
 
+                        // Step 1.45: รายชื่อผู้ทรงคุณวุฒิ (เอกสารที่ 8 เฟส 2) — ตัดแถวว่างท้ายตาราง
+                        xml = pruneTrailingExpertRows(xml, placeholders);
+
                         // Step 1.5: Dynamic row cloning - เพิ่มแถวตารางสำหรับนวิจัยที่เกิน 5 รายการ
                         xml = expandDynamicRows(xml, placeholders);
 
@@ -2211,6 +2214,51 @@ public class DocumentGenerationService {
             out.replace(at[0], at[1], kept);
         }
         return out.toString();
+    }
+
+    /** ช่องของผู้ทรงคุณวุฒิหนึ่งแถว ({@code {{name1}}} ... {@code {{Information1}}}) */
+    private static final List<String> EXPERT_ROW_FIELDS = List.of("name", "majorcom", "major_expert", "Information");
+    static final int EXPERT_ROWS = 10;
+
+    /**
+     * ตารางรายชื่อผู้ทรงคุณวุฒิมี 10 แถวตายตัวในแบบฟอร์ม — มีผู้ทรงคุณวุฒิสองคน เอกสารก็พิมพ์แถว 3–10 ว่างออกมา
+     * ทำให้ตารางมีแถวเท่าจำนวนคนที่กรอก (อย่างน้อย 1 แถว)
+     *
+     * <p>เลขลำดับ "3." เป็นข้อความในแบบฟอร์ม ตัดแถวกลางตารางแล้วลำดับจะกระโดด จึงเลื่อนคนที่กรอกขึ้นมาเรียงกันก่อน
+     * (แก้ค่าใน {@code placeholders} ของการ render ครั้งนี้) แล้วค่อยตัดแถวว่างที่เหลือท้ายตาราง
+     * ดูจากตัวแบบฟอร์มเอง ({@code {{name1}}} คู่กับ {@code {{Information1}}}) ไม่ผูกกับเลขเอกสาร
+     */
+    String pruneTrailingExpertRows(String xml, Map<String, String> placeholders) {
+        if (!xml.contains("{{name1}}") || !xml.contains("{{Information1}}")) {
+            return xml;
+        }
+        List<List<String>> filled = new ArrayList<>();
+        for (int i = 1; i <= EXPERT_ROWS; i++) {
+            final int row = i;
+            List<String> values = EXPERT_ROW_FIELDS.stream().map(f -> placeholders.get(f + row)).toList();
+            if (values.stream().anyMatch(v -> v != null && !v.isBlank())) {
+                filled.add(values);
+            }
+        }
+        for (int i = 1; i <= EXPERT_ROWS; i++) {
+            for (int f = 0; f < EXPERT_ROW_FIELDS.size(); f++) {
+                String value = i <= filled.size() ? filled.get(i - 1).get(f) : null;
+                placeholders.put(EXPERT_ROW_FIELDS.get(f) + i, value == null ? "" : value);
+            }
+        }
+        for (int i = EXPERT_ROWS; i > Math.max(1, filled.size()); i--) {
+            int at = xml.indexOf("{{name" + i + "}}");
+            if (at < 0) {
+                continue;
+            }
+            int start = Math.max(xml.lastIndexOf("<w:tr ", at), xml.lastIndexOf("<w:tr>", at));
+            int end = xml.indexOf("</w:tr>", at);
+            if (start < 0 || end < 0) {
+                break;
+            }
+            xml = xml.substring(0, start) + xml.substring(end + "</w:tr>".length());
+        }
+        return xml;
     }
 
     private static final java.util.regex.Pattern BODY_STRUCTURE = java.util.regex.Pattern.compile(

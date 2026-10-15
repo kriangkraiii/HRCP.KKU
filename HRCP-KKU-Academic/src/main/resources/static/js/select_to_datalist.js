@@ -1,6 +1,9 @@
 /**
- * Auto-converts <select> elements inside doc forms to <input> + <datalist>
- * so users can BOTH select from options AND type custom values.
+ * Converts the <select> elements in doc forms that accept values outside their list
+ * (the academic title — data-academic-title — or anything marked data-allow-custom)
+ * to <input> + <datalist>, so users can BOTH select from options AND type custom values.
+ * Every other <select> stays a real dropdown: ตำแหน่งที่ขอ, วิธีการ, สถานะ ฯลฯ ต้องเป็นค่าในรายการ
+ * เท่านั้น พิมพ์ค่าอื่นไปแล้วกติกาฝั่งเซิร์ฟเวอร์ที่อ่านค่าพวกนี้อ่านไม่ออก
  *
  * Every input[list] in a doc form then gets a styled dropdown (DatalistCombo)
  * in place of the browser's datalist popup. The list attribute moves to
@@ -13,14 +16,27 @@ document.addEventListener('DOMContentLoaded', function () {
     // เรนเดอร์มาเลือกได้เฉพาะค่าที่มีในรายการ ค่าที่พิมพ์เองจึงหายตอนเปิดฟอร์มซ้ำ (เช่นตอนถูกส่งกลับ
     // ให้แก้) แล้วผู้ใช้ส่งลงนามไม่ได้เพราะช่องบังคับว่าง — อ่านจากข้อมูลที่บันทึกไว้แทน
     var saved = {};
-    var holder = document.getElementById('existingDataHolder');
+    var holder = document.getElementById('existingDataHolder') || document.getElementById('docSavedData');
     if (holder && holder.value) {
         try { saved = JSON.parse(holder.value) || {}; } catch (e) { saved = {}; }
     }
 
-    // Target all selects inside doc forms (cards with .card-academic)
+    // ช่องที่ยังเป็น <select>: ค่าที่บันทึกไว้แต่ไม่อยู่ในรายการ (พิมพ์เองตอนช่องนี้ยังพิมพ์ได้ หรือดึงมาจาก
+    // ข้อมูลอื่น เช่น "ป.ตรี") ต้องไม่หายเงียบ ๆ ตอนเปิดฟอร์ม — ใส่เป็นตัวเลือกให้เห็นแล้วเลือกใหม่ได้
+    document.querySelectorAll('form[id^="doc"] select.form-select:not([data-academic-title]):not([data-allow-custom])')
+            .forEach(function (sel) {
+                var value = typeof saved[sel.name] === 'string' ? saved[sel.name].trim() : '';
+                if (!sel.name || !value) return;
+                var known = Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
+                if (!known) {
+                    sel.add(new Option(value, value));
+                    sel.value = value;
+                }
+            });
+
     // ช่องชื่อผู้ลงนามเป็นตัวค้นหาชื่อ (person_picker.js) — เลือกได้อย่างเดียว ห้ามแปลงเป็นช่องพิมพ์อิสระ
-    document.querySelectorAll('form[id^="doc"] select.form-select:not([data-person-picker])').forEach(function (sel) {
+    document.querySelectorAll('form[id^="doc"] select.form-select:is([data-academic-title], [data-allow-custom])'
+            + ':not([data-person-picker])').forEach(function (sel) {
         const name = sel.name;
         const required = sel.required;
         const id = sel.id || ('dl_' + name);

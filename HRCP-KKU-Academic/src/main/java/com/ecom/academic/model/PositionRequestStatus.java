@@ -11,7 +11,7 @@ public enum PositionRequestStatus {
     COLLEGE_APPROVED("รับรองมติคณะกรรมการวิทยาลัยฯ", "fa-file-circle-check", "#1b5e20"),
     SENT_TO_HR("ส่งออกกองทรัพยากรบุคคล มข.", "fa-paper-plane", "#004d40"),
     /** สภามหาวิทยาลัยมีมติกำหนดตำแหน่ง — จบกระบวนการ */
-    COUNCIL_APPROVED("สภามหาวิทยาลัยอนุมัติ", "fa-award", "#1b5e20"),
+    COUNCIL_APPROVED("สภามหาวิทยาลัยอนุมัติแล้ว", "fa-award", "#1b5e20"),
     /** สภามหาวิทยาลัยมีมติไม่กำหนดตำแหน่ง — ขอทบทวนได้ไม่เกิน 2 ครั้ง ภายใน 90 วันนับจากวันรับทราบมติ (ข้อบังคับ 2569 ข้อ 35) */
     COUNCIL_REJECTED("สภามหาวิทยาลัยไม่อนุมัติ", "fa-circle-xmark", "#c62828"),
     /** ยื่นขอทบทวนผลการพิจารณาแล้ว รอ ก.พ.ว. และสภามหาวิทยาลัยพิจารณา */
@@ -25,6 +25,14 @@ public enum PositionRequestStatus {
         this.thaiLabel = thaiLabel;
         this.icon = icon;
         this.color = color;
+    }
+
+    /**
+     * ชื่อขั้นบนแถบความคืบหน้าตอนยังไม่ถึง — ขั้นสุดท้ายยังไม่เกิดจึงไม่มีคำว่า "แล้ว"
+     * ขั้นที่ถึงแล้วใช้ {@link #getThaiLabel()}
+     */
+    public String getStepLabel() {
+        return this == COUNCIL_APPROVED ? "สภามหาวิทยาลัยอนุมัติ" : thaiLabel;
     }
 
     public String getThaiLabel() {
@@ -128,8 +136,9 @@ public enum PositionRequestStatus {
             case COLLEGE_COMMITTEE ->
                 java.util.EnumSet.of(COLLEGE_APPROVED, REVISION_REQUESTED);
             case COLLEGE_APPROVED -> java.util.EnumSet.of(SENT_TO_HR);
-            // ผู้ยื่นแก้แล้วส่งกลับ เข้าสู่การตรวจสอบเอกสารอีกรอบ
-            case REVISION_REQUESTED -> java.util.EnumSet.of(DOCUMENT_VERIFICATION);
+            // ผู้ยื่นแก้แล้วส่งกลับ เข้าสู่การตรวจสอบเอกสารอีกรอบ — ส่งกลับตั้งแต่ก่อนทำแบบตรวจสอบคุณสมบัติ
+            // (เอกสารที่ 7) ต้องกลับไปที่รับคำร้อง ไม่อย่างนั้นแบบตรวจสอบถูกข้ามไปทั้งฉบับ
+            case REVISION_REQUESTED -> java.util.EnumSet.of(DOCUMENT_RECEIVED, DOCUMENT_VERIFICATION);
             // หลังส่งออก: บันทึกมติสภามหาวิทยาลัย และการขอทบทวน (ข้อบังคับ 2569 ข้อ 35)
             // จำนวนครั้งและกำหนด 90 วันตรวจที่ PositionRequestService เพราะต้องดูประวัติ
             case SENT_TO_HR, APPEAL_SUBMITTED -> java.util.EnumSet.of(COUNCIL_APPROVED, COUNCIL_REJECTED);

@@ -150,11 +150,19 @@ public final class NextStepGuide {
                         "เอกสารของผู้ยื่นไม่ถูกต้อง ให้กด “ส่งกลับแก้ไข” ในหน้าเอกสารนั้น");
             }
             case DOCUMENT_VERIFICATION -> {
+                // ปกติแบบตรวจสอบคุณสมบัติลงนามครบก่อนถึงขั้นนี้ — ถ้ายังไม่ครบ (อัปเดตสถานะข้ามมาเอง) ต้องบอก
+                if (!docs.signed(P2_CHECKLIST)) {
+                    docs.staffDocument(items, P2_CHECKLIST, null);
+                }
                 docs.staffDocument(items, P2_SUMMARY, "เสนอวาระกลั่นกรองฯ");
                 yield Step.of("สรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ เพื่อเสนอวาระกลั่นกรองฯ", items, null);
             }
+            // กลับไปขั้นไหนขึ้นกับแบบตรวจสอบคุณสมบัติ — PositionRequestService.resumeAfterRevision
             case REVISION_REQUESTED -> Step.of(revisionTitle(items, awaitingResign, resubmitted), items,
-                    "แก้และลงนามใหม่ครบทุกช่องแล้ว สถานะกลับเป็น “ตรวจสอบความถูกต้อง/ครบถ้วน” เอง");
+                    docs.signed(P2_CHECKLIST)
+                            ? "แก้และลงนามใหม่ครบทุกช่องแล้ว สถานะกลับเป็น “ตรวจสอบความถูกต้อง/ครบถ้วน” เอง"
+                            : "แก้และลงนามใหม่ครบทุกช่องแล้ว สถานะกลับเป็น “รับคำร้อง” เอง แล้วทำ"
+                                    + docs.name(P2_CHECKLIST) + " ต่อ");
             case SCREENING_COMMITTEE -> {
                 items.add(manual("ที่ประชุมกลั่นกรองฯ เห็นชอบ → อัปเดตสถานะเป็น “รับรองมติกลั่นกรองฯ”"));
                 items.add(manual(sendBack));
@@ -348,6 +356,12 @@ public final class NextStepGuide {
 
         Stage stage(int type) {
             return progress.getOrDefault(type, Stage.NOT_STARTED);
+        }
+
+        /** ลงนามครบแล้ว (เหลือแค่ออกเลขที่หนังสือก็นับ) */
+        boolean signed(int type) {
+            Stage s = stage(type);
+            return s == Stage.AWAITING_OFFICE || s == Stage.DONE;
         }
 
         /**

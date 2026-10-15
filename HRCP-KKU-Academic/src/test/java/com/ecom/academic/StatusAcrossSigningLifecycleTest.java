@@ -269,8 +269,9 @@ class StatusAcrossSigningLifecycleTest extends AbstractFlowTest {
                     PositionRequestStatus.DOCUMENT_VERIFICATION, null);
             data.positionDocument(request, 8, "{\"date\":\"๑ กันยายน ๒๕๖๙\"}");
 
+            // ส่งไปลงนามได้เมื่อมีผู้ทรงคุณวุฒิอย่างน้อย 1 คน (DocumentCompleteness.malformedFields)
             signEveryStep(circulate(SignatureModule.POSITION, request.getId(), 8,
-                    "{\"date\":\"๑ กันยายน ๒๕๖๙\"}", officer,
+                    "{\"date\":\"๑ กันยายน ๒๕๖๙\",\"name1\":\"ศ.ดร.ผู้ทรงคุณวุฒิ ทดสอบ\"}", officer,
                     List.of(new SignerAssignment("hr", officer.getId()))), officer);
 
             assertThat(statusOf(request.getId()))

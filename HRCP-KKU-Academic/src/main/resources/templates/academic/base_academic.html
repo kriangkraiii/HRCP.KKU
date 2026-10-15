@@ -716,6 +716,9 @@
         </footer>
     </div>
 
+    <!--/* ข้อมูลที่บันทึกไว้ของหน้าเอกสาร — select_to_datalist.js ใช้คงค่าที่ไม่อยู่ในรายการของ dropdown ไว้
+         (ฟอร์มแอดมินเฟส 1 มี existingDataHolder ของตัวเองอยู่แล้ว) ไม่มี name จึงไม่ถูกส่งไปกับฟอร์ม */-->
+    <input type="hidden" id="docSavedData" th:if="${existingData != null}" th:value="${existingData}">
     <script src="/vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="/js/data_styles.js?v=1.0"></script>
     <!--/* ปุ่ม (i) ของ academic/_info_tip.html ต้องมาหลัง bootstrap เพราะใช้ bootstrap.Popover */-->
@@ -890,7 +893,7 @@
     </script>
 <!--/* ตัวค้นหาชื่อผู้ลงนาม — ต้องรันก่อน DOMContentLoaded (สร้างช่องซ่อนรหัสบัญชีให้สคริปต์ของหน้าเติมค่าที่บันทึกไว้) */-->
 <script src="/js/person_picker.js?v=6"></script>
-<script src="/js/select_to_datalist.js?v=4"></script>
+<script src="/js/select_to_datalist.js?v=5"></script>
 <!--/* โหมด dev เท่านั้น: ปุ่มกรอกข้อมูลทดสอบในฟอร์มเอกสาร (GlobalModelAdvice.devFormFill) */-->
 <script th:if="${devFormFill}" src="/js/dev_form_filler.js?v=3"></script>
 <script src="/js/thai_date_autofill.js"></script>

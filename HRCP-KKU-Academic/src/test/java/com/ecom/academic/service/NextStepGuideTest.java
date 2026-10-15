@@ -63,6 +63,28 @@ class NextStepGuideTest {
     }
 
     @Test
+    @DisplayName("เฟส 2 ตรวจสอบเอกสาร แต่แบบตรวจสอบคุณสมบัติ (เอกสารที่ 7) ยังไม่ได้ทำ — ต้องขึ้นให้ทำก่อนเอกสารที่ 8")
+    void positionVerificationStillNeedsTheChecklist() {
+        Step step = NextStepGuide.position(PositionRequestStatus.DOCUMENT_VERIFICATION, rows(7, 8),
+                Map.of(7, Stage.NOT_STARTED, 8, Stage.NOT_STARTED), List.of(), CouncilDates.NONE);
+
+        assertThat(step.items()).extracting(Item::text, Item::state).startsWith(
+                tuple("กรอกแล้วส่งลงนาม — เอกสารที่ 7 ชื่อ7", State.CURRENT));
+    }
+
+    @Test
+    @DisplayName("เฟส 2 ส่งแก้ไขก่อนทำแบบตรวจสอบคุณสมบัติ — บอกว่าแก้เสร็จแล้วกลับไปรับคำร้อง แล้วทำเอกสารที่ 7 ต่อ")
+    void positionRevisionBeforeTheChecklistSaysWhereItReturns() {
+        Step before = NextStepGuide.position(PositionRequestStatus.REVISION_REQUESTED, rows(1, 7),
+                Map.of(1, Stage.AWAITING_SIGNATURE, 7, Stage.NOT_STARTED), List.of(1), CouncilDates.NONE);
+        assertThat(before.hint()).contains("“รับคำร้อง”").contains("เอกสารที่ 7");
+
+        Step after = NextStepGuide.position(PositionRequestStatus.REVISION_REQUESTED, rows(1, 7),
+                Map.of(1, Stage.AWAITING_SIGNATURE, 7, Stage.DONE), List.of(1), CouncilDates.NONE);
+        assertThat(after.hint()).contains("“ตรวจสอบความถูกต้อง/ครบถ้วน”");
+    }
+
+    @Test
     @DisplayName("เฟส 2 ส่งแก้ไข: เอกสารที่รอผู้ยื่นขึ้นเฉพาะรายการที่ส่งกลับ")
     void positionRevision() {
         Step step = NextStepGuide.position(PositionRequestStatus.REVISION_REQUESTED, rows(1, 4),

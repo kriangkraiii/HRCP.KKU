@@ -323,6 +323,9 @@ public final class DocumentCompleteness {
     /** ครั้งที่ประชุมทับปี พ.ศ. สี่หลัก เช่น 1/2569 (เอกสารที่ 8) */
     public static final Pattern MEETING_NO_YEAR = Pattern.compile("^\\d{1,3}/\\d{4}$");
 
+    /** ชื่อผู้ทรงคุณวุฒิแต่ละแถวในเอกสารที่ 8 เฟส 2 (name1..name10) — ไม่รวม name_admin */
+    private static final Pattern EXPERT_NAME = Pattern.compile("^name\\d+$");
+
     /**
      * ช่องที่กรอกแล้วแต่รูปแบบผิด — ร่างบันทึกได้ตามปกติ (กำลังพิมพ์อยู่) แต่ส่งไปลงนามไม่ได้
      *
@@ -341,6 +344,23 @@ public final class DocumentCompleteness {
         }
         if (module == SignatureModule.POSITION && PositionDocTypes.base(documentType) == PositionDocTypes.WORK_PARTICIPATION) {
             return applicantRoleConflict(parse(json));
+        }
+        if (module == SignatureModule.POSITION && documentType == 8) {
+            Map<String, String> data = parse(json);
+            Set<String> experts = data == null ? Set.of() : data.entrySet().stream()
+                    .filter(e -> EXPERT_NAME.matcher(e.getKey()).matches()
+                            && e.getValue() != null && !e.getValue().isBlank())
+                    .map(e -> e.getValue().trim())
+                    .collect(java.util.stream.Collectors.toSet());
+            if (experts.isEmpty()) {
+                return List.of("รายชื่อผู้ทรงคุณวุฒิ: ต้องระบุอย่างน้อย 1 คน");
+            }
+            // ประธานกรรมการเลือกจากผู้ทรงคุณวุฒิในตาราง — หน้ากรอกล้างให้เมื่อคนนั้นถูกลบ ตรงนี้กันการส่งตรง
+            String chair = data.get("committee_name");
+            if (chair != null && !chair.isBlank() && !experts.contains(chair.trim())) {
+                return List.of("ชื่อประธานกรรมการต้องเป็นหนึ่งในรายชื่อผู้ทรงคุณวุฒิ — กรุณาเลือกใหม่จากรายชื่อ");
+            }
+            return List.of();
         }
         if (module == SignatureModule.ACADEMIC && documentType == 8) {
             Map<String, String> data = parse(json);

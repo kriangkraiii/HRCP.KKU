@@ -6,6 +6,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -14,7 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.PositionRequestService;
+import com.ecom.academic.service.SignatureWorkflowService.SignerAssignment;
 import com.ecom.model.UserDtls;
 import com.ecom.support.AbstractFlowTest;
 
@@ -156,6 +160,27 @@ class PositionDocumentEditGateTest extends AbstractFlowTest {
             PositionRequest done = requestWith(PositionRequestStatus.REVISION_REQUESTED);
             positionService.resumeAfterRevision(done.getId(), applicant);
             assertThat(positionService.findById(done.getId()).orElseThrow().getCurrentStatus())
+                    .as("ยังไม่ได้ทำแบบตรวจสอบคุณสมบัติ (เอกสารที่ 7) — กลับไปรับคำร้อง ไม่ข้ามเอกสารที่ 7")
+                    .isEqualTo(PositionRequestStatus.DOCUMENT_RECEIVED);
+        }
+
+        @Test
+        @DisplayName("ส่งกลับหลังแบบตรวจสอบคุณสมบัติลงนามครบแล้ว — แก้เสร็จกลับเข้า ตรวจสอบความถูกต้อง/ครบถ้วน")
+        void aCheckedRequestReturnsToVerification() {
+            UserDtls dean = data.user("dean@example.invalid", "คณบดี", "วิทยาลัยฯ", "ROLE_ADMIN");
+            PositionRequest request = requestWith(PositionRequestStatus.DOCUMENT_RECEIVED);
+            data.positionDocument(request, PositionRequestService.CHECKLIST_DOC, "{\"applicant_name\":\"สมชาย ใจดี\"}");
+            signEveryStep(circulate(SignatureModule.POSITION, request.getId(), PositionRequestService.CHECKLIST_DOC,
+                    "{\"applicant_name\":\"สมชาย ใจดี\"}", officer,
+                    List.of(new SignerAssignment("hr", officer.getId()), new SignerAssignment("dean", dean.getId()))),
+                    officer);
+            assertThat(positionService.findById(request.getId()).orElseThrow().getCurrentStatus())
+                    .isEqualTo(PositionRequestStatus.DOCUMENT_VERIFICATION);
+
+            positionService.markRevisionRequested(request.getId(), APPLICANT_DOC, officer, "แก้สาขา");
+            positionService.resumeAfterRevision(request.getId(), applicant);
+
+            assertThat(positionService.findById(request.getId()).orElseThrow().getCurrentStatus())
                     .isEqualTo(PositionRequestStatus.DOCUMENT_VERIFICATION);
         }
 
