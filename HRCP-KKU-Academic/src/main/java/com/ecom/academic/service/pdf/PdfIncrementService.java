@@ -270,19 +270,25 @@ public final class PdfIncrementService {
             return;
         }
         String text = value == null ? "" : value;
-        // ช่องชื่อใต้ลายเซ็น (centredFields) — วาดวงเล็บแนบชิดชื่อเสมอ ไม่ให้มีช่องไฟ
-        if (centred && !text.isBlank()) {
+        // ช่องที่เป็นทั้งย่อหน้าซึ่งจัดกึ่งกลาง (ชื่อ/ตำแหน่งใต้ลายเซ็น) วาดกึ่งกลางช่องเหมือนที่ Word จัดเอง —
+        // ไม่ว่าผู้ลงนามเติมเองหรือเจ้าหน้าที่กรอกให้ ไม่อย่างนั้นค่าที่สั้นกว่าช่องจะเยื้องไปทางซ้าย
+        boolean centre = centred || field.getCOSObject().getBoolean(BasePdfBuilder.CENTRE, false);
+        // ช่องชื่อใต้ลายเซ็น — วาดวงเล็บแนบชิดชื่อเสมอ ไม่ให้มีช่องไฟ ค่าที่เก็บไว้ยังเป็นชื่อล้วน
+        // (ยกเว้นทางเดิมของผู้ลงนาม) การเทียบกับค่าที่บันทึกในระบบจึงไม่เห็นว่าเปลี่ยนทุกครั้ง
+        String drawn = text;
+        if ((centred || field.getCOSObject().getBoolean(BasePdfBuilder.BRACKETS, false)) && !text.isBlank()) {
             String trimmed = text.trim();
             if (!trimmed.startsWith("(") || !trimmed.endsWith(")")) {
-                text = "(" + trimmed + ")";
+                drawn = "(" + trimmed + ")";
             }
         }
+        String stored = centred ? drawn : text;
         float preferred = daSize(field);
         int lines = field.getCOSObject().getInt(BasePdfBuilder.LINES, 1);
         float pitch = field.getCOSObject().getFloat(BasePdfBuilder.PITCH, 0);
         for (PDAnnotationWidget w : field.getWidgets()) {
             PDRectangle r = w.getRectangle();
-            Fit fit = fit(text, preferred, r.getWidth(), lines);
+            Fit fit = fit(drawn, preferred, r.getWidth(), lines);
             if (fit == null) {
                 throw new DoesNotFitException(name, text);
             }
@@ -298,9 +304,9 @@ public final class PdfIncrementService {
             res.getCOSObject().setItem(COSName.FONT, fonts);
             ap.setResources(res);
             StringBuilder body = new StringBuilder();
-            if (text.isEmpty()) {
+            if (drawn.isEmpty()) {
                 // nothing to draw
-            } else if (TICK.equals(text)) {
+            } else if (TICK.equals(drawn)) {
                 body.append(tick(r, preferred));
             } else if (wrapped != null) {
                 // Line i sits where the base found the template's line i.
@@ -310,8 +316,8 @@ public final class PdfIncrementService {
                     body.append(thai.operators(FONT, size, wrapped.get(i), 0, firstBaseline - i * pitch));
                 }
             } else {
-                float x = centred ? Math.max(0, (r.getWidth() - thai.width(text, size)) / 2) : 0;
-                body.append(thai.operators(FONT, size, text, x, baseline(r)));
+                float x = centre ? Math.max(0, (r.getWidth() - thai.width(drawn, size)) / 2) : 0;
+                body.append(thai.operators(FONT, size, drawn, x, baseline(r)));
             }
             String ops = "/Tx BMC\n" + body + "EMC\n";
             try (var os = ap.getContentStream().createOutputStream(COSName.FLATE_DECODE)) {
@@ -324,7 +330,7 @@ public final class PdfIncrementService {
         }
         // A push button has no value a viewer could redraw; the text goes in /TU,
         // where search, screen readers and valueOf() find it.
-        field.getCOSObject().setItem(isPushButton(field) ? COSName.TU : COSName.V, new COSString(text));
+        field.getCOSObject().setItem(isPushButton(field) ? COSName.TU : COSName.V, new COSString(stored));
         field.getCOSObject().setNeedToBeUpdated(true);
     }
 

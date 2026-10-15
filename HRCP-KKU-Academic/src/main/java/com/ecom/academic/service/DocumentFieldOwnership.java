@@ -54,8 +54,8 @@ public final class DocumentFieldOwnership {
             SignatureModule.POSITION, Map.of(
                     3, Set.of("dean_name", "dean_position"),
                     4, Set.of("memo_no", "date", "department_head_name"),
-                    6, Set.of("memo_no", "date", "applicant_signature_name", "dean_signature_name",
-                            "position_title")));
+                    // ชื่อใต้ลายเซ็นผู้ขอคือ ({{applicant_title}}{{applicant_name}}) จากข้อมูลของผู้ขอเอง ไม่ใช่ช่องของแอดมิน
+                    6, Set.of("memo_no", "date", "dean_signature_name", "position_title")));
 
     /**
      * ช่องหัวบันทึกข้อความที่สารบรรณเป็นคนออก

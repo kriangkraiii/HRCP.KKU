@@ -7,6 +7,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.ecom.external.repository.ScopusPublicationRepository;
 
 import com.ecom.support.AbstractFlowTest;
 import com.ecom.support.TestDataFactory;
@@ -24,6 +27,9 @@ import com.ecom.support.TestDataFactory;
 class PublicationAdminPageRenderTest extends AbstractFlowTest {
 
     private static final long SOMCHAI = 4101L;
+
+    @Autowired
+    private ScopusPublicationRepository publications;
 
     private String openPublicationsPage(String queryString) throws Exception {
         data.admin();
@@ -75,6 +81,29 @@ class PublicationAdminPageRenderTest extends AbstractFlowTest {
     @DisplayName("ยังไม่มีผลงานจากแหล่งใดเลย — หน้าต้องเปิดได้ตามปกติ")
     void anEmptyDatabaseStillRenders() throws Exception {
         assertThat(openPublicationsPage(""))
-                .contains("ไม่พบผลงานตามเงื่อนไขที่เลือก");
+                .contains("ไม่พบผลงานตามเงื่อนไขที่เลือก")
+                .as("ผลงานดึงได้จากหลายแหล่ง ข้อความชวนดึงข้อมูลต้องไม่บอกว่าเป็น Scopus")
+                .doesNotContain("ดึงผลงาน Scopus");
+    }
+
+    @Test
+    @DisplayName("หน้ารายละเอียดของผลงานจาก OpenAlex ต้องไม่บอกว่าเป็น Scopus")
+    void theDetailPageNamesTheRealSource() throws Exception {
+        data.admin();
+        data.faculty(SOMCHAI, TestDataFactory.APPLICANT_EMAIL);
+        var p = data.harvestedPublication(SOMCHAI, "ผลงานจาก OpenAlex", 2024, "OPENALEX");
+        p.setScopusUrl("https://openalex.org/W1");
+        publications.save(p);
+
+        String page = mvc.perform(get("/admin/publications/" + p.getId())
+                .with(user(TestDataFactory.ADMIN_EMAIL).roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(page)
+                .contains("เปิดใน OpenAlex")
+                .contains("รหัสผลงาน (OpenAlex)")
+                .doesNotContain("เปิดใน Scopus")
+                .doesNotContain("Scopus EID");
     }
 }

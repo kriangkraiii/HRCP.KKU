@@ -1899,7 +1899,6 @@ public class SignatureWorkflowService {
             // ช่องตำแหน่งเติมจากตำแหน่งในบัญชีของคนที่เลือก แก้ในฟอร์มไม่ได้ — บอกว่าต้องไปแก้ที่ไหน
             Map.entry("dean_position", "ตำแหน่งคณบดี ซึ่งระบบเติมจากบัญชีผู้ใช้ที่เลือก ถ้าว่างให้ตั้งตำแหน่งในข้อมูลผู้ใช้ของผู้นั้นก่อน"),
             Map.entry("department_head_name", "ชื่อหัวหน้าสาขา"),
-            Map.entry("applicant_signature_name", "ชื่อผู้ขอใต้ลายมือชื่อ"),
             Map.entry("dean_signature_name", "ชื่อคณบดีใต้ลายมือชื่อ"),
             Map.entry("position_title", "ตำแหน่งใต้ลายมือชื่อ"),
             Map.entry("hr_staff_name", "ชื่อเจ้าหน้าที่ผู้ตรวจ"));

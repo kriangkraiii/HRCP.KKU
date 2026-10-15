@@ -144,6 +144,23 @@ public final class BasePdfBuilder {
     static final COSName LINES = COSName.getPDFName("HRCPLines");
     static final COSName PITCH = COSName.getPDFName("HRCPPitch");
 
+    /**
+     * The field is the whole of a centred paragraph (a name or position under a signature):
+     * its value is drawn centred in the box, as Word would have centred the text itself.
+     */
+    static final COSName CENTRE = COSName.getPDFName("HRCPCentre");
+
+    /** The template's "( )" round the field were taken out of the base; the value is drawn inside them. */
+    static final COSName BRACKETS = COSName.getPDFName("HRCPBrackets");
+
+    /**
+     * Reserve for a field alone on a centred line. Full academic titles run long
+     * ("รองศาสตราจารย์ ดร.รองคณบดี ทดสอบ" is about 240 pt at 16 pt) and a 45-space reserve
+     * shrinks them below the text around them. The value is centred in the box, so a wide
+     * reserve does not move it off the middle; one wider than its line shrinks as any other.
+     */
+    static final int CENTRED_RUN = 75;
+
     public record Layout(List<Box> texts, List<Box> signatures) {
     }
 
@@ -206,6 +223,15 @@ public final class BasePdfBuilder {
         }
 
         byte[] template = renderer.docx(overrides, pictures, signatureHeightEmu);
+        Set<String> centred = new HashSet<>();
+        Set<String> bracketed = new HashSet<>();
+        reserve(template, distinct(wanted), lines, new LinkedHashMap<>(), new ArrayList<>(), new HashSet<>(),
+                centred, bracketed);
+        for (String f : centred) {
+            if (wanted.get(f) != TICK_RUN && lines.getOrDefault(f, 1) == 1) {
+                wanted.merge(f, CENTRED_RUN, Math::max);
+            }
+        }
         Map<String, Integer> original = new LinkedHashMap<>(wanted);
         // Fields that sit on a line of their own even at the shortest reserve: the
         // template's own layout breaks there, so they keep their full length.
@@ -256,7 +282,7 @@ public final class BasePdfBuilder {
                 }
                 continue;
             }
-            return finish(rendered, mergeLines(found, lines), byWidth, slots);
+            return finish(rendered, mergeLines(found, lines), byWidth, slots, centred, bracketed);
         }
     }
 
@@ -319,10 +345,10 @@ public final class BasePdfBuilder {
     }
 
     private Result finish(byte[] rendered, List<Box> found, Map<Integer, SlotSpec> byWidth,
-            List<SlotSpec> slots) throws IOException, BaseBuildException {
+            List<SlotSpec> slots, Set<String> centred, Set<String> bracketed) throws IOException, BaseBuildException {
         List<Box> textBoxes = new ArrayList<>(found);
         List<Box> sigBoxes = locateSlots(rendered, byWidth);
-        byte[] pdf = installForm(rendered, textBoxes, sigBoxes, slots);
+        byte[] pdf = installForm(rendered, textBoxes, sigBoxes, slots, centred, bracketed);
         return new Result(pdf, new Layout(textBoxes, sigBoxes));
     }
 
@@ -335,6 +361,16 @@ public final class BasePdfBuilder {
      */
     static byte[] reserve(byte[] docx, Map<String, Integer> lengths, Map<String, Integer> lines,
             Map<String, Integer> seen, List<String> order, Set<String> inline) throws IOException {
+        return reserve(docx, lengths, lines, seen, order, inline, new HashSet<>(), new HashSet<>());
+    }
+
+    /**
+     * @param centred   filled with the fields that are the whole of a centred paragraph
+     * @param bracketed filled with the name fields whose "( )" were taken out of the template
+     */
+    static byte[] reserve(byte[] docx, Map<String, Integer> lengths, Map<String, Integer> lines,
+            Map<String, Integer> seen, List<String> order, Set<String> inline, Set<String> centred,
+            Set<String> bracketed) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(docx));
                 ZipOutputStream zout = new ZipOutputStream(out)) {
@@ -386,7 +422,9 @@ public final class BasePdfBuilder {
                                 if (textBefore.endsWith("(") && tail.startsWith(")")) {
                                     textBefore = textBefore.substring(0, textBefore.length() - 1);
                                     tail = tail.substring(1);
+                                    bracketed.add(l.getKey());
                                 } else if (textBefore.trim().endsWith("(") && tail.trim().startsWith(")")) {
+                                    bracketed.add(l.getKey());
                                     int parenBefore = textBefore.lastIndexOf('(');
                                     if (textBefore.substring(parenBefore + 1).isBlank()) {
                                         textBefore = textBefore.substring(0, parenBefore);
@@ -408,8 +446,14 @@ public final class BasePdfBuilder {
                                     if (mPre.find() && mPost.find()) {
                                         prefix = before + mPre.replaceFirst("$1$2");
                                         tail = mPost.replaceFirst("$1$2");
+                                        bracketed.add(l.getKey());
                                     }
                                 }
+                            }
+
+                            if (pStart >= 0 && alone(prefix.substring(Math.min(pStart, prefix.length())) + textBefore, tail)
+                                    && centredParagraph(xml, pStart)) {
+                                centred.add(l.getKey());
                             }
 
                             String run = String.valueOf(NBSP).repeat(l.getValue());
@@ -431,6 +475,31 @@ public final class BasePdfBuilder {
             }
         }
         return out.toByteArray();
+    }
+
+    /** No other text in the paragraph: before the field ({@code before}) or up to its end ({@code tail}). */
+    private static boolean alone(String before, String tail) {
+        int end = tail.indexOf("</w:p>");
+        String after = end < 0 ? tail : tail.substring(0, end);
+        return text(before).isBlank() && text(after).isBlank();
+    }
+
+    private static String text(String xml) {
+        return xml.replaceAll("<[^>]+>", "").replace(NBSP, ' ');
+    }
+
+    /** The paragraph starting at {@code pStart} is centred in its own properties. */
+    private static boolean centredParagraph(String xml, int pStart) {
+        int open = xml.indexOf('>', pStart);
+        int pEnd = xml.indexOf("</w:p>", open);
+        if (!xml.startsWith("<w:pPr", open + 1) || pEnd < 0) {
+            return false;
+        }
+        int pPrEnd = xml.indexOf("</w:pPr>", open);
+        if (pPrEnd < 0 || pPrEnd > pEnd) {
+            return false;
+        }
+        return xml.substring(open, pPrEnd).matches("(?s).*<w:jc w:val=\"center\"\s*/>.*");
     }
 
     /**
@@ -610,7 +679,8 @@ public final class BasePdfBuilder {
 
     // ------------------------------------------------------------------ form
 
-    private static byte[] installForm(byte[] pdf, List<Box> texts, List<Box> sigs, List<SlotSpec> slots) throws IOException {
+    private static byte[] installForm(byte[] pdf, List<Box> texts, List<Box> sigs, List<SlotSpec> slots,
+            Set<String> centred, Set<String> bracketed) throws IOException {
         try (PDDocument doc = Loader.loadPDF(pdf);
                 InputStream ttf = BasePdfBuilder.class.getClassLoader().getResourceAsStream(ThaiText.FONT_RESOURCE)) {
             // Whole font, not a subset: later revisions draw any glyph and must not embed anything new.
@@ -639,6 +709,12 @@ public final class BasePdfBuilder {
                             String.format(Locale.ROOT, "/%s %.1f Tf 0 g", PdfIncrementService.FONT, b.fontSize()));
                     // Filled by the server only.
                     t.setReadOnly(true);
+                    if (centred.contains(b.field())) {
+                        t.getCOSObject().setBoolean(CENTRE, true);
+                    }
+                    if (bracketed.contains(b.field())) {
+                        t.getCOSObject().setBoolean(BRACKETS, true);
+                    }
                     textFields.put(b.field(), t);
                     form.getFields().add(t);
                     w = t.getWidgets().get(0);

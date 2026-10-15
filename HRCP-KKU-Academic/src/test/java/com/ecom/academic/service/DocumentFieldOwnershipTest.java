@@ -435,4 +435,13 @@ class DocumentFieldOwnershipTest {
             assertThat(DocumentFieldOwnership.mergeJson(P1, 1, false, null, map())).isNull();
         }
     }
+
+    @Test
+    @DisplayName("เอกสารจริยธรรมการวิจัย (เฟส 2) — ชื่อใต้ลายเซ็นผู้ขอมาจากข้อมูลผู้ขอ แอดมินไม่ต้องพิมพ์เอง")
+    void applicantNameUnderSignatureIsNotAnOfficerField() {
+        assertThat(DocumentFieldOwnership.adminFields(P2, 6)).doesNotContain("applicant_signature_name");
+        assertThat(DocumentCompleteness.missingAdminFields(P2, 6,
+                "{\"dean_signature_name\":\"ศ.ดร.คณบดี วิทยาลัย\",\"position_title\":\"คณบดีวิทยาลัยการคอมพิวเตอร์\"}"))
+                .as("กรอกคณบดีและตำแหน่งแล้วก็ส่งต่อได้").isEmpty();
+    }
 }

@@ -219,7 +219,7 @@
           <div class="detail-section">
             <div class="detail-section-header">
               <h5><i class="fas fa-folder-open"></i> เอกสารในคำร้อง</h5>
-              <span class="badge bg-secondary" th:text="${attachmentCount} + ' / 10 ไฟล์'"></span>
+              <span class="badge bg-secondary" th:text="${attachmentCount} + ' / 20 ไฟล์'"></span>
             </div>
             <div class="detail-section-body">
               <!--/* Flow ข้อ 13-14: ฉบับแก้ไขที่ผู้ยื่นส่งกลับมา — เจ้าหน้าที่ส่งต่อให้คณะอนุกรรมการ */-->
@@ -323,7 +323,7 @@
             </div>
           </div>
 
-          <!--/* History Tabs: Status History & Edit History */-->
+          <!--/* History Tabs: Status, Edit & Signature History */-->
           <div class="detail-section">
             <div
               class="detail-section-header s-request-detail-2"
@@ -345,6 +345,14 @@
                 >
                   <i class="fas fa-edit"></i> ประวัติการแก้ไข
                   <span class="htb-count" th:text="${editHistory != null ? editHistory.size() : 0}">0</span>
+                </button>
+                <button
+                  type="button"
+                  class="history-tab-btn"
+                  data-target="sigHistPane"
+                >
+                  <i class="fas fa-signature"></i> ประวัติการลงนาม
+                  <span class="htb-count" th:text="${signatureHistory != null ? signatureHistory.size() : 0}">0</span>
                 </button>
               </div>
             </div>
@@ -451,6 +459,54 @@
                 <div id="editHistNoMatch" class="admin-table-empty js-hidden">
                   <i class="fas fa-search"></i>
                   <p>ไม่มีประวัติการแก้ไขสำหรับเอกสารที่เลือก</p>
+                </div>
+              </div>
+
+              <!--/* Signature History Pane — audit ของระบบลงนาม (SignatureAuditEvent) ทุกเอกสารของคำร้องนี้ */-->
+              <div id="sigHistPane" class="js-hidden">
+                <div class="mb-3">
+                  <select id="sigHistFilter" class="form-select form-select-sm hist-filter">
+                    <option value="all">ทุกเอกสาร</option>
+                    <option
+                      th:each="entry : ${docLabels}"
+                      th:value="${entry.key}"
+                      th:text="'เอกสารที่ ' + ${entry.key} + ' — ' + ${entry.value}"
+                    ></option>
+                  </select>
+                </div>
+                <div
+                  th:each="ev : ${signatureHistory}"
+                  class="history-entry sig-log-entry"
+                  th:with="docType=${ev.signatureRequest.documentType}"
+                  th:attr="data-doc-type=${docType}"
+                >
+                  <span class="history-entry-badge" th:classappend="'hist-sig-' + ${ev.eventType.name()}">
+                    <i th:class="${ev.eventType.icon}"></i>
+                    [[${ev.eventType.thaiLabel}]]
+                  </span>
+                  <div class="history-entry-content">
+                    <div class="history-entry-date">
+                      <strong th:text="'เอกสารที่ ' + ${docType}">เอกสาร</strong>
+                    </div>
+                    <div class="history-entry-note" th:text="${docLabels[docType]}"></div>
+                    <div th:if="${ev.detail != null and !#strings.isEmpty(ev.detail)}"
+                         class="history-entry-note" th:text="${ev.detail}"></div>
+                    <div class="history-entry-by">
+                      <i class="fas fa-clock me-1"></i>
+                      [[${@thaiDateUtil.formatWithSeconds(ev.createdAt)}]]
+                    </div>
+                    <div th:if="${ev.actor != null}" class="history-entry-by">
+                      <i class="fas fa-user me-1"></i> โดย: [[${ev.actor.name}]]
+                    </div>
+                  </div>
+                </div>
+                <div th:if="${signatureHistory == null or signatureHistory.isEmpty()}" class="admin-table-empty">
+                  <i class="fas fa-inbox"></i>
+                  <p>ยังไม่มีประวัติการลงนาม</p>
+                </div>
+                <div id="sigHistNoMatch" class="admin-table-empty js-hidden">
+                  <i class="fas fa-search"></i>
+                  <p>ไม่มีประวัติการลงนามสำหรับเอกสารที่เลือก</p>
                 </div>
               </div>
             </div>
@@ -712,16 +768,20 @@
             document
               .getElementById("editHistPane")
               .classList.toggle("js-hidden", target !== "editHistPane");
+            document
+              .getElementById("sigHistPane")
+              .classList.toggle("js-hidden", target !== "sigHistPane");
           });
         });
 
-      // Edit history document filter
-      var editFilter = document.getElementById("editHistFilter");
-      if (editFilter) {
-        editFilter.addEventListener("change", function () {
+      // History document filters (edit + signature)
+      function bindHistFilter(filterId, entrySelector, noMatchId) {
+        var filter = document.getElementById(filterId);
+        if (!filter) return;
+        filter.addEventListener("change", function () {
           var val = this.value;
-          var entries = document.querySelectorAll(".edit-log-entry");
-          var noMatch = document.getElementById("editHistNoMatch");
+          var entries = document.querySelectorAll(entrySelector);
+          var noMatch = document.getElementById(noMatchId);
           var visibleCount = 0;
 
           entries.forEach(function (el) {
@@ -738,6 +798,8 @@
           }
         });
       }
+      bindHistFilter("editHistFilter", ".edit-log-entry", "editHistNoMatch");
+      bindHistFilter("sigHistFilter", ".sig-log-entry", "sigHistNoMatch");
 
     </script>
 

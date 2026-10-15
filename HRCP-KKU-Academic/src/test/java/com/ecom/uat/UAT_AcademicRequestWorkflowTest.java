@@ -411,10 +411,10 @@ class UAT_AcademicRequestWorkflowTest {
         }
 
         @Test
-        @DisplayName("TC-04: อัปโหลดไฟล์เกิน 10 ไฟล์")
+        @DisplayName("TC-04: อัปโหลดไฟล์เกิน 20 ไฟล์")
         void uploadAttachment_overLimit_shouldFail() {
-            // Given: คำร้องมีแนบไฟล์แล้ว 10 ไฟล์
-            // When: อัปโหลดไฟล์ที่ 11
+            // Given: คำร้องมีแนบไฟล์แล้ว 20 ไฟล์
+            // When: อัปโหลดไฟล์ที่ 21
             // Then: redirect พร้อม error=max_attachments
             assertTrue(true, "ปฏิเสธไฟล์เกินจำนวน");
         }

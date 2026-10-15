@@ -40,14 +40,14 @@
                 </div>
 
                 <div class="d-flex flex-wrap gap-2">
-                    <!--/* DOI คือทางไปอ่านฉบับเต็มที่สำนักพิมพ์ ส่วน Scopus ให้หน้าบรรณานุกรม */-->
+                    <!--/* DOI คือทางไปอ่านฉบับเต็มที่สำนักพิมพ์ ส่วน url คือหน้าบรรณานุกรมของแหล่งที่ดึงมา */-->
                     <a th:if="${p.doi}" th:href="'https://doi.org/' + ${p.doi}"
                        target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary">
                         <i class="fas fa-file-lines"></i> อ่านฉบับเต็ม (DOI)
                     </a>
                     <a th:if="${p.url}" th:href="${p.url}" target="_blank" rel="noopener noreferrer"
                        class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-arrow-up-right-from-square"></i> เปิดใน Scopus
+                        <i class="fas fa-arrow-up-right-from-square"></i> <span th:text="'เปิดใน ' + ${p.sourceLabel()}">เปิดในแหล่งข้อมูล</span>
                     </a>
                 </div>
             </div>
@@ -101,7 +101,7 @@
                     <dd class="col-sm-9" th:if="${raw != null and raw.fundSponsor != null}"
                         th:text="${raw.fundSponsor}">-</dd>
 
-                    <dt class="col-sm-3">Scopus EID</dt>
+                    <dt class="col-sm-3" th:text="${p.sourceLabel() == 'Scopus'} ? 'Scopus EID' : 'รหัสผลงาน (' + ${p.sourceLabel()} + ')'">รหัสผลงาน</dt>
                     <dd class="col-sm-9" th:text="${p.eid}">-</dd>
                 </dl>
             </div>

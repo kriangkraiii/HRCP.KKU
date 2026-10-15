@@ -239,6 +239,19 @@ body {
   }
 }
 
+/* ขั้นที่รอผู้ยื่นแก้ไข — กระพริบเหมือนขั้นที่กำลังดำเนินการ แต่เป็นสีส้ม */
+@keyframes stepPulseRevise {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 127, 23, 0.45);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(245, 127, 23, 0);
+  }
+}
+
 /* ===== Sidebar ===== */
 .sidebar {
   position: fixed;
@@ -433,11 +446,15 @@ body {
 }
 
 .sidebar-link>span:first-of-type,
+/* ชื่อเมนูยาว (เช่น "คำร้องขอตำแหน่งทางวิชาการ" ที่มีตัวเลขต่อท้าย) ขึ้นบรรทัดใหม่ ไม่ตัดเป็น "..." */
 .sidebar-link .sidebar-link-text {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.sidebar-link .badge {
+  flex-shrink: 0;
 }
 
 .sidebar-link:hover {
@@ -1947,6 +1964,8 @@ body.modal-open .sidebar-toggle {
   border-color: var(--color-warning, #f57f17);
   background: var(--color-warning, #f57f17);
   color: #fff !important;
+  box-shadow: 0 0 0 4px rgba(245, 127, 23, 0.2);
+  animation: stepPulseRevise 2s var(--ease-out-quart) infinite;
 }
 
 .progress-step.rejected .step-icon {
@@ -2546,6 +2565,8 @@ body.modal-open .sidebar-toggle {
   border-color: var(--color-warning, #f57f17);
   background: var(--color-warning, #f57f17);
   color: #fff !important;
+  box-shadow: 0 0 0 4px rgba(245, 127, 23, 0.2);
+  animation: stepPulseRevise 2.5s var(--ease-out-quart) infinite;
 }
 
 .timeline-v2-step.t-rejected .timeline-v2-icon {
@@ -4402,6 +4423,8 @@ body.modal-open .sidebar-toggle {
   border-color: var(--color-warning, #f57f17) !important;
   color: #ffffff !important;
   box-shadow: 0 0 0 4px rgba(245, 127, 23, 0.25);
+  transform: scale(1.12);
+  animation: stepPulseRevise 2s var(--ease-out-quart) infinite;
 }
 
 .detail-progress-step.dp-revise .detail-progress-step-label {

@@ -78,6 +78,21 @@ public record PublicationDto(
                 p.getTciTier());
     }
 
+    /** Display name of the source the row was harvested from; rows predating multi-source sync are Scopus. */
+    public String sourceLabel() {
+        if (dataSource == null) {
+            return "Scopus";
+        }
+        return switch (dataSource) {
+            case "SCOPUS" -> "Scopus";
+            case "OPENALEX" -> "OpenAlex";
+            case "CROSSREF" -> "Crossref";
+            case "THAIJO" -> "ThaiJO";
+            case "KKUIR" -> "KKU IR";
+            default -> dataSource;
+        };
+    }
+
     /** E-journals use an article number where print journals give a page range. */
     private static String pageLabel(ScopusPublication p) {
         if (p.getPageRange() != null && !p.getPageRange().isBlank()) {

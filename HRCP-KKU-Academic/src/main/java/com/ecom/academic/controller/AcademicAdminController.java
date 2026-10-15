@@ -501,6 +501,7 @@ public class AcademicAdminController {
 
         model.addAttribute("statusHistory", requestService.getStatusHistory(id));
         model.addAttribute("editHistory", requestService.getEditHistory(id));
+        model.addAttribute("signatureHistory", signatureWorkflow.auditTrailOf(SignatureModule.ACADEMIC, id));
         // กำหนดเวลาตามประกาศ มข. 1669/2569 ข้อ 10.3 (45 / 7 / 30 วันทำการ)
         model.addAttribute("evaluationDeadlines", requestService.deadlines(id));
         model.addAttribute("committeeRankWarnings", requestService.committeeRankWarnings(request));
