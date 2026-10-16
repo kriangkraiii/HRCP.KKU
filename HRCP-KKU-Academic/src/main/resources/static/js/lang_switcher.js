@@ -1,16 +1,15 @@
 /*
- * Language switcher (TH <-> EN) backed by the Google Translate website widget.
+ * Single-click language toggle switch (TH <-> EN) backed by the Google Translate website widget.
  *
  * Shared by templates/academic/base_academic.html and templates/guest/login.html.
- * Expected markup: #google_translate_element, #langDropdownBtn, #langDropdownIcon,
- * #langDropdownMenu (.lang-dropdown-item[data-lang]), #langCurrentLabel,
- * #langLoadingOverlay, #langLoadingTitle, #langLoadingSub.
+ * Expected markup: #google_translate_element, #langDropdownBtn (.lang-switch-opt[data-lang]),
+ * #langDropdownIcon, #langLoadingOverlay, #langLoadingTitle, #langLoadingSub.
  *
  * Why it is built this way:
  * - Google intermittently answers element.js with a 302 to google.com/sorry (rate limit
  *   for a shared campus IP). The CSP blocks that redirect, so the script fails to load.
  *   We alternate between the two official hosts and retry with backoff.
- * - The widget is only loaded when it is actually needed (user picks EN, or the
+ * - The widget is only loaded when it is actually needed (user switches to EN, or the
  *   googtrans cookie says EN), which keeps the request volume to Google low.
  * - The loading overlay follows the real translation progress (Thai characters left in
  *   the DOM + DOM quiet period) instead of a fixed timer.
@@ -227,16 +226,16 @@
     document.addEventListener('DOMContentLoaded', function () {
         var btn = document.getElementById('langDropdownBtn');
         var icon = document.getElementById('langDropdownIcon');
-        var menu = document.getElementById('langDropdownMenu');
         var label = document.getElementById('langCurrentLabel');
         var overlay = document.getElementById('langLoadingOverlay');
         var titleEl = document.getElementById('langLoadingTitle');
         var subEl = document.getElementById('langLoadingSub');
-        var items = menu ? Array.prototype.slice.call(menu.querySelectorAll('.lang-dropdown-item')) : [];
-        if (!btn || !menu) return;
+        if (!btn) return;
+
+        var opts = Array.prototype.slice.call(btn.querySelectorAll('.lang-switch-opt[data-lang]'));
 
         // Our own UI must never be rewritten by Google Translate.
-        [btn, menu, overlay].forEach(function (el) {
+        [btn, overlay].forEach(function (el) {
             if (el) { el.classList.add('notranslate'); el.setAttribute('translate', 'no'); }
         });
         var spinnerIcon = overlay ? overlay.querySelector('.lang-loading-spinner i') : null;
@@ -244,8 +243,15 @@
 
         function renderActive(lang) {
             activeLang = lang;
+            btn.setAttribute('data-active-lang', lang);
+            btn.setAttribute('aria-checked', lang === 'en' ? 'true' : 'false');
+            btn.setAttribute('aria-label', lang === 'en'
+                ? 'Language: English (Click to switch to Thai)'
+                : 'ภาษา: ไทย (คลิกเพื่อสลับเป็นภาษาอังกฤษ)');
             if (label) label.textContent = lang.toUpperCase();
-            items.forEach(function (it) { it.classList.toggle('active', it.dataset.lang === lang); });
+            opts.forEach(function (opt) {
+                opt.classList.toggle('active', opt.dataset.lang === lang);
+            });
         }
 
         function setText(title, sub) {
@@ -331,70 +337,37 @@
         }
 
         function selectLang(lang) {
-            closeMenu(false);
             if (busy || lang === activeLang) return;
+
+            // Optimistically slide the switch thumb immediately on click for tactile responsiveness.
+            renderActive(lang);
 
             // Widget was never loaded (or failed): the page is still in Thai, nothing to undo.
             if (lang === 'th' && !enginePromise && !isTranslatedClass()) {
                 setGoogTransCookie('th');
-                renderActive('th');
                 notifyChange('th');
                 return;
             }
             translateTo(lang, true);
         }
 
-        function openMenu() {
-            menu.classList.add('show');
-            btn.setAttribute('aria-expanded', 'true');
-            var first = menu.querySelector('.lang-dropdown-item');
-            if (first) first.focus();
-        }
-
-        function closeMenu(restoreFocus) {
-            if (!menu.classList.contains('show')) return;
-            menu.classList.remove('show');
-            btn.setAttribute('aria-expanded', 'false');
-            if (restoreFocus !== false) btn.focus();
-        }
-
         renderActive(activeLang);
 
         btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (menu.classList.contains('show')) closeMenu(); else openMenu();
+            e.preventDefault();
+            var nextLang = activeLang === 'th' ? 'en' : 'th';
+            selectLang(nextLang);
         });
+
         btn.addEventListener('keydown', function (e) {
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            if (e.key === 'ArrowLeft') {
                 e.preventDefault();
-                if (!menu.classList.contains('show')) openMenu();
-            } else if (e.key === 'Escape') {
-                closeMenu();
+                selectLang('th');
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                selectLang('en');
             }
         });
-
-        items.forEach(function (item, idx) {
-            item.addEventListener('click', function (e) {
-                e.stopPropagation();
-                selectLang(this.dataset.lang);
-            });
-            item.addEventListener('keydown', function (e) {
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    (items[idx + 1] || items[0]).focus();
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    (items[idx - 1] || items[items.length - 1]).focus();
-                } else if (e.key === 'Escape') {
-                    closeMenu();
-                } else if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    selectLang(this.dataset.lang);
-                }
-            });
-        });
-
-        document.addEventListener('click', function () { closeMenu(false); });
 
         // User chose English earlier: translate this page too (button spinner only, no blocking overlay).
         if (activeLang === 'en') translateTo('en', false);

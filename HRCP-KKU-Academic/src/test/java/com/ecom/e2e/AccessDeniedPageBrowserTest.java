@@ -93,4 +93,123 @@ class AccessDeniedPageBrowserTest extends PlaywrightTestBase {
         page.waitForURL("**/user/academic/dashboard**");
         assertThat(page.url()).contains("/user/academic/dashboard");
     }
+
+    @Test
+    @DisplayName("สวิตช์เปลี่ยนภาษาแบบคลิกเดียว (TH ↔ EN) สลับสถานะได้ทันทีทั้งหน้าเข้าสู่ระบบและแถบด้านบน")
+    void singleClickLanguageSwitchTogglesBetweenThAndEn() {
+        java.nio.file.Path artifactDir = java.nio.file.Paths.get(
+                "/Users/kriangkrai/.gemini/antigravity/brain/a1ddee9c-65bb-4f3e-8c66-a7f39f8a5409");
+
+        // จำลองสคริปต์ Google Translate เพื่อให้ทดสอบการสลับ TH <-> EN ได้เสถียรโดยไม่พึ่งเครือข่ายภายนอก
+        page.route("**/translate_a/element.js*", route -> {
+            String mockScript = ""
+                    + "window.google = { translate: { TranslateElement: function(opts, id) {"
+                    + "  var root = document.getElementById(id);"
+                    + "  if (root && !root.querySelector('select.goog-te-combo')) {"
+                    + "    var sel = document.createElement('select');"
+                    + "    sel.className = 'goog-te-combo';"
+                    + "    sel.innerHTML = '<option value=\"th\">Thai</option><option value=\"en\">English</option>';"
+                    + "    sel.addEventListener('change', function() {"
+                    + "      if (sel.value === 'en') document.documentElement.classList.add('translated-ltr');"
+                    + "      else document.documentElement.classList.remove('translated-ltr');"
+                    + "      var tick = document.createElement('span');"
+                    + "      tick.className = 'd-none';"
+                    + "      document.body.appendChild(tick);"
+                    + "    });"
+                    + "    root.appendChild(sel);"
+                    + "  }"
+                    + "} } };"
+                    + "if (typeof window.googleTranslateElementInit === 'function') window.googleTranslateElementInit();";
+            route.fulfill(new com.microsoft.playwright.Route.FulfillOptions()
+                    .setStatus(200)
+                    .setContentType("application/javascript")
+                    .setBody(mockScript));
+        });
+
+        page.setViewportSize(1440, 900);
+
+        // 1. ตรวจสอบสวิตช์ในหน้าเข้าสู่ระบบ (/signin)
+        page.navigate(baseUrl() + "/signin");
+        com.microsoft.playwright.Locator loginSwitch = page.locator("#langDropdownBtn");
+        assertThat(loginSwitch.getAttribute("role")).isEqualTo("switch");
+        assertThat(loginSwitch.getAttribute("data-active-lang")).isEqualTo("th");
+        assertThat(loginSwitch.getAttribute("aria-checked")).isEqualTo("false");
+        assertThat(page.locator("#langDropdownMenu").count()).isZero();
+
+        if (java.nio.file.Files.isDirectory(artifactDir)) {
+            page.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
+                    .setPath(artifactDir.resolve("lang_switch_login_th.png"))
+                    .setClip(980, 0, 460, 120));
+        }
+
+        // คลิกครั้งเดียวเพื่อสลับเป็น EN บนหน้าเข้าสู่ระบบ
+        loginSwitch.click();
+        page.waitForCondition(() -> "en".equals(loginSwitch.getAttribute("data-active-lang"))
+                && "false".equals(loginSwitch.getAttribute("aria-busy")));
+        assertThat(loginSwitch.getAttribute("aria-checked")).isEqualTo("true");
+        page.mouse().move(0, 0);
+        page.waitForTimeout(350);
+
+        if (java.nio.file.Files.isDirectory(artifactDir)) {
+            page.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
+                    .setPath(artifactDir.resolve("lang_switch_login_en.png"))
+                    .setClip(980, 0, 460, 120));
+        }
+
+        // คลิกอีกหนึ่งครั้งเพื่อสลับกลับเป็น TH
+        loginSwitch.click();
+        page.waitForCondition(() -> "th".equals(loginSwitch.getAttribute("data-active-lang"))
+                && "false".equals(loginSwitch.getAttribute("aria-busy")));
+        assertThat(loginSwitch.getAttribute("aria-checked")).isEqualTo("false");
+
+        // 2. เข้าสู่ระบบและตรวจสอบสวิตช์บน Topbar (/user/academic/dashboard)
+        data.applicant();
+        signIn(TestDataFactory.APPLICANT_EMAIL, TestDataFactory.PASSWORD);
+        page.navigate(baseUrl() + "/user/academic/dashboard");
+
+        com.microsoft.playwright.Locator topbarSwitch = page.locator("#langDropdownBtn");
+        assertThat(topbarSwitch.getAttribute("role")).isEqualTo("switch");
+        assertThat(topbarSwitch.getAttribute("data-active-lang")).isEqualTo("th");
+
+        if (java.nio.file.Files.isDirectory(artifactDir)) {
+            page.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
+                    .setPath(artifactDir.resolve("lang_switch_topbar_light_th.png"))
+                    .setClip(740, 0, 700, 72));
+        }
+
+        // คลิกครั้งเดียวสลับเป็น EN บน Topbar
+        topbarSwitch.click();
+        page.waitForCondition(() -> "en".equals(topbarSwitch.getAttribute("data-active-lang"))
+                && "false".equals(topbarSwitch.getAttribute("aria-busy")));
+        assertThat(topbarSwitch.getAttribute("aria-checked")).isEqualTo("true");
+        page.mouse().move(0, 0);
+        page.waitForTimeout(350);
+
+        if (java.nio.file.Files.isDirectory(artifactDir)) {
+            page.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
+                    .setPath(artifactDir.resolve("lang_switch_topbar_light_en.png"))
+                    .setClip(740, 0, 700, 72));
+        }
+
+        // ตรวจสอบในโหมดมืด (Dark Mode)
+        page.evaluate("() => document.documentElement.setAttribute('data-theme', 'dark')");
+        page.waitForTimeout(200);
+        if (java.nio.file.Files.isDirectory(artifactDir)) {
+            page.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
+                    .setPath(artifactDir.resolve("lang_switch_topbar_dark_en.png"))
+                    .setClip(740, 0, 700, 72));
+        }
+
+        // คลิกครั้งเดียวสลับกลับเป็น TH ในโหมดมืด
+        topbarSwitch.click();
+        page.waitForCondition(() -> "th".equals(topbarSwitch.getAttribute("data-active-lang"))
+                && "false".equals(topbarSwitch.getAttribute("aria-busy")));
+        page.mouse().move(0, 0);
+        page.waitForTimeout(250);
+        if (java.nio.file.Files.isDirectory(artifactDir)) {
+            page.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
+                    .setPath(artifactDir.resolve("lang_switch_topbar_dark_th.png"))
+                    .setClip(740, 0, 700, 72));
+        }
+    }
 }

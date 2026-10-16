@@ -353,125 +353,107 @@
                 color: #94a3b8;
             }
 
-            /* Topbar Language Dropdown */
+            /* Topbar Single-Click Language Switch */
             .topbar-lang-dropdown {
                 position: relative;
                 display: inline-flex;
                 align-items: center;
                 margin-bottom: 0;
             }
-            .topbar-lang-dropdown .lang-dropdown-btn {
+            .topbar-lang-dropdown .lang-switch-btn {
                 display: inline-flex;
                 align-items: center;
-                gap: 6px;
-                background: var(--bg-card, #ffffff);
-                border: 1px solid var(--border-color, #e2e8f0);
+                justify-content: center;
+                background: #f1f5f9;
+                border: 1px solid var(--border-color, #cbd5e1);
                 color: var(--text-dark, #334155);
-                font-size: 0.82rem;
-                font-weight: 600;
                 cursor: pointer;
-                padding: 4px 10px;
-                border-radius: 20px;
-                height: 34px;
-                transition: all 0.2s ease;
-                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+                padding: 3px;
+                border-radius: 999px;
+                height: 32px;
+                user-select: none;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+                box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
             }
-            .topbar-lang-dropdown .lang-dropdown-btn:hover {
+            .topbar-lang-dropdown .lang-switch-btn:hover {
                 border-color: var(--color-primary, #0d47a1);
-                color: var(--color-primary, #0d47a1);
-                background: rgba(13, 71, 161, 0.04);
+                box-shadow: 0 2px 6px rgba(13, 71, 161, 0.12);
             }
-            .topbar-lang-dropdown .lang-dropdown-btn .lang-icon {
-                font-size: 1rem;
-                color: var(--color-primary, #0d47a1);
+            .topbar-lang-dropdown .lang-switch-btn:active {
+                transform: scale(0.97);
             }
-            .topbar-lang-dropdown .lang-dropdown-menu {
-                display: none;
+            .topbar-lang-dropdown .lang-switch-track {
+                position: relative;
+                display: inline-grid;
+                grid-template-columns: 1fr 1fr;
+                align-items: center;
+                border-radius: 999px;
+                height: 100%;
+                min-width: 68px;
+            }
+            .topbar-lang-dropdown .lang-switch-thumb {
                 position: absolute;
-                top: calc(100% + 6px);
-                bottom: auto;
-                right: 0;
-                left: auto;
-                min-width: 130px;
-                background: var(--bg-card, #ffffff);
-                border: 1px solid var(--border-color, #e2e8f0);
-                border-radius: 10px;
-                box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-                padding: 6px 0;
-                margin-bottom: 0;
-                z-index: 1060;
-                overflow: hidden;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                width: 50%;
+                border-radius: 999px;
+                background: var(--color-primary, #0d47a1);
+                box-shadow: 0 1px 3px rgba(13, 71, 161, 0.35);
+                transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
+                z-index: 1;
             }
-            .topbar-lang-dropdown .lang-dropdown-menu.show {
-                display: block;
-                animation: langDropInTop 0.18s ease-out;
+            .topbar-lang-dropdown .lang-switch-btn[data-active-lang="en"] .lang-switch-thumb {
+                transform: translateX(100%);
             }
-            @keyframes langDropInTop {
-                from {
-                    opacity: 0;
-                    transform: translateY(-6px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-            .topbar-lang-dropdown .lang-dropdown-item {
-                display: block;
-                width: 100%;
-                padding: 7px 16px;
-                background: none;
-                border: none;
-                color: var(--text-dark, #334155);
-                font-size: 0.85rem;
-                font-weight: 500;
-                text-align: left;
-                cursor: pointer;
-                transition: all 0.15s ease;
-            }
-            .topbar-lang-dropdown .lang-dropdown-item:hover {
-                background: rgba(13, 71, 161, 0.06);
-                color: var(--color-primary, #0d47a1);
-            }
-            .topbar-lang-dropdown .lang-dropdown-item.active {
-                color: var(--color-primary, #0d47a1);
+            .topbar-lang-dropdown .lang-switch-opt {
+                position: relative;
+                z-index: 2;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.74rem;
                 font-weight: 700;
-                background: rgba(13, 71, 161, 0.08);
+                letter-spacing: 0.03em;
+                line-height: 1;
+                padding: 0 8px;
+                color: #64748b;
+                transition: color 0.18s ease;
+            }
+            .topbar-lang-dropdown .lang-switch-opt.active {
+                color: #ffffff;
+            }
+            .topbar-lang-dropdown .lang-switch-btn:hover .lang-switch-opt:not(.active) {
+                color: var(--color-primary, #0d47a1);
             }
 
             /* Dark Theme Support */
-            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-btn {
-                background: var(--bg-card, #1e293b);
-                border-color: rgba(255, 255, 255, 0.12);
+            [data-theme="dark"] .topbar-lang-dropdown .lang-switch-btn {
+                background: rgba(15, 23, 42, 0.8);
+                border-color: rgba(255, 255, 255, 0.15);
                 color: #e2e8f0;
+                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
             }
-            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-btn:hover {
+            [data-theme="dark"] .topbar-lang-dropdown .lang-switch-btn:hover {
                 border-color: #60a5fa;
-                color: #60a5fa;
-                background: rgba(96, 165, 250, 0.1);
+                box-shadow: 0 2px 8px rgba(96, 165, 250, 0.2);
             }
-            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-btn .lang-icon {
-                color: #60a5fa;
+            [data-theme="dark"] .topbar-lang-dropdown .lang-switch-thumb {
+                background: #2563eb;
+                box-shadow: 0 1px 4px rgba(37, 99, 235, 0.5);
             }
-            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-menu {
-                background: var(--bg-card, #1e293b);
-                border-color: rgba(255, 255, 255, 0.12);
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            [data-theme="dark"] .topbar-lang-dropdown .lang-switch-opt {
+                color: #94a3b8;
             }
-            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-item {
-                color: #e2e8f0;
+            [data-theme="dark"] .topbar-lang-dropdown .lang-switch-opt.active {
+                color: #ffffff;
             }
-            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-item:hover {
-                background: rgba(96, 165, 250, 0.12);
+            [data-theme="dark"] .topbar-lang-dropdown .lang-switch-btn:hover .lang-switch-opt:not(.active) {
                 color: #93c5fd;
-            }
-            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-item.active {
-                color: #60a5fa;
-                background: rgba(96, 165, 250, 0.18);
             }
         </style>
 
-        <script src="/js/lang_switcher.js?v=1.0"></script>
+        <script src="/js/lang_switcher.js?v=2.0"></script>
 
         <!--/* Sidebar Footer: User Info */-->
         <div class="sidebar-footer" th:if="${user != null}">
@@ -642,16 +624,18 @@
                     </div>
                 </div>
 
-                <!--/* Custom Language Switcher (Topbar next to Quick Search) */-->
+                <!--/* Single-Click Language Switch (Topbar next to Quick Search) */-->
                 <div class="lang-dropdown topbar-lang-dropdown">
-                    <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdownMenu" aria-label="เปลี่ยนภาษา">
-                        <i class="fas fa-language lang-icon" id="langDropdownIcon" aria-hidden="true"></i>
-                        <span id="langCurrentLabel">TH</span>
+                    <button type="button" class="lang-dropdown-btn lang-switch-btn" id="langDropdownBtn"
+                            role="switch" aria-checked="false" data-active-lang="th"
+                            aria-label="ภาษา: ไทย (คลิกเพื่อสลับเป็นภาษาอังกฤษ)"
+                            title="คลิกเพื่อสลับภาษา (TH / EN)">
+                        <span class="lang-switch-track" aria-hidden="true">
+                            <span class="lang-switch-thumb"></span>
+                            <span class="lang-switch-opt active" data-lang="th">TH</span>
+                            <span class="lang-switch-opt" data-lang="en">EN</span>
+                        </span>
                     </button>
-                    <div class="lang-dropdown-menu shadow-sm" id="langDropdownMenu" role="menu" aria-label="เลือกภาษา">
-                        <button type="button" class="lang-dropdown-item" data-lang="th" role="menuitem" tabindex="-1">Thai</button>
-                        <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem" tabindex="-1">English</button>
-                    </div>
                 </div>
 
                 <!--/* Help / User Guide Icon */-->

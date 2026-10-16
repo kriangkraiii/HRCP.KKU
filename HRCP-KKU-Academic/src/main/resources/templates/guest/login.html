@@ -18,16 +18,18 @@
 	<!--/* Google Translate (hidden) */-->
 	<div id="google_translate_element"></div>
 
-	<!--/* Language Switcher */-->
+	<!--/* Single-Click Language Switch */-->
 	<div class="lang-dropdown">
-		<button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-label="เปลี่ยนภาษา">
-			<i class="fas fa-language lang-icon" id="langDropdownIcon"></i>
-			<span id="langCurrentLabel">TH</span>
+		<button type="button" class="lang-dropdown-btn lang-switch-btn" id="langDropdownBtn"
+				role="switch" aria-checked="false" data-active-lang="th"
+				aria-label="ภาษา: ไทย (คลิกเพื่อสลับเป็นภาษาอังกฤษ)"
+				title="คลิกเพื่อสลับภาษา (TH / EN)">
+			<span class="lang-switch-track" aria-hidden="true">
+				<span class="lang-switch-thumb"></span>
+				<span class="lang-switch-opt active" data-lang="th">TH</span>
+				<span class="lang-switch-opt" data-lang="en">EN</span>
+			</span>
 		</button>
-		<div class="lang-dropdown-menu" id="langDropdownMenu">
-			<button type="button" class="lang-dropdown-item" data-lang="th">Thai</button>
-			<button type="button" class="lang-dropdown-item" data-lang="en">English</button>
-		</div>
 	</div>
 
 	<!--/* Language Switcher Loading Overlay (Glassmorphism) */-->
@@ -208,7 +210,7 @@
 		</div>
 	</div>
 
-	<script src="/js/lang_switcher.js?v=1.0"></script>
+	<script src="/js/lang_switcher.js?v=2.0"></script>
 	<script>
 		// Real-time lockout countdown timer
 		(function() {
