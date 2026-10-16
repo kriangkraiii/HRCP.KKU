@@ -108,11 +108,13 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @Modifying
     @Transactional
-    @Query("DELETE FROM Notification n WHERE n.isDeleted = true AND n.createdAt < :cutoff")
+    // นับจากวันที่ลงถัง — แถวที่ลบก่อนมีคอลัมน์ deleted_at (V48) ใช้วันที่สร้างแทนเหมือนเดิม
+    @Query("DELETE FROM Notification n WHERE n.isDeleted = true AND COALESCE(n.deletedAt, n.createdAt) < :cutoff")
     int deleteDeletedNotificationsBefore(@Param("cutoff") LocalDateTime cutoff);
 
+    // ที่ติดดาวคือผู้ใช้ตั้งใจเก็บ — ไม่ลบตามอายุ
     @Modifying
     @Transactional
-    @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff")
+    @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff AND n.isStarred = false")
     int deleteAncientNotificationsBefore(@Param("cutoff") LocalDateTime cutoff);
 }

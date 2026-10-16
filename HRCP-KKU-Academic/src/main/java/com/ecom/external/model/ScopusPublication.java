@@ -23,6 +23,9 @@ import jakarta.persistence.UniqueConstraint;
  */
 @EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity
+// แถวที่ถูกรวมเข้ากับอีกแถวแล้ว (PublicationMergeService) หายจากทุก query ที่ผ่าน JPA — ตัวเลือกผลงาน หน้าแอดมิน
+// การกรองซ้ำ สถิติ และดัชนีค้นหา id เดิมที่อ้างไว้ใน JSON ของเอกสาร ใช้ repository.resolveMerged หาแถวที่เหลือ
+@org.hibernate.annotations.SQLRestriction("merged_into_id IS NULL")
 @Table(name = "scopus_publication",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_scopus_pub_user_eid",
@@ -42,6 +45,10 @@ public class ScopusPublication {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** ผลงานชิ้นเดียวกันที่แถวนี้ถูกรวมเข้าไป — แถวนี้ถูกซ่อนแล้ว (ดู {@code @SQLRestriction} บนคลาส) */
+    @Column(name = "merged_into_id")
+    private Long mergedIntoId;
 
     // ----- ownership (drives every authorization check) -----
 
@@ -256,6 +263,10 @@ public class ScopusPublication {
     private LocalDateTime syncedAt;
 
     public ScopusPublication() {
+    }
+
+    public Long getMergedIntoId() {
+        return mergedIntoId;
     }
 
     public Long getId() {

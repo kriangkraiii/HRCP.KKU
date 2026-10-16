@@ -88,7 +88,7 @@ class KkuDocumentSyncServiceTest {
     void getDocumentsByAudience_splitsEmployeeAndCivilServantTabs() {
         KkuRegulationDoc employee = new KkuRegulationDoc("ข้อบังคับมหาวิทยาลัยขอนแก่น", "ข้อบังคับ 2569", "u1", "a.pdf", 1);
         KkuRegulationDoc civil = new KkuRegulationDoc("ข้าราชการ · ประกาศ ก.พ.อ.", "ก.พ.อ. 2568", "u2", "b.pdf", 1001);
-        when(docRepo.findAllByOrderByDisplayOrderAscIdAsc()).thenReturn(List.of(employee, civil));
+        when(docRepo.findByRetiredAtIsNullOrderByDisplayOrderAscIdAsc()).thenReturn(List.of(employee, civil));
 
         var tabs = syncService.getDocumentsByAudience();
 
@@ -123,7 +123,7 @@ class KkuDocumentSyncServiceTest {
         KkuRegulationDoc doc2 = new KkuRegulationDoc("ข้อบังคับ", "ข้อบังคับ 2566", "http://example.com/2.pdf", "2.pdf", 2);
         KkuRegulationDoc doc3 = new KkuRegulationDoc("ประกาศ", "ประกาศ 2566", "http://example.com/3.pdf", "3.pdf", 3);
 
-        when(docRepo.findAllByOrderByDisplayOrderAscIdAsc()).thenReturn(List.of(doc1, doc2, doc3));
+        when(docRepo.findByRetiredAtIsNullOrderByDisplayOrderAscIdAsc()).thenReturn(List.of(doc1, doc2, doc3));
 
         List<KkuDocumentSyncService.CategoryGroup> groups = syncService.getGroupedDocuments();
 
@@ -174,5 +174,106 @@ class KkuDocumentSyncServiceTest {
         assertFalse(KkuDocumentSyncService.isActuallyNew("ข้อบังคับ พ.ศ. 2566", "2566"));
         assertFalse(KkuDocumentSyncService.isActuallyNew("ข้อบังคับ พ.ศ. 2560", "2560"));
         assertFalse(KkuDocumentSyncService.isActuallyNew("ลักษณะการมีส่วนร่วมในผลงานทางวิชาการทั่วไป", null));
+    }
+
+    // ---- เอกสารที่ HR ถอดออกจากหน้าเว็บ (docs/PLAN-bughunt-decisions.md ข้อ 5) ----
+
+    private static KkuRegulationDoc doc(String key) {
+        return new KkuRegulationDoc("ข้อบังคับมหาวิทยาลัยขอนแก่น", "เอกสาร " + key, "https://hr2.kku.ac.th/" + key, key, 1);
+    }
+
+    /** อ่านได้ทั้งสองหน้า — หน้าข้าราชการว่างไม่ได้ (นับเป็นอ่านไม่สำเร็จ) จึงให้เอกสารหนึ่งเรื่องเสมอ */
+    private KkuDocumentSyncService serviceSeeing(List<KkuRegulationDoc> onEmployeePage, KkuRegulationDoc onCivilPage) {
+        when(parser.parse("employee-html", null)).thenReturn(onEmployeePage);
+        when(parser.parse("civil-html", "ข้าราชการ")).thenReturn(List.of(onCivilPage));
+        return new KkuDocumentSyncService(parser, docRepo, syncStateRepo) {
+            @Override
+            protected String fetchHtml(String url) {
+                return url.contains("5546") ? "employee-html" : "civil-html";
+            }
+        };
+    }
+
+    @Test
+    void syncNow_retiresWhatHrTookOffThePage() {
+        List<KkuRegulationDoc> stored = new java.util.ArrayList<>();
+        for (int i = 1; i <= 9; i++) {
+            stored.add(doc("d" + i + ".pdf"));
+        }
+        KkuRegulationDoc civil = doc("c.pdf");
+        stored.add(civil);
+        // HR ถอด d9 ออก — เหลือ d1..d8 บนหน้าพนักงาน
+        List<KkuRegulationDoc> stillThere = stored.subList(0, 8).stream().map(d -> doc(d.getFileKey())).toList();
+        for (KkuRegulationDoc d : stored) {
+            when(docRepo.findByFileKey(d.getFileKey())).thenReturn(Optional.of(d));
+        }
+        when(docRepo.findByRetiredAtIsNullOrderByDisplayOrderAscIdAsc()).thenReturn(stored);
+
+        KkuDocumentSyncService.SyncResult result = serviceSeeing(stillThere, doc("c.pdf")).syncNow();
+
+        assertTrue(result.isSuccess(), result.getMessage());
+        assertNotNull(stored.get(8).getRetiredAt(), "d9 หายจากหน้าเว็บ HR ต้องถูกถอด");
+        assertTrue(stored.subList(0, 8).stream().allMatch(d -> d.getRetiredAt() == null));
+        assertTrue(result.getMessage().contains("ถอดออก 1"), result.getMessage());
+    }
+
+    @Test
+    void syncNow_doesNotRetireWhenOnePageFailed() {
+        KkuRegulationDoc civil = doc("c.pdf");
+        when(docRepo.findByFileKey(any())).thenReturn(Optional.empty());
+        when(parser.parse("employee-html", null)).thenReturn(List.of(doc("d1.pdf")));
+        KkuDocumentSyncService service = new KkuDocumentSyncService(parser, docRepo, syncStateRepo) {
+            @Override
+            protected String fetchHtml(String url) throws java.io.IOException {
+                if (url.contains("5532")) {
+                    throw new java.io.IOException("blocked");
+                }
+                return "employee-html";
+            }
+        };
+
+        service.syncNow();
+
+        assertEquals(null, civil.getRetiredAt(), "หน้าข้าราชการพัง — เอกสารของหน้านั้นต้องไม่ถูกถอด");
+        verify(docRepo, org.mockito.Mockito.never()).findByRetiredAtIsNullOrderByDisplayOrderAscIdAsc();
+    }
+
+    @Test
+    void syncNow_refusesToRetireMostOfTheCatalogueUntilConfirmed() {
+        List<KkuRegulationDoc> stored = new java.util.ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            stored.add(doc("d" + i + ".pdf"));
+        }
+        for (KkuRegulationDoc d : stored) {
+            when(docRepo.findByFileKey(d.getFileKey())).thenReturn(Optional.of(d));
+        }
+        when(docRepo.findByRetiredAtIsNullOrderByDisplayOrderAscIdAsc()).thenReturn(stored);
+        // หน้าเว็บเปลี่ยนรูปแบบ parser อ่านได้แค่ 2 เรื่อง — ดูเหมือน 8 จาก 10 เรื่องหายไป
+        List<KkuRegulationDoc> parsedOnly = List.of(doc("d1.pdf"));
+        KkuDocumentSyncService service = serviceSeeing(parsedOnly, doc("d2.pdf"));
+
+        KkuDocumentSyncService.SyncResult blocked = service.syncNow();
+
+        assertFalse(blocked.isSuccess());
+        assertTrue(blocked.getMessage().contains(KkuDocumentSyncService.RETIRE_BLOCKED_MARKER), blocked.getMessage());
+        assertTrue(stored.stream().allMatch(d -> d.getRetiredAt() == null), "ยังไม่ยืนยัน — ไม่ถอดสักเรื่อง");
+
+        KkuDocumentSyncService.SyncResult confirmed = service.syncNow(true);
+
+        assertTrue(confirmed.isSuccess(), confirmed.getMessage());
+        assertEquals(8, stored.stream().filter(d -> d.getRetiredAt() != null).count());
+    }
+
+    @Test
+    void syncNow_bringsBackADocumentHrPutBack() {
+        KkuRegulationDoc returned = doc("d1.pdf");
+        returned.setRetiredAt(java.time.LocalDateTime.now().minusDays(40));
+        when(docRepo.findByFileKey("d1.pdf")).thenReturn(Optional.of(returned));
+        when(docRepo.findByFileKey("c.pdf")).thenReturn(Optional.empty());
+        when(docRepo.findByRetiredAtIsNullOrderByDisplayOrderAscIdAsc()).thenReturn(List.of(returned));
+
+        serviceSeeing(List.of(doc("d1.pdf")), doc("c.pdf")).syncNow();
+
+        assertEquals(null, returned.getRetiredAt());
     }
 }

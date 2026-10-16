@@ -98,4 +98,26 @@ class RedirectMessagesRenderTest extends AbstractFlowTest {
         assertThat(page("/user/academic/request/" + evaluation.getId() + "?error=already_submitted", applicant))
                 .contains("คำร้องนี้ส่งไปแล้ว");
     }
+
+    @Test
+    @DisplayName("แอดมิน: เอกสารที่ 7 ที่ระดับไม่ตรงกับคะแนนรวม (ข้อมูลก่อนแก้) — มีแถบเตือน")
+    void doc7LevelMismatchIsFlagged() throws Exception {
+        UserDtls admin = data.admin();
+        AcademicRequest evaluation = data.evaluation(data.applicant(), RequestStatus.SUBCOMMITTEE_FAIL);
+        data.academicDocument(evaluation, 7, "{\"scorex\":\"56.00\",\"eval_result_level\":\"ไม่ผ่าน\"}");
+
+        assertThat(page("/admin/academic/request/" + evaluation.getId() + "/document/7", admin))
+                .contains("doc7LevelMismatch").contains("ชำนาญ");
+    }
+
+    @Test
+    @DisplayName("แอดมิน: เอกสารที่ 7 ที่ระดับตรงกับคะแนน — ไม่มีแถบเตือน")
+    void consistentDoc7IsNotFlagged() throws Exception {
+        UserDtls admin = data.admin();
+        AcademicRequest evaluation = data.evaluation(data.applicant(), RequestStatus.COMPLETED_PASS);
+        data.academicDocument(evaluation, 7, "{\"scorex\":\"56.00\",\"eval_result_level\":\"ชำนาญ\"}");
+
+        assertThat(page("/admin/academic/request/" + evaluation.getId() + "/document/7", admin))
+                .doesNotContain("doc7LevelMismatch");
+    }
 }

@@ -285,6 +285,9 @@ public class UserServiceImpl implements UserService {
 		if (user.getRole() == null || user.getRole().isEmpty()) {
 			user.setRole("ROLE_ADMIN");
 		}
+		if (!UserDtls.ASSIGNABLE_ROLES.contains(user.getRole().trim())) {
+			throw new IllegalArgumentException("Unknown role: " + user.getRole());
+		}
 		user.setIsEnable(true);
 		user.setAccountNonLocked(true);
 		user.setFailedAttempt(0);
@@ -426,6 +429,9 @@ public class UserServiceImpl implements UserService {
 			// Handle role change and Applicant ID management
 			if (user.getRole() != null && !user.getRole().isBlank()) {
 				String newRole = user.getRole().trim();
+				if (!UserDtls.ASSIGNABLE_ROLES.contains(newRole)) {
+					throw new IllegalArgumentException("Unknown role: " + newRole);
+				}
 				String oldRole = dbUser.getRole();
 				if (!newRole.equals(oldRole)) {
 					dbUser.setRole(newRole);

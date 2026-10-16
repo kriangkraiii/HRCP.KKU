@@ -185,6 +185,7 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
     @Query(value = """
             SELECT id FROM scopus_publication
             WHERE fs_user_id = :fsUserId
+              AND merged_into_id IS NULL
               AND publication_year = :year
               AND similarity(LOWER(title), LOWER(:candidateTitle)) >= :threshold
             ORDER BY similarity(LOWER(title), LOWER(:candidateTitle)) DESC
@@ -194,5 +195,46 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
                                      @Param("candidateTitle") String candidateTitle,
                                      @Param("year") int year,
                                      @Param("threshold") double threshold);
+
+    // ---- ผลงานซ้ำที่ถูกรวมแล้ว (PublicationMergeService) — native เพราะ @SQLRestriction ซ่อนแถวพวกนี้จาก JPA ----
+
+    @Query(value = "SELECT merged_into_id FROM scopus_publication WHERE id = :id", nativeQuery = true)
+    Long findMergedIntoId(@Param("id") Long id);
+
+    /**
+     * id ของแถวที่ยังแสดงอยู่สำหรับผลงานนี้ — id เดิมถ้าไม่เคยถูกรวม
+     *
+     * <p>เอกสารที่ 1 เก็บ id ของผลงานที่ผู้ยื่นเลือกไว้ใน JSON ถ้าแถวนั้นถูกรวมเข้ากับแถวอื่นทีหลัง id เดิมต้องชี้ไปแถวที่เหลือ
+     */
+    default Long resolveMerged(Long id) {
+        Long current = id;
+        for (int hop = 0; current != null && hop < 8; hop++) {
+            Long next = findMergedIntoId(current);
+            if (next == null) {
+                return current;
+            }
+            current = next;
+        }
+        return current;
+    }
+
+    /** แถวละ {@code [id, fs_user_id, lower(doi), dedup_hash, data_source]} ของผลงานที่ยังไม่ถูกรวม และมี DOI หรือ hash */
+    @Query(value = """
+            SELECT id, fs_user_id, LOWER(doi), dedup_hash, data_source FROM scopus_publication
+            WHERE merged_into_id IS NULL AND (doi IS NOT NULL OR dedup_hash IS NOT NULL)
+            """, nativeQuery = true)
+    List<Object[]> findDedupKeys();
+
+    /** ซ่อนแถว {@code loser} — eid เปลี่ยนเป็น {@code MERGED:<id>} เพื่อคืนคีย์ (fs_user_id, eid) ให้การดึงรอบหน้า */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = "UPDATE scopus_publication SET merged_into_id = :survivor, eid = CONCAT('MERGED:', id) WHERE id = :loser",
+            nativeQuery = true)
+    int markMerged(@Param("loser") Long loser, @Param("survivor") Long survivor);
+
+    /** แถวที่เคยถูกรวมเข้า {@code loser} ย้ายไปชี้ {@code survivor} — ไม่ให้เกิดสายยาว */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = "UPDATE scopus_publication SET merged_into_id = :survivor WHERE merged_into_id = :loser",
+            nativeQuery = true)
+    int repointMerged(@Param("loser") Long loser, @Param("survivor") Long survivor);
 }
 

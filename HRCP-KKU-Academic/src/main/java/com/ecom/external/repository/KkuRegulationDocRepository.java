@@ -16,6 +16,9 @@ public interface KkuRegulationDocRepository extends JpaRepository<KkuRegulationD
 
     List<KkuRegulationDoc> findAllByOrderByDisplayOrderAscIdAsc();
 
+    /** เอกสารที่ยังอยู่บนหน้าเว็บ HR — ที่ถูกถอดแล้ว ({@code retiredAt}) ไม่รวม */
+    List<KkuRegulationDoc> findByRetiredAtIsNullOrderByDisplayOrderAscIdAsc();
+
     List<KkuRegulationDoc> findByCategoryOrderByDisplayOrderAscIdAsc(String category);
 
     long countByIsNewTrue();

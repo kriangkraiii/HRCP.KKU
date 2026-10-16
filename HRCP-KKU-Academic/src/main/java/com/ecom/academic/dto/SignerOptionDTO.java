@@ -63,8 +63,6 @@ public record SignerOptionDTO(
         String displayName = (prefix == null || prefix.isBlank() ? "" : prefix + " ") + fullName;
         if (user.getRole() != null && ("ROLE_ADMIN".equalsIgnoreCase(user.getRole()) || "ADMIN".equalsIgnoreCase(user.getRole()))) {
             displayName = displayName.trim() + " [ผู้ดูแลระบบ]";
-        } else if (user.getRole() != null && ("ROLE_STAFF".equalsIgnoreCase(user.getRole()) || "STAFF".equalsIgnoreCase(user.getRole()))) {
-            displayName = displayName.trim() + " [เจ้าหน้าที่]";
         }
         return new SignerOptionDTO(null, user.getId(), displayName.trim(), null, user.getEmail(), true);
     }

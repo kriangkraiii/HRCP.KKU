@@ -185,6 +185,24 @@ public final class Doc7Scoring {
      * ๘๖–๑๐๐ เชี่ยวชาญ — ทุกขอบใช้หลักเดียวกับ "ต่ำกว่า ๕๖ ไม่ผ่าน": ต้องถึงคะแนนต่ำสุดของช่วงจึงเข้าช่วงนั้น
      * คะแนนที่ตกระหว่างช่วง (เช่น 70.6) จึงยังอยู่ช่วงล่าง
      */
+    /**
+     * ระดับที่ควรได้จากคะแนนรวม เมื่อไม่ตรงกับระดับที่บันทึกไว้ — {@code null} เมื่อตรงกัน หรือข้อมูลไม่พอจะเทียบ
+     *
+     * <p>ก่อนแก้การคิดคะแนนเป็นทศนิยมฐานสิบ (BigDecimal) คะแนนรวม 56/71/86 พอดีอาจถูกบันทึกเป็นระดับต่ำกว่าหนึ่งขั้น
+     * ทั้งที่เอกสารพิมพ์คะแนนนั้น — หน้าเอกสารที่ 7 ฝั่งเจ้าหน้าที่เตือนให้ตรวจ (docs/PLAN-bughunt-decisions.md ข้อ 2a)
+     */
+    public static String levelMismatch(Map<String, String> formData) {
+        if (formData == null) {
+            return null;
+        }
+        String stored = formData.get("eval_result_level");
+        String expected = evalLevelFromScore(formData.get("scorex"));
+        if (stored == null || stored.isBlank() || expected.isEmpty() || expected.equals(stored.trim())) {
+            return null;
+        }
+        return expected;
+    }
+
     public static String evalLevelFromScore(Object rawScore) {
         if (rawScore == null)
             return "";

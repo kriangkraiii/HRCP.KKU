@@ -2064,8 +2064,11 @@ public class AcademicRequestService {
     private static final int EVALUATION_VALID_YEARS = 3;
 
     /**
-     * วันสุดท้ายที่ผลประเมินใช้ได้ — นับตามประมวลกฎหมายแพ่งและพาณิชย์: เริ่มนับวันถัดจากวันประเมิน
-     * ระยะเวลาเป็นปีสิ้นสุดในวันก่อนหน้าวันที่ตรงกันของปีสุดท้าย — ประเมิน 2 ต.ค. 2569 ใช้ได้ถึง 1 ต.ค. 2572
+     * วันสุดท้ายที่ผลประเมินใช้ได้ — นับวันประเมิน (วันประชุมกรรมการประจำวิทยาลัยฯ รับรองผล) เป็นวันแรก
+     * ครบ 3 ปีในวันก่อนวันที่ตรงกัน: ประเมิน 2 ต.ค. 2569 ใช้ได้ถึง 1 ต.ค. 2572
+     *
+     * <p>ตามที่ HR พิมพ์ในหนังสือแจ้งผลฉบับกระดาษ (ยืนยัน 16 ต.ค. 2569) ไม่ใช่วิธีนับของ ป.พ.พ. ม.193/3 + 193/5
+     * ซึ่งไม่นับวันแรกและจะได้ 2 ต.ค. 2572 — ดู docs/PLAN-bughunt-decisions.md ข้อ 1
      */
     public static LocalDateTime expiryFromEvaluation(LocalDateTime evaluated) {
         return evaluated == null ? null : evaluated.minusDays(1).plusYears(EVALUATION_VALID_YEARS);

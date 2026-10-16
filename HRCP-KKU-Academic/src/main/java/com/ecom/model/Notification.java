@@ -69,6 +69,10 @@ public class Notification {
 	@Column(nullable = false)
 	private Boolean isDeleted = false;
 
+	/** วันที่ย้ายลงถังขยะ — ถังขยะนับอายุจากวันนี้ ไม่ใช่วันที่แจ้งเตือนถูกสร้าง */
+	@Column(name = "deleted_at")
+	private LocalDateTime deletedAt;
+
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
 
@@ -400,6 +404,15 @@ public class Notification {
 
 	public void setIsDeleted(Boolean isDeleted) {
 		this.isDeleted = isDeleted;
+		this.deletedAt = Boolean.TRUE.equals(isDeleted) ? (deletedAt != null ? deletedAt : LocalDateTime.now()) : null;
+	}
+
+	public LocalDateTime getDeletedAt() {
+		return deletedAt;
+	}
+
+	public void setDeletedAt(LocalDateTime deletedAt) {
+		this.deletedAt = deletedAt;
 	}
 
 	public LocalDateTime getCreatedAt() {

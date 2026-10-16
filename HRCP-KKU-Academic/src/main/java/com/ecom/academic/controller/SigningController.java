@@ -124,7 +124,7 @@ public class SigningController {
         String historySearch = historyQ == null || historyQ.isBlank() ? null : historyQ.trim();
         // "pending" = rounds this person signed that still wait on someone after them; anything else = fully signed.
         boolean awaitingOthers = "pending".equals(historyFilter);
-        boolean isAdmin = me != null && ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole()));
+        boolean isAdmin = me != null && "ROLE_ADMIN".equals(me.getRole());
 
         List<SignatureStep> pendingSteps = workflow.findInbox(me);
         List<SignatureRequest> sentEnvelopes = workflow.findSentEnvelopes(me);
@@ -199,7 +199,7 @@ public class SigningController {
         UserDtls me = currentUser(principal);
         SignatureStep step = workflow.findStep(stepId).orElse(null);
 
-        boolean isAdmin = me != null && ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole()));
+        boolean isAdmin = me != null && "ROLE_ADMIN".equals(me.getRole());
         boolean isSigner = step != null && step.getSigner() != null && me != null && step.getSigner().getId().equals(me.getId());
 
         if (step == null || step.getSigner() == null || (!isSigner && !isAdmin)) {
@@ -301,7 +301,7 @@ public class SigningController {
         UserDtls me = currentUser(principal);
         SignatureStep step = workflow.findStep(stepId).orElse(null);
 
-        boolean isAdmin = me != null && ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole()));
+        boolean isAdmin = me != null && "ROLE_ADMIN".equals(me.getRole());
         boolean isSigner = step != null && step.getSigner() != null && me != null && step.getSigner().getId().equals(me.getId());
 
         if (step == null || step.getSigner() == null || (!isSigner && !isAdmin)) {
@@ -402,7 +402,7 @@ public class SigningController {
         UserDtls me = currentUser(principal);
         SignatureStep step = workflow.findStep(stepId).orElse(null);
 
-        boolean isAdmin = me != null && ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole()));
+        boolean isAdmin = me != null && "ROLE_ADMIN".equals(me.getRole());
         boolean isSigner = step != null && step.getSigner() != null && me != null && step.getSigner().getId().equals(me.getId());
 
         if (step == null || step.getSigner() == null || (!isSigner && !isAdmin)) {
@@ -469,7 +469,7 @@ public class SigningController {
         if (me == null) {
             return false;
         }
-        if ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole())) {
+        if ("ROLE_ADMIN".equals(me.getRole())) {
             return academicRequests.findById(requestId).isPresent();
         }
         return academicRequests.findById(requestId)

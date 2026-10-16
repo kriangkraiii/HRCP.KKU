@@ -19,6 +19,15 @@
                     <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
                     <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
+                    <!--/* ระดับที่บันทึกไว้ไม่ตรงกับคะแนนรวม — ข้อมูลจากก่อนแก้การคิดคะแนน (56/71/86 พอดี) */-->
+                    <div th:if="${doc7ExpectedLevel != null}" class="alert alert-danger" id="doc7LevelMismatch" role="alert">
+                        <i class="fas fa-triangle-exclamation me-1"></i>
+                        <strong>ระดับผลการประเมินที่บันทึกไว้ไม่ตรงกับคะแนนรวม</strong> —
+                        คะแนนรวมนี้ต้องได้ระดับ "<span th:text="${doc7ExpectedLevel}"></span>"
+                        ถ้าเอกสารยังไม่ได้ลงนาม กดบันทึกอีกครั้งเพื่อคำนวณใหม่
+                        ถ้าลงนามหรือแจ้งผลไปแล้ว กรุณาตรวจสถานะคำร้องและหนังสือแจ้งผล
+                    </div>
+
                     <!--/* อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง */-->
                     <div th:replace="~{academic/_admin_field_lock :: banner('academic', ${request.id}, ${documentType})}"></div>
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"

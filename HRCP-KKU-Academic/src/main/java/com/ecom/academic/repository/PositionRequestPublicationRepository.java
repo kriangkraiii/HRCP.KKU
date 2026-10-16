@@ -42,4 +42,21 @@ public interface PositionRequestPublicationRepository
             """)
     List<Long> findSpentPublicationIds(@Param("applicantId") Integer applicantId,
             @Param("free") Collection<PositionRequestStatus> free);
+
+    // ---- รวมผลงานซ้ำ (PublicationMergeService) ----
+
+    /** คำร้องที่ลิงก์ไว้กับทั้งสองแถวอยู่แล้ว — ลบลิงก์ของแถวที่ถูกรวม ไม่อย่างนั้นการย้ายชน unique (request_id, publication_id) */
+    @Modifying
+    @Query(value = """
+            DELETE FROM position_request_publication
+            WHERE publication_id = :loser
+              AND request_id IN (SELECT l.request_id FROM position_request_publication l WHERE l.publication_id = :survivor)
+            """, nativeQuery = true)
+    int dropLinksAlreadyOn(@Param("loser") Long loser, @Param("survivor") Long survivor);
+
+    /** ลิงก์ที่เหลือย้ายไปแถวที่เหลือ — ผลงานที่ใช้ไปแล้วยังนับว่าใช้แล้ว */
+    @Modifying
+    @Query(value = "UPDATE position_request_publication SET publication_id = :survivor WHERE publication_id = :loser",
+            nativeQuery = true)
+    int moveLinks(@Param("loser") Long loser, @Param("survivor") Long survivor);
 }

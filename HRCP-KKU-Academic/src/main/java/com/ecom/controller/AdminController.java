@@ -455,6 +455,12 @@ public class AdminController {
 			return "redirect:/admin/edit-admin?id=" + user.getId();
 		}
 
+		String roleProblem = roleProblem(user, p);
+		if (roleProblem != null) {
+			session.setAttribute("errorMsg", roleProblem);
+			return "redirect:/admin/edit-admin?id=" + user.getId();
+		}
+
 		try {
 			// Update admin details
 			UserDtls updatedAdmin = userService.updateUserDetails(user, file);
@@ -499,6 +505,28 @@ public class AdminController {
 		}
 
 		return "redirect:/admin/users?type=" + userListType(user.getRole());
+	}
+
+	/**
+	 * role ที่ส่งมากับฟอร์มแก้บัญชี — null เมื่อใช้ได้ (หรือไม่ได้ส่งมา = ไม่เปลี่ยน) ไม่อย่างนั้นข้อความบอกเหตุ
+	 *
+	 * <p>แอดมินเปลี่ยน role ของตัวเองไม่ได้ เหมือนที่ลบหรือระงับบัญชีตัวเองไม่ได้ — คนกดเป็นแอดมินที่ยังใช้งานได้เสมอ
+	 * ด่านนี้จึงกันกรณีลดสิทธิ์แอดมินคนสุดท้ายไปด้วย
+	 */
+	private String roleProblem(UserDtls submitted, Principal p) {
+		String role = submitted.getRole();
+		if (role == null || role.isBlank()) {
+			return null;
+		}
+		if (!UserDtls.ASSIGNABLE_ROLES.contains(role.trim())) {
+			return "สิทธิ์การใช้งานไม่ถูกต้อง";
+		}
+		UserDtls self = p != null ? userService.getUserByEmail(p.getName()) : null;
+		if (self != null && self.getId() != null && self.getId().equals(submitted.getId())
+				&& !role.trim().equals(self.getRole())) {
+			return "ไม่สามารถเปลี่ยนสิทธิ์การใช้งานของบัญชีตัวเองได้";
+		}
+		return null;
 	}
 
 	private static int userListType(String role) {
@@ -550,6 +578,12 @@ public class AdminController {
 		UserDtls existingUser = userService.getUserByEmail(user.getEmail());
 		if (existingUser != null && !existingUser.getId().equals(user.getId())) {
 			session.setAttribute("errorMsg", "อีเมลนี้มีในระบบแล้ว");
+			return "redirect:/admin/edit-user?id=" + user.getId();
+		}
+
+		String roleProblem = roleProblem(user, p);
+		if (roleProblem != null) {
+			session.setAttribute("errorMsg", roleProblem);
 			return "redirect:/admin/edit-user?id=" + user.getId();
 		}
 
@@ -607,6 +641,11 @@ public class AdminController {
 		String storedImage = profileImageStorage.store(file);
 		user.setProfileImage(storedImage != null ? storedImage : "default.png");
 
+		if (user.getRole() != null && !user.getRole().isBlank()
+				&& !UserDtls.ASSIGNABLE_ROLES.contains(user.getRole().trim())) {
+			session.setAttribute("errorMsg", "สิทธิ์การใช้งานไม่ถูกต้อง");
+			return "redirect:/admin/add-admin";
+		}
 		UserDtls saveUser = userService.saveAdmin(user);
 
 		if (!ObjectUtils.isEmpty(saveUser)) {

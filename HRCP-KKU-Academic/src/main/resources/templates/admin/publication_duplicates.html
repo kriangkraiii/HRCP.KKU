@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic::layout(~{::section})}">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ผลงานตีพิมพ์ที่ซ้ำกัน</title>
+</head>
+
+<body>
+<section>
+        <div class="mb-3">
+            <a href="/admin/external-sync" class="btn-back-pill">
+                <i class="fas fa-arrow-left"></i> กลับ
+            </a>
+        </div>
+
+        <div class="card card-sh mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h4 class="mb-1">ผลงานตีพิมพ์ที่ซ้ำกัน</h4>
+                        <small class="text-muted">
+                            ผลงานชิ้นเดียวกันที่มีหลายแถว (DOI หรือชื่อเรื่อง+ปี+ผู้แต่งตรงกัน ภายในอาจารย์คนเดียวกัน)
+                            — แถวซ้ำทำให้ผู้ยื่นเลือกผลงานที่ใช้ไปแล้วได้อีกครั้ง
+                        </small>
+                    </div>
+                    <span class="badge bg-warning text-dark fs-6">
+                        รวมได้ [[${review.mergeable().size()}]] กลุ่ม ([[${review.rowsToHide()}]] แถวจะถูกซ่อน)
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div th:if="${review.mergeable().isEmpty()}" class="text-center text-muted py-4">
+                    <i class="fas fa-circle-check text-success me-1"></i> ไม่พบผลงานซ้ำที่รวมได้
+                </div>
+
+                <th:block th:unless="${review.mergeable().isEmpty()}">
+                    <div class="alert alert-info small">
+                        <i class="fas fa-circle-info me-1"></i>
+                        แถวที่เหลือคือแถวจาก Scopus (ถ้ามี) แถวอื่นถูกซ่อน ไม่ถูกลบ —
+                        คำร้องที่เลือกแถวที่ถูกซ่อนไว้จะถูกย้ายไปชี้แถวที่เหลือ ผลงานที่ใช้ไปแล้วจึงยังนับว่าใช้แล้ว
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>อาจารย์ (FS id)</th>
+                                    <th>แถวที่เหลือ</th>
+                                    <th>แถวที่จะถูกซ่อน</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="g : ${review.mergeable()}">
+                                    <td th:text="${g.fsUserId()}">0</td>
+                                    <td>
+                                        <div class="fw-semibold" th:text="${g.survivor().title}">ชื่อผลงาน</div>
+                                        <small class="text-muted">
+                                            #[[${g.survivor().id}]] · [[${g.survivor().dataSource}]]
+                                            <th:block th:if="${g.survivor().publicationYear != null}"> · [[${g.survivor().publicationYear}]]</th:block>
+                                            <th:block th:if="${g.survivor().doi != null}"> · DOI [[${g.survivor().doi}]]</th:block>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div th:each="l : ${g.losers()}" class="small">
+                                            #[[${l.id}]] · [[${l.dataSource}]] — <span th:text="${l.title}">ชื่อผลงาน</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <form th:action="@{/admin/external-sync/publication-duplicates/merge}" method="post"
+                          data-lock-button="1"
+                          data-confirm="รวมผลงานซ้ำทั้งหมดในรายการ? แถวที่ซ้ำจะถูกซ่อนและคำร้องที่อ้างถึงจะชี้ไปแถวที่เหลือ">
+                        <button type="submit" class="btn btn-warning text-dark fw-semibold">
+                            <i class="fas fa-object-group me-1"></i> รวมทั้งหมด
+                        </button>
+                    </form>
+                </th:block>
+            </div>
+        </div>
+
+        <div class="card card-sh mb-4" th:unless="${review.skipped().isEmpty()}">
+            <div class="card-header">
+                <h5 class="mb-1">ต้องตรวจเอง — ระบบไม่รวมให้</h5>
+                <small class="text-muted">กลุ่มที่มีแถวจาก Scopus มากกว่าหนึ่ง: Scopus เองมี DOI ซ้ำกันได้จริง (เช่น erratum)</small>
+            </div>
+            <div class="card-body">
+                <div th:each="rows : ${review.skipped()}" class="border-bottom py-2 small">
+                    <div th:each="p : ${rows}">
+                        #[[${p.id}]] · [[${p.dataSource}]] · FS [[${p.fsUserId}]] — <span th:text="${p.title}">ชื่อผลงาน</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+</section>
+</body>
+</html>

@@ -167,6 +167,7 @@ public class ExternalSyncPageController {
         long runningCount = syncJobList.stream().filter(j -> j.state() != null && "RUNNING".equalsIgnoreCase(j.state().getLastStatus())).count();
 
         model.addAttribute("okCount", okCount);
+        model.addAttribute("kkuRetireAwaitingConfirmation", kkuDocSyncService.awaitingRetireConfirmation());
         model.addAttribute("failedCount", failedCount);
         model.addAttribute("runningCount", runningCount);
         model.addAttribute("totalJobs", syncJobList.size());
@@ -556,8 +557,10 @@ public class ExternalSyncPageController {
      * Manually triggers immediate synchronization of KKU HR Regulations & Announcements.
      */
     @PostMapping("/kku-docs/run")
-    public String runKkuDocsSync(RedirectAttributes redirect) {
-        com.ecom.external.service.KkuDocumentSyncService.SyncResult result = kkuDocSyncService.syncNow();
+    public String runKkuDocsSync(
+            @org.springframework.web.bind.annotation.RequestParam(name = "confirmRetire", defaultValue = "false") boolean confirmRetire,
+            RedirectAttributes redirect) {
+        com.ecom.external.service.KkuDocumentSyncService.SyncResult result = kkuDocSyncService.syncNow(confirmRetire);
         if (result.isSuccess()) {
             redirect.addFlashAttribute("succMsg", result.getMessage());
         } else {

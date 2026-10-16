@@ -174,6 +174,24 @@ public class KkuDocumentSyncService {
      */
     @Transactional
     public synchronized SyncResult syncNow() {
+        return syncNow(false);
+    }
+
+    /**
+     * เกินส่วนนี้ของเอกสารที่มีอยู่หายจากหน้าเว็บ HR พร้อมกันในรอบเดียว ไม่ถอดให้ — มักแปลว่า parser อ่านหน้าเว็บ
+     * ที่เปลี่ยนรูปแบบไม่ออก ไม่ใช่ HR ยกเลิกเอกสารจริง แอดมินยืนยันเองได้ ({@link #syncNow(boolean)})
+     */
+    static final double MAX_RETIRE_SHARE = 0.3;
+
+    /** ข้อความในผลซิงก์เมื่อด่านข้างบนกันการถอดไว้ — หน้าแอดมินใช้แสดงปุ่มยืนยัน */
+    public static final String RETIRE_BLOCKED_MARKER = "รอแอดมินยืนยันการถอดเอกสาร";
+
+    /**
+     * @param confirmMassRetire แอดมินยืนยันแล้วว่าเอกสารที่หายจากเว็บ HR จำนวนมากถูกถอดจริง — ข้ามด่าน
+     *                          {@link #MAX_RETIRE_SHARE}
+     */
+    @Transactional
+    public synchronized SyncResult syncNow(boolean confirmMassRetire) {
         long startTime = System.currentTimeMillis();
         FsSyncState state = syncStateRepo.findById(SYNC_TYPE).orElseGet(() -> new FsSyncState(SYNC_TYPE));
         state.setLastRunAt(LocalDateTime.now());
@@ -249,6 +267,11 @@ public class KkuDocumentSyncService {
                         existing.setPublishedYear(parsed.getPublishedYear());
                         changed = true;
                     }
+                    // HR ใส่เอกสารที่เคยถอดกลับขึ้นหน้าเว็บ
+                    if (existing.getRetiredAt() != null) {
+                        existing.setRetiredAt(null);
+                        changed = true;
+                    }
 
                     if (changed) {
                         docRepo.save(existing);
@@ -260,6 +283,26 @@ public class KkuDocumentSyncService {
                 }
             }
 
+            // ถอดเฉพาะตอนอ่านได้ครบทั้งสองหน้า — หน้าไหนพัง เอกสารของหน้านั้นจะดูเหมือนหายไปหมด
+            int retired = 0;
+            if (failures.isEmpty()) {
+                java.util.Set<String> seen = new java.util.HashSet<>();
+                parsedDocs.forEach(d -> seen.add(d.getFileKey()));
+                List<KkuRegulationDoc> active = docRepo.findByRetiredAtIsNullOrderByDisplayOrderAscIdAsc();
+                List<KkuRegulationDoc> gone = active.stream().filter(d -> !seen.contains(d.getFileKey())).toList();
+                if (!gone.isEmpty() && gone.size() > active.size() * MAX_RETIRE_SHARE && !confirmMassRetire) {
+                    failures.add(RETIRE_BLOCKED_MARKER + ": " + gone.size() + " จาก " + active.size()
+                            + " รายการหายจากหน้าเว็บ HR พร้อมกัน — หน้าเว็บอาจเปลี่ยนรูปแบบ ตรวจหน้าเว็บ HR แล้วกดยืนยันถ้าถูกถอดจริง");
+                } else {
+                    LocalDateTime now = LocalDateTime.now();
+                    for (KkuRegulationDoc doc : gone) {
+                        doc.setRetiredAt(now);
+                        docRepo.save(doc);
+                    }
+                    retired = gone.size();
+                }
+            }
+
             long duration = System.currentTimeMillis() - startTime;
             boolean complete = failures.isEmpty();
             state.setLastStatus(complete ? FsSyncState.STATUS_OK : FsSyncState.STATUS_FAILED);
@@ -268,8 +311,8 @@ public class KkuDocumentSyncService {
             }
             state.setRowsProcessed(parsedDocs.size());
             state.setDurationMs(duration);
-            String msg = String.format("%s: พบ %d รายการ (เพิ่มใหม่ %d, อัปเดต %d) ในเวลา %d ms",
-                    complete ? "ซิงค์สำเร็จ" : "ซิงค์ได้บางส่วน", parsedDocs.size(), added, updated, duration)
+            String msg = String.format("%s: พบ %d รายการ (เพิ่มใหม่ %d, อัปเดต %d, ถอดออก %d) ในเวลา %d ms",
+                    complete ? "ซิงค์สำเร็จ" : "ซิงค์ได้บางส่วน", parsedDocs.size(), added, updated, retired, duration)
                     + (complete ? "" : " — ดึงไม่ได้: " + String.join(", ", failures));
             state.setMessage(msg);
             syncStateRepo.save(state);
@@ -303,7 +346,7 @@ public class KkuDocumentSyncService {
      * Returns all documents grouped by category for frontend display.
      */
     public List<CategoryGroup> getGroupedDocuments() {
-        List<KkuRegulationDoc> allDocs = docRepo.findAllByOrderByDisplayOrderAscIdAsc();
+        List<KkuRegulationDoc> allDocs = docRepo.findByRetiredAtIsNullOrderByDisplayOrderAscIdAsc();
         Map<String, CategoryGroup> groupMap = new LinkedHashMap<>();
 
         for (KkuRegulationDoc doc : allDocs) {
@@ -330,7 +373,7 @@ public class KkuDocumentSyncService {
         byAudience.put(EMPLOYEE_AUDIENCE, new LinkedHashMap<>());
         byAudience.put(CIVIL_SERVANT_AUDIENCE, new LinkedHashMap<>());
         String civilPrefix = CIVIL_SERVANT_AUDIENCE + AUDIENCE_SEPARATOR;
-        for (KkuRegulationDoc doc : docRepo.findAllByOrderByDisplayOrderAscIdAsc()) {
+        for (KkuRegulationDoc doc : docRepo.findByRetiredAtIsNullOrderByDisplayOrderAscIdAsc()) {
             String cat = doc.getCategory();
             boolean civil = cat.startsWith(civilPrefix);
             String title = civil ? cat.substring(civilPrefix.length()) : cat;
@@ -345,6 +388,12 @@ public class KkuDocumentSyncService {
             }
         });
         return tabs;
+    }
+
+    /** ด่าน {@link #MAX_RETIRE_SHARE} กันการถอดไว้ในรอบล่าสุด — หน้าแอดมินแสดงปุ่มยืนยัน */
+    public boolean awaitingRetireConfirmation() {
+        FsSyncState state = getSyncState();
+        return state != null && state.getMessage() != null && state.getMessage().contains(RETIRE_BLOCKED_MARKER);
     }
 
     /**

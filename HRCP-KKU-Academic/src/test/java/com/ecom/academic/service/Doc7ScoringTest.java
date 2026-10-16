@@ -168,4 +168,22 @@ class Doc7ScoringTest {
     void levelMustMeetTheRequestedRank(String level, com.ecom.academic.model.AcademicRank rank, boolean short_) {
         assertThat(Doc7Scoring.fallsShortOf(level, rank)).isEqualTo(short_);
     }
+
+    @Test
+    @DisplayName("ข้อมูลเก่า: คะแนนรวม 56.00 แต่บันทึกว่าไม่ผ่าน — บอกระดับที่ถูกต้อง (ชำนาญ)")
+    void aStoredLevelBelowItsTotalIsReported() {
+        assertThat(Doc7Scoring.levelMismatch(Map.of("scorex", "56.00", "eval_result_level", "ไม่ผ่าน")))
+                .isEqualTo("ชำนาญ");
+        assertThat(Doc7Scoring.levelMismatch(Map.of("scorex", "71.00", "eval_result_level", "ชำนาญ")))
+                .isEqualTo("ชำนาญพิเศษ");
+    }
+
+    @Test
+    @DisplayName("ระดับตรงกับคะแนน หรือข้อมูลไม่พอ — ไม่เตือน")
+    void aConsistentOrIncompleteRowIsNotReported() {
+        assertThat(Doc7Scoring.levelMismatch(Map.of("scorex", "56.00", "eval_result_level", "ชำนาญ"))).isNull();
+        assertThat(Doc7Scoring.levelMismatch(Map.of("scorex", "56.00"))).isNull();
+        assertThat(Doc7Scoring.levelMismatch(Map.of("eval_result_level", "ชำนาญ"))).isNull();
+        assertThat(Doc7Scoring.levelMismatch(null)).isNull();
+    }
 }

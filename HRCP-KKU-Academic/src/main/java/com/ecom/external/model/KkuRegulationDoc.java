@@ -63,6 +63,18 @@ public class KkuRegulationDoc {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    /** HR ถอดออกจากหน้าเว็บแล้ว — ซ่อนจากคลังเอกสารและผลค้นหา กลับมาเองถ้า HR ใส่คืน (null = ยังอยู่) */
+    @Column(name = "retired_at")
+    private LocalDateTime retiredAt;
+
+    public LocalDateTime getRetiredAt() {
+        return retiredAt;
+    }
+
+    public void setRetiredAt(LocalDateTime retiredAt) {
+        this.retiredAt = retiredAt;
+    }
+
     public KkuRegulationDoc() {
     }
 

@@ -178,7 +178,7 @@
                         expiryInput.value = '';
                         return;
                     }
-                    // นับตาม ป.พ.พ.: ครบ 3 ปีในวันก่อนหน้าวันที่ตรงกัน (ประเมิน 2 ต.ค. 2569 → 1 ต.ค. 2572)
+                    // นับวันประเมินเป็นวันแรกตามที่ HR ใช้: ครบ 3 ปีในวันก่อนวันที่ตรงกัน (2 ต.ค. 2569 → 1 ต.ค. 2572) — ต้องตรงกับ expiryFromEvaluation
                     d.setFullYear(d.getFullYear() + 3);
                     d.setDate(d.getDate() - 1);
                     expiryInput.value = toThaiDate(d);

@@ -643,6 +643,13 @@ public class AcademicAdminController {
         List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, type);
         String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
         Map<String, String> autoFilledData = autoFillHelper.getPreFilledAcademicDocData(request, type, existingJson);
+        if (type == 7) {
+            // ระดับที่บันทึกไว้ไม่ตรงกับคะแนนรวม (ข้อมูลจากก่อนแก้การคิดคะแนน) — เตือนให้เจ้าหน้าที่ตรวจ
+            String expected = Doc7Scoring.levelMismatch(requestService.getLatestDocumentData(id, 7));
+            if (expected != null) {
+                model.addAttribute("doc7ExpectedLevel", expected);
+            }
+        }
 
         model.addAttribute("request", request);
         model.addAttribute("documentType", type);

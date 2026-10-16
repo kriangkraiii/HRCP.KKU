@@ -328,6 +328,13 @@ public class UserDtls {
 	/** บทบาทของบัญชีผู้ลงนามภายนอก มข. */
 	public static final String ROLE_EXTERNAL = "ROLE_EXTERNAL";
 
+	/**
+	 * บทบาทที่แอดมินตั้งให้บัญชีได้ — ตรงกับตัวเลือกในฟอร์ม และเป็นบทบาทเดียวที่ SecurityConfig รู้จัก
+	 * ค่าอื่นทำให้บัญชีเข้าระบบได้แต่ใช้งานไม่ได้ หรือไปตรงกับเงื่อนไขพิเศษที่ไม่ได้ตั้งใจ
+	 */
+	public static final java.util.Set<String> ASSIGNABLE_ROLES = java.util.Set.of("ROLE_USER", "ROLE_ADMIN",
+			ROLE_EXTERNAL);
+
 	public LocalDateTime getAcademicPositionSyncedAt() {
 		return academicPositionSyncedAt;
 	}

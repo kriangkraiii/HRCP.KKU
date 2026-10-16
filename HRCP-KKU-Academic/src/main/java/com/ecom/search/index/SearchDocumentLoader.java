@@ -137,7 +137,9 @@ public class SearchDocumentLoader {
             case SYSTEM_USER -> map(users.findById(id.intValue()), factory::fromUser);
             case NOTIFICATION -> map(notifications.findById(id), factory::fromNotification);
             case ADMIN_FILE -> map(adminFiles.findById(id), factory::fromAdminFile);
-            case REGULATION_DOC -> map(regulationDocs.findById(id), factory::fromRegulationDoc);
+            // ที่ HR ถอดออกแล้วไม่อยู่ในผลค้นหา — โหลดไม่ได้ = ลบออกจากดัชนี
+            case REGULATION_DOC -> map(regulationDocs.findById(id).filter(d -> d.getRetiredAt() == null),
+                    factory::fromRegulationDoc);
             case ACADEMIC_ATTACHMENT ->
                 map(academicAttachments.findById(id), factory::fromAcademicAttachment);
             case POSITION_ATTACHMENT ->

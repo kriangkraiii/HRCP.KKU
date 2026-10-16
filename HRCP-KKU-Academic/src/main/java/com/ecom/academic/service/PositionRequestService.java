@@ -2227,7 +2227,8 @@ public class PositionRequestService {
                     continue;
                 }
                 try {
-                    byPublication.putIfAbsent(Long.valueOf(value.trim()),
+                    // id ที่เลือกไว้อาจเป็นแถวที่ถูกรวมเข้ากับแถวอื่นแล้ว (PublicationMergeService) — ลิงก์ไปแถวที่เหลือ
+                    byPublication.putIfAbsent(publicationRepository.resolveMerged(Long.valueOf(value.trim())),
                             Integer.valueOf(field.group(1)));
                 } catch (NumberFormatException e) {
                     // Someone hand-edited the form or a browser extension mangled

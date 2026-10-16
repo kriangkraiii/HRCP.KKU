@@ -54,7 +54,7 @@ public class KkuDocumentFileService {
         if (id == null) {
             return Optional.empty();
         }
-        return docRepo.findById(id).filter(doc -> isOnHrSite(doc.getFileUrl()));
+        return docRepo.findById(id).filter(doc -> doc.getRetiredAt() == null && isOnHrSite(doc.getFileUrl()));
     }
 
     /** เนื้อไฟล์ จากหน่วยความจำ หรือดึงจาก hr2 — ดึงไม่ได้หรือใหญ่เกินจะไม่ถูกเก็บไว้ */

@@ -142,6 +142,48 @@ class CpDirectorySyncServiceTest {
     }
 
     @Test
+    @DisplayName("เว็บคณะยังแสดงตำแหน่งต่ำกว่า — คำนำหน้าที่แก้ไว้แล้วต้องไม่ถูกลดกลับ")
+    void aPromotedTitleIsNotPulledBackByTheWebsite() {
+        UserDtls u = user();
+        u.setTitle("รศ.ดร.");
+        when(userRepo.findByEmail(EMAIL)).thenReturn(u);
+        when(client.fetchAllWithFallback()).thenReturn(live(person())); // เว็บยังเป็น "ผศ.ดร."
+
+        CpDirectorySyncService.Result result = sync.sync();
+
+        assertThat(u.getTitle()).isEqualTo("รศ.ดร.");
+        assertThat(result.titlesKept()).isEqualTo(1);
+        assertThat(result.describe()).contains("คงคำนำหน้าเดิม 1 คน");
+    }
+
+    @Test
+    @DisplayName("คำนำหน้าธรรมดาจาก HR feed ยังถูกยกระดับเป็นตำแหน่งวิชาการจากเว็บคณะ")
+    void aPlainPrefixIsStillUpgraded() {
+        UserDtls u = user();
+        u.setTitle("นาย");
+        when(userRepo.findByEmail(EMAIL)).thenReturn(u);
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
+
+        CpDirectorySyncService.Result result = sync.sync();
+
+        assertThat(u.getTitle()).isEqualTo("ผศ.ดร.");
+        assertThat(result.titlesKept()).isZero();
+    }
+
+    @Test
+    @DisplayName("ตำแหน่งเท่ากัน — เติม ดร. จากเว็บคณะได้")
+    void theSameRankStillGainsTheDoctorate() {
+        UserDtls u = user();
+        u.setTitle("ผศ.");
+        when(userRepo.findByEmail(EMAIL)).thenReturn(u);
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
+
+        sync.sync();
+
+        assertThat(u.getTitle()).isEqualTo("ผศ.ดร.");
+    }
+
+    @Test
     @DisplayName("ถ้ามีไฟล์รูปภาพอยู่บนดิสก์แล้ว ต้องนำมาใช้งานทันทีโดยไม่ยิงเน็ตไปโหลดซ้ำ")
     void existingPhotoOnDiskIsReusedWithoutNetworkCall() {
         UserDtls u = user();
@@ -169,7 +211,9 @@ class CpDirectorySyncServiceTest {
         sync.sync();
 
         assertThat(u.getFirstName()).isEqualTo("สมชาย");
-        assertThat(u.getTitle()).isEqualTo("ผศ.ดร.");
+        assertThat(u.getTitle())
+                .as("ตำแหน่งจากระบบ HR (รศ.) สูงกว่าเว็บคณะ (ผศ.) — ใช้ตำแหน่งของบัญชี แต่ยังเติม ดร. จากเว็บได้")
+                .isEqualTo("รศ.ดร.");
         assertThat(u.getAcademicPosition())
                 .as("เว็บคณะเป็นข้อมูลประชาสัมพันธ์ ไม่ควรทับข้อมูลจากระบบ HR")
                 .isEqualTo("รองศาสตราจารย์");

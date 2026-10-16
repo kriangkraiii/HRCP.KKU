@@ -39,6 +39,12 @@ import com.ecom.service.SystemAlertService;
  * written over what is already there, so that this run can correct the guess. The
  * cost is that a hand edit to them lasts until the next sync.
  *
+ * <p><b>The short title (คำนำหน้า) is overwritten too, but only upwards.</b> The HR
+ * feed sends plain prefixes ("นาย"), and the website is where "ผศ.ดร." comes from.
+ * The website also lags behind promotions, though, so a title that already shows a
+ * higher academic rank than the website's is left alone — otherwise a newly
+ * promoted "รศ.ดร." was pulled back to "ผศ.ดร." every Sunday.
+ *
  * <p>Matching is by e-mail address. It is the one field both sides carry for
  * everyone, and unlike a name it does not go stale on marriage or promotion.
  */
@@ -113,6 +119,7 @@ public class CpDirectorySyncService {
             int photos = 0;
             int details = 0;
             int unmatched = 0;
+            int titlesKept = 0;
 
             for (CpPerson person : people) {
                 Applied applied = apply(person);
@@ -126,9 +133,12 @@ public class CpDirectorySyncService {
                 if (applied.details()) {
                     details++;
                 }
+                if (applied.titleKept()) {
+                    titlesKept++;
+                }
             }
 
-            Result result = new Result(people.size(), photos, details, unmatched,
+            Result result = new Result(people.size(), photos, details, unmatched, titlesKept,
                     fetch.usedFallbackCache(), null);
             if (result.usedFallbackCache()) {
                 // Everything was still applied, so this is not a failed run — but the
@@ -195,10 +205,13 @@ public class CpDirectorySyncService {
 
         boolean photo = false;
         boolean details = false;
+        boolean titleKept = false;
 
         if (user != null) {
             photo = applyPhoto(user, person);
-            details = applyUserDetails(user, person);
+            TitleOutcome title = applyTitle(user, person);
+            titleKept = title.websiteLower();
+            details = applyUserDetails(user, person) | title.changed();
             if (photo || details) {
                 userRepo.save(user);
             }
@@ -210,7 +223,7 @@ public class CpDirectorySyncService {
             details = true;
         }
 
-        return new Applied(true, photo, details);
+        return new Applied(true, photo, details, titleKept);
     }
 
     private boolean isCustomUserPhoto(String filename, String syncFileName) {
@@ -269,6 +282,50 @@ public class CpDirectorySyncService {
         return true;
     }
 
+    /** @param websiteLower เว็บคณะแสดงตำแหน่งต่ำกว่าบัญชี — นับในผลซิงก์ว่าคงตำแหน่งเดิมไว้ */
+    private record TitleOutcome(boolean changed, boolean websiteLower) {
+    }
+
+    /**
+     * คำนำหน้าจากเว็บคณะ — ยกระดับได้ (นาย → ผศ.ดร., ผศ. → ผศ.ดร.) แต่ลดตำแหน่งวิชาการไม่ได้
+     *
+     * <p>ไม่แตะคำนำหน้าของคนที่ SSO ยืนยันตำแหน่งให้แล้ว คำนำหน้าของคนกลุ่มนั้น derive มาจากตำแหน่ง
+     * ที่ทะเบียนบุคลากรยืนยัน ส่วนที่นี่คือเว็บประชาสัมพันธ์ซึ่งอัปเดตช้ากว่า
+     */
+    private TitleOutcome applyTitle(UserDtls user, CpPerson person) {
+        if (user.isAcademicPositionFromSso()) {
+            return new TitleOutcome(false, false);
+        }
+        String fromWebsite = com.ecom.util.AcademicTitleResolver.resolveShortTitle(
+                person.academicRankShort(),
+                person.academicRank(),
+                person.academicRankEn(),
+                user.getTitle());
+        boolean websiteLower = !isBlank(fromWebsite) && wouldLowerRank(user, fromWebsite);
+        // เว็บคณะยังแสดงตำแหน่งต่ำกว่า: ตำแหน่งเอาจากบัญชี ส่วน "ดร." ยังเติมจากเว็บได้
+        // (resolveShortTitle เอาตำแหน่งจากตัวเลือกแรกที่มี แต่ ดร. จากตัวเลือกไหนก็ได้)
+        String resolvedTitle = websiteLower
+                ? com.ecom.util.AcademicTitleResolver.resolveShortTitle(user.getTitle(), user.getAcademicPosition(),
+                        person.academicRankShort(), person.academicRank(), person.academicRankEn())
+                : fromWebsite;
+        if (websiteLower) {
+            log.info("Kept the rank in the title of {} ({}): the college site still shows {}", user.getEmail(),
+                    user.getTitle(), fromWebsite);
+        }
+        if (isBlank(resolvedTitle) || resolvedTitle.equals(user.getTitle())) {
+            return new TitleOutcome(false, websiteLower);
+        }
+        user.setTitle(resolvedTitle);
+        return new TitleOutcome(true, websiteLower);
+    }
+
+    /** คำนำหน้าใหม่แสดงตำแหน่งวิชาการต่ำกว่าที่บัญชีนี้มีอยู่ (จากคำนำหน้าหรือช่องตำแหน่งวิชาการ) */
+    static boolean wouldLowerRank(UserDtls user, String newTitle) {
+        com.ecom.academic.model.AcademicRank current =
+                com.ecom.academic.model.AcademicRank.of(user.getTitle(), user.getAcademicPosition());
+        return current != null && current.isAbove(com.ecom.academic.model.AcademicRank.of(newTitle));
+    }
+
     /** Fills gaps on the account. Anything already set is left as it is. */
     private boolean applyUserDetails(UserDtls user, CpPerson person) {
         boolean changed = false;
@@ -279,21 +336,6 @@ public class CpDirectorySyncService {
         }
         if (isBlank(user.getLastName()) && !isBlank(person.lastName())) {
             user.setLastName(person.lastName());
-            changed = true;
-        }
-
-        // Resolve clean Title from Thai short name, full rank, or English rank
-        String resolvedTitle = com.ecom.util.AcademicTitleResolver.resolveShortTitle(
-                person.academicRankShort(),
-                person.academicRank(),
-                person.academicRankEn(),
-                user.getTitle());
-        // ...แต่ไม่แตะคำนำหน้าของคนที่ SSO ยืนยันตำแหน่งให้แล้ว คำนำหน้าของคนกลุ่มนั้นถูก
-        // derive มาจากตำแหน่งที่ทะเบียนบุคลากรยืนยัน ส่วนที่นี่คือเว็บประชาสัมพันธ์ซึ่งอัปเดตช้ากว่า
-        // ทับทุกวันอาทิตย์เมื่อไหร่ คำนำหน้ากับตำแหน่งก็ไม่ตรงกันอีกรอบ
-        if (!isBlank(resolvedTitle) && !resolvedTitle.equals(user.getTitle())
-                && !user.isAcademicPositionFromSso()) {
-            user.setTitle(resolvedTitle);
             changed = true;
         }
 
@@ -411,30 +453,32 @@ public class CpDirectorySyncService {
      * by that address" and "found them, nothing needed changing" are different
      * outcomes and only the first is worth reporting.
      */
-    private record Applied(boolean matched, boolean photo, boolean details) {
+    private record Applied(boolean matched, boolean photo, boolean details, boolean titleKept) {
 
         static Applied noMatch() {
-            return new Applied(false, false, false);
+            return new Applied(false, false, false, false);
         }
     }
 
     /**
      * Outcome of a whole run.
      *
+     * @param titlesKept        accounts whose title already shows a higher rank than the
+     *                          website, left as they were
      * @param usedFallbackCache true when the live site could not be reached and the
      *                          run worked from the last snapshot on disk. The run
      *                          still succeeded — {@link #success()} stays true — but
      *                          the data is as old as that snapshot.
      */
-    public record Result(int read, int photos, int details, int unmatched,
+    public record Result(int read, int photos, int details, int unmatched, int titlesKept,
             boolean usedFallbackCache, String error) {
 
         static Result skipped(String reason) {
-            return new Result(0, 0, 0, 0, false, reason);
+            return new Result(0, 0, 0, 0, 0, false, reason);
         }
 
         static Result failed(String message) {
-            return new Result(0, 0, 0, 0, false, message == null ? "ไม่ทราบสาเหตุ" : message);
+            return new Result(0, 0, 0, 0, 0, false, message == null ? "ไม่ทราบสาเหตุ" : message);
         }
 
         public boolean success() {
@@ -450,7 +494,9 @@ public class CpDirectorySyncService {
                     ? "อ่านจากเว็บคณะ (ข้อมูลสำรองในเครื่อง) "
                     : "อ่านจากเว็บคณะ ";
             String summary = source + read + " คน — เพิ่มรูป " + photos + " คน, "
-                    + "เติมข้อมูล " + details + " คน, ไม่พบในระบบ " + unmatched + " คน";
+                    + "เติมข้อมูล " + details + " คน, ไม่พบในระบบ " + unmatched + " คน"
+                    + (titlesKept > 0 ? ", คงคำนำหน้าเดิม " + titlesKept
+                            + " คน (เว็บคณะยังแสดงตำแหน่งต่ำกว่าในระบบ)" : "");
             return usedFallbackCache
                     ? summary + " (เชื่อมต่อเว็บคณะไม่ได้ จึงใช้ข้อมูลล่าสุดที่เคยซิงค์สำเร็จ)"
                     : summary;

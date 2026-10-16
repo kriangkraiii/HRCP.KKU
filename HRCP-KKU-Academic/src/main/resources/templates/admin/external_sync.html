@@ -271,6 +271,19 @@
                                 </div>
                             </div>
 
+                            <!--/* ผลงานตีพิมพ์ที่ซ้ำกัน — ตรวจรายการก่อนรวม (docs/PLAN-bughunt-decisions.md ข้อ 2b) */-->
+                            <div class="col-12 mt-3">
+                                <div class="border rounded-3 p-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between shadow-sm bg-white">
+                                    <div class="me-md-3 mb-2 mb-md-0">
+                                        <h6 class="fw-bold mb-1"><i class="fas fa-clone text-secondary me-1"></i> ผลงานตีพิมพ์ที่ซ้ำกัน</h6>
+                                        <p class="text-muted small mb-0">ผลงานชิ้นเดียวกันที่มีหลายแถว (เช่น Scopus กับ OpenAlex) — ตรวจรายการแล้วรวมเป็นแถวเดียว</p>
+                                    </div>
+                                    <a href="/admin/external-sync/publication-duplicates" class="btn btn-outline-secondary px-4 text-nowrap">
+                                        <i class="fas fa-magnifying-glass me-1"></i> ตรวจหาผลงานซ้ำ
+                                    </a>
+                                </div>
+                            </div>
+
                             <!--/* Card 5: KKU HR Regulations Sync */-->
                             <div class="col-12 mt-3">
                                 <div class="border rounded-3 p-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between shadow-sm bg-white border-warning">
@@ -280,11 +293,22 @@
                                             ดึงข้อบังคับ ประกาศ และคำจำกัดความผลงานทางวิชาการล่าสุดจาก <a href="https://hr2.kku.ac.th/?page_id=5546" target="_blank" rel="noopener" class="text-primary text-decoration-none">hr2.kku.ac.th/?page_id=5546 (พนักงาน) <i class="fas fa-external-link-alt small"></i></a> และ <a href="https://hr2.kku.ac.th/?page_id=5532" target="_blank" rel="noopener" class="text-primary text-decoration-none">hr2.kku.ac.th/?page_id=5532 (ข้าราชการ) <i class="fas fa-external-link-alt small"></i></a> ทุกเดือนโดยอัตโนมัติ
                                         </p>
                                     </div>
-                                    <form th:action="@{/admin/external-sync/kku-docs/run}" method="post" data-lock-button="1">
-                                        <button type="submit" class="btn btn-warning text-dark px-4 fw-semibold text-nowrap">
-                                            <i class="fas fa-sync-alt me-1"></i> ซิงค์คลังเอกสาร มข. ทันที
-                                        </button>
-                                    </form>
+                                    <div class="d-flex flex-column gap-2">
+                                        <form th:action="@{/admin/external-sync/kku-docs/run}" method="post" data-lock-button="1">
+                                            <button type="submit" class="btn btn-warning text-dark px-4 fw-semibold text-nowrap">
+                                                <i class="fas fa-sync-alt me-1"></i> ซิงค์คลังเอกสาร มข. ทันที
+                                            </button>
+                                        </form>
+                                        <!--/* ด่านกันถอดเอกสารจำนวนมากในรอบเดียวกันไว้ — แอดมินตรวจหน้าเว็บ HR แล้วยืนยันเอง */-->
+                                        <form th:if="${kkuRetireAwaitingConfirmation}" th:action="@{/admin/external-sync/kku-docs/run}"
+                                              method="post" data-lock-button="1"
+                                              data-confirm="ยืนยันว่า HR ถอดเอกสารเหล่านั้นออกจากหน้าเว็บจริง? เอกสารจะถูกซ่อนจากคลังเอกสารและผลค้นหา (กลับมาเองถ้า HR ใส่คืน)">
+                                            <input type="hidden" name="confirmRetire" value="true">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm w-100 text-nowrap">
+                                                <i class="fas fa-box-archive me-1"></i> ยืนยันถอดเอกสารที่หายจากเว็บ HR
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
