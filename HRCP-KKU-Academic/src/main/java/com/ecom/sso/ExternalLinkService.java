@@ -210,7 +210,7 @@ public class ExternalLinkService {
     }
 
     /** เก็บแถวที่หมดอายุไว้ 90 วันเผื่อสอบย้อน แล้วลบ */
-    @Scheduled(cron = "${app.auth.email-link.purge-cron:0 40 3 * * *}")
+    @Scheduled(cron = "${app.auth.email-link.purge-cron:0 40 3 * * *}", zone = "Asia/Bangkok")
     @Transactional
     public void purgeExpired() {
         int removed = links.deleteExpiredBefore(LocalDateTime.now(clock).minusDays(90));

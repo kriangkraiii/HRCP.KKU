@@ -94,6 +94,57 @@ class Doc7ScoringTest {
     }
 
     @Test
+    @DisplayName("คะแนนรวมที่ได้พอดีขอบเกณฑ์ (56/71/86) ไม่ตกไปช่วงล่างเพราะเศษทศนิยมของ double")
+    void exactBoundaryTotalsReachTheirBand() {
+        // 0×4 + 1.8×6 + 4.8×6 + 4.1×4 = 10.8 + 28.8 + 16.4 = 56 พอดี — double เคยรวมได้ 55.99999999999999
+        Map<String, String> m = scores("0", "1.8", "4.8", "4.1");
+
+        Doc7Scoring.derive(m);
+
+        assertThat(m).containsEntry("scorex", "56.00")
+                .containsEntry("ch1", "☐")
+                .containsEntry("ch2", "☑")
+                .containsEntry("eval_result_level", "ชำนาญ");
+    }
+
+    @Test
+    @DisplayName("ทุกชุดคะแนนรายส่วน (ทศนิยม 1 ตำแหน่ง) ได้ระดับตรงกับคะแนนรวมที่พิมพ์")
+    void everyCombinationMatchesThePrintedTotal() {
+        int mismatches = 0;
+        String first = null;
+        for (int a = 0; a <= 50; a += 1) {
+            for (int b = 0; b <= 50; b += 1) {
+                for (int c = 0; c <= 50; c += 1) {
+                    for (int d = 0; d <= 50; d += 3) {
+                        Map<String, String> m = scores(String.valueOf(a / 10.0), String.valueOf(b / 10.0),
+                                String.valueOf(c / 10.0), String.valueOf(d / 10.0));
+                        Doc7Scoring.derive(m);
+                        String printed = Doc7Scoring.evalLevelFromScore(m.get("scorex"));
+                        if (!printed.equals(m.get("eval_result_level"))) {
+                            mismatches++;
+                            if (first == null) {
+                                first = m.get("scorex") + " " + m;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assertThat(mismatches).as("ตัวอย่างแรก: %s", first).isZero();
+    }
+
+    @Test
+    @DisplayName("คะแนนรายส่วนที่ไม่ใช่ตัวเลขจริง (NaN) ไม่ทำให้ได้ระดับเชี่ยวชาญ")
+    void notANumberIsNotExpert() {
+        Map<String, String> m = scores("NaN", "NaN", "NaN", "NaN");
+
+        Doc7Scoring.derive(m);
+
+        assertThat(m.get("eval_result_level")).isEqualTo("ไม่ผ่าน");
+        assertThat(Doc7Scoring.evalLevelFromScore("NaN")).isEmpty();
+    }
+
+    @Test
     @DisplayName("คะแนนรายส่วนทศนิยมคิดน้ำหนักและช่วงระดับถูกต้อง")
     void decimalSectionScoresAreWeighted() {
         Map<String, String> m = scores("4.5", "3.2", "3.8", "4");

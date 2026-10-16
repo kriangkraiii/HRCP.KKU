@@ -191,6 +191,52 @@ class AttachmentPreviewTest {
         assertThat(disposition).contains("original.docx");
     }
 
+    /** ไฟล์แนบของคำร้องผู้อื่น — ผู้ยื่นใส่เลขคำร้องของตัวเองใน URL แล้วเดาเลขไฟล์แนบ */
+    private AcademicAttachment someoneElsesAttachment(String filename) throws Exception {
+        File file = tempDir.resolve(filename).toFile();
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write("%PDF-1.4 another applicant's evidence".getBytes());
+        }
+        UserDtls other = new UserDtls();
+        other.setId(200);
+        AcademicRequest otherRequest = new AcademicRequest();
+        otherRequest.setId(2L);
+        otherRequest.setApplicant(other);
+
+        AcademicAttachment attachment = new AcademicAttachment();
+        attachment.setId(99L);
+        attachment.setRequest(otherRequest);
+        attachment.setOriginalFilename(filename);
+        attachment.setFileType("PDF");
+        attachment.setStoredFilePath(file.getAbsolutePath());
+        when(requestService.findAttachmentById(99L)).thenReturn(Optional.of(attachment));
+        return attachment;
+    }
+
+    @Test
+    @DisplayName("ผู้ยื่นดาวน์โหลดไฟล์แนบของคำร้องอื่นผ่านเลขคำร้องของตัวเองไม่ได้")
+    void downloadingAnotherRequestsAttachmentIsRefused() throws Exception {
+        someoneElsesAttachment("other.pdf");
+
+        ResponseEntity<Resource> response = applicantController.downloadAttachment(1L, 99L,
+                () -> "applicant@kku.ac.th");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody()).isNull();
+    }
+
+    @Test
+    @DisplayName("ผู้ยื่นเปิดดูไฟล์แนบของคำร้องอื่นผ่านเลขคำร้องของตัวเองไม่ได้")
+    void viewingAnotherRequestsAttachmentIsRefused() throws Exception {
+        someoneElsesAttachment("other-view.pdf");
+
+        ResponseEntity<Resource> response = applicantController.viewAttachment(1L, 99L,
+                () -> "applicant@kku.ac.th");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody()).isNull();
+    }
+
     @Test
     @DisplayName("แอดมินเปิดดูไฟล์แนบ DOCX จะแปลงเป็น PDF inline")
     void adminViewDocxAttachment_shouldConvertToPdfInline() throws Exception {

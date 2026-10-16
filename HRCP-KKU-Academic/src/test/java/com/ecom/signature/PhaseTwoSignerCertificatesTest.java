@@ -97,6 +97,8 @@ class PhaseTwoSignerCertificatesTest extends AbstractFlowTest {
         json.put("applicant_name", SignerNameResolver.printedName(applicant));
         // เอกสารที่ 9: ผู้ขอไม่ได้เป็นผู้ประพันธ์ทั้งสองตำแหน่งในเทสต์นี้ — เป็นผู้นิพนธ์ร่วม
         json.put("chk_coauthor", "☑");
+        // เอกสารที่ 8: ส่งเวียนไม่ได้ถ้าไม่มีผู้ทรงคุณวุฒิในตารางอย่างน้อย 1 คน (DocumentCompleteness.malformedFields)
+        json.put("name1", "Expert One");
         UserDtls initiator = signers.containsKey("applicant") ? applicant : admin;
 
         SignatureRequest envelope = circulate(SignatureModule.POSITION, request.getId(), documentType,

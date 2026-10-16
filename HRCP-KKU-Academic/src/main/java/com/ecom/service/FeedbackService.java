@@ -72,6 +72,20 @@ public class FeedbackService {
     }
 
     /**
+     * ภาพที่แนบ อ่านเข้าหน่วยความจำแล้ว
+     *
+     * <p>ส่งอีเมลทำงานบนอีก thread หลังคำขอจบไปแล้ว ตอนนั้น Tomcat ลบไฟล์ชั่วคราวของ {@link MultipartFile}
+     * ทิ้งไปแล้ว — เดิมส่ง MultipartFile ข้ามไป อ่านไม่ได้ อีเมลทั้งฉบับจึงไม่ออก (ทั้งที่หน้าเว็บบอกว่าส่งแล้ว)
+     */
+    public record Image(String filename, byte[] bytes, String contentType) {
+
+        public static Image of(MultipartFile file) throws java.io.IOException {
+            String name = file.getOriginalFilename() != null ? file.getOriginalFilename() : "image.png";
+            return new Image(name, file.getBytes(), file.getContentType());
+        }
+    }
+
+    /**
      * Sends the feedback email asynchronously to all configured recipients.
      *
      * @param sender    the logged-in user filing the report
@@ -82,7 +96,7 @@ public class FeedbackService {
      */
     @Async
     public void sendFeedback(UserDtls sender, String category, String subject,
-                             String detail, List<MultipartFile> images) {
+                             String detail, List<Image> images) {
         try {
             List<String> recipients = getRecipientList().stream()
                     .filter(r -> !EmailTemplateHelper.isTestEmail(r))
@@ -119,14 +133,9 @@ public class FeedbackService {
 
             // Attach images
             if (images != null) {
-                for (MultipartFile image : images) {
-                    if (image != null && !image.isEmpty()) {
-                        String filename = image.getOriginalFilename() != null
-                                ? image.getOriginalFilename() : "image.png";
-                        helper.addAttachment(filename,
-                                new ByteArrayResource(image.getBytes()),
-                                image.getContentType());
-                    }
+                for (Image image : images) {
+                    helper.addAttachment(image.filename(), new ByteArrayResource(image.bytes()),
+                            image.contentType());
                 }
             }
 

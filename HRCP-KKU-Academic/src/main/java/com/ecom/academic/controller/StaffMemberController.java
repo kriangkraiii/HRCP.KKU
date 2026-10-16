@@ -234,7 +234,7 @@ public class StaffMemberController {
     @GetMapping("/edit/{id}")
     public String editStaffForm(@PathVariable Long id, Model model) {
         StaffMember staff = staffMemberService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Staff not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Staff not found"));
         model.addAttribute("staff", staff);
         addLinkableUsers(model);
         return "academic/admin/staff_form";
@@ -255,7 +255,7 @@ public class StaffMemberController {
             Model model,
             java.security.Principal principal) {
         StaffMember staff = staffMemberService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Staff not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Staff not found"));
         staff.setFirstName(firstName);
         staff.setLastName(lastName);
         staff.setAcademicTitle(academicTitle);

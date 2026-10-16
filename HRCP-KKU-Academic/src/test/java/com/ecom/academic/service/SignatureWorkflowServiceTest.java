@@ -100,6 +100,9 @@ class SignatureWorkflowServiceTest {
     @Autowired
     private SignatureVerificationService verificationService;
 
+    @Autowired
+    private com.ecom.repository.NotificationRepository notificationRepository;
+
     private UserDtls admin;
     private UserDtls head;
     private UserDtls dean;
@@ -717,6 +720,21 @@ class SignatureWorkflowServiceTest {
 
         Result result = workflow.requestExtension(step.getId(), "ติดราชการต่างประเทศ", head, ActorContext.none());
         assertThat(result.ok()).isTrue();
+
+        // ผู้ริเริ่มซองต้องได้รับแจ้ง — เดิมส่ง proxy ของผู้ริเริ่ม (LAZY) ไปแตะบนเธรด @Async การแจ้งเตือนจึงหาย
+        boolean notified = false;
+        for (int i = 0; i < 50 && !notified; i++) {
+            notified = notificationRepository.findByRecipientOrderByCreatedAtDesc(admin).stream()
+                    .anyMatch(n -> n.getTitle() != null && n.getTitle().startsWith("ขอขยายเวลาลงนาม"));
+            if (!notified) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+        assertThat(notified).as("ผู้ริเริ่มซองได้รับแจ้งว่ามีผู้ขอขยายเวลา").isTrue();
     }
 
     @Test

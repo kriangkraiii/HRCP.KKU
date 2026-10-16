@@ -154,7 +154,9 @@
 
     var today = new Date();
     var todayThai = formatThaiDate(today);
-    var isoToday = today.toISOString().split('T')[0];
+    // วันที่ตามเวลาเครื่อง — toISOString() เป็น UTC ช่วง 00:00–06:59 ของไทยจึงได้วันของเมื่อวาน
+    function pad2(n) { return (n < 10 ? '0' : '') + n; }
+    var isoToday = today.getFullYear() + '-' + pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
 
     /**
      * บางเทมเพลตมีชุดเลือกวันที่ของตัวเองอยู่แล้ว คือ .thai-date-picker (ซ่อนไว้)

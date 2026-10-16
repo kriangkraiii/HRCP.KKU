@@ -41,8 +41,13 @@ public class RequestLiveUpdates {
     public SseEmitter subscribe(SignatureModule module, Long requestId) {
         Key key = new Key(module, requestId);
         SseEmitter emitter = new SseEmitter(TIMEOUT_MS);
-        List<SseEmitter> list = subscribers.computeIfAbsent(key, k -> new CopyOnWriteArrayList<>());
-        list.add(emitter);
+        // เพิ่มใน compute เดียวกับที่สร้างรายการ — computeIfAbsent แล้วค่อย add เปิดช่องให้ remove() ของหน้าอื่น
+        // ลบรายการว่างออกจาก map ระหว่างนั้น หน้านี้จะไปอยู่ในรายการที่ไม่มีใครเห็นและไม่ได้รับแจ้งอีกเลย
+        subscribers.compute(key, (k, list) -> {
+            List<SseEmitter> target = list != null ? list : new CopyOnWriteArrayList<>();
+            target.add(emitter);
+            return target;
+        });
         Runnable remove = () -> remove(key, emitter);
         emitter.onCompletion(remove);
         emitter.onTimeout(remove);

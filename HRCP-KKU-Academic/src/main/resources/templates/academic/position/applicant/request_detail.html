@@ -57,11 +57,16 @@
                 <span th:if="${param.error[0] == 'cosigners_pending'}">
                     ยังส่งคำร้องไม่ได้ เนื่องจากผู้ร่วมงานยังลงนามเอกสารที่มีสถานะ "รอผู้อื่นลงนาม" ไม่ครบ
                 </span>
+                <!--/* เปิดเอกสารการมีส่วนร่วมในผลงานก่อนกรอกงานวิจัยในเอกสารที่ 1 — ไม่ใช่การส่งคำร้อง */-->
+                <span th:if="${param.error[0] == 'no_research_works'}">
+                    ยังไม่มีงานวิจัยในเอกสารที่ 1 จึงยังไม่มีแบบรับรองการมีส่วนร่วมในผลงานให้กรอก — กรุณากรอกงานวิจัยในเอกสารที่ 1 ก่อน
+                </span>
                 <span th:unless="${param.error[0] == 'incomplete_docs' or param.error[0] == 'rank_not_higher'
                         or param.error[0] == 'evaluation_required' or param.error[0] == 'position_mismatch'
                         or param.error[0] == 'already_professor' or param.error[0] == 'level_below_rank'
                         or param.error[0] == 'evaluation_unusable' or param.error[0] == 'special_method'
-                        or param.error[0] == 'unsigned_docs' or param.error[0] == 'cosigners_pending'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
+                        or param.error[0] == 'unsigned_docs' or param.error[0] == 'cosigners_pending'
+                        or param.error[0] == 'no_research_works'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 

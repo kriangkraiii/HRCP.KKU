@@ -28,6 +28,10 @@ class AcademicTitleResolverTest {
     void testResolveProfDr() {
         assertEquals("ศ.ดร.", AcademicTitleResolver.resolveShortTitle(null, "ศาสตราจารย์ ดร.", "Professor Ph.D."));
         assertEquals("ศ.ดร.", AcademicTitleResolver.resolveShortTitle(null, null, "Prof. Dr."));
+        // ตัวย่อไทยอย่างเดียว (เว็บวิทยาลัยมักมีแค่ช่องนี้) — เดิมได้ "ดร." ตำแหน่ง ศ. หายไปจากคำนำหน้า
+        assertEquals("ศ.ดร.", AcademicTitleResolver.resolveShortTitle("ศ.ดร.", null, null));
+        assertEquals("ศ.ดร.", AcademicTitleResolver.resolveShortTitle("ศ. ดร."));
+        assertEquals("ศ.", AcademicTitleResolver.resolveShortTitle("ศ."));
     }
 
     @Test

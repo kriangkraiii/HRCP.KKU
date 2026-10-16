@@ -307,7 +307,8 @@ public class AcademicApplicantController {
             return "redirect:/user/position/new-request";
         }
         if (currentRank == AcademicRank.PROFESSOR) {
-            redirectAttributes.addFlashAttribute("info",
+            // แดชบอร์ดไม่มีช่อง "info" — ข้อความเคยหายไปเฉย ๆ ผู้ใช้ถูกพากลับโดยไม่รู้ว่าทำไม
+            redirectAttributes.addFlashAttribute("warnMsg",
                     "ท่านดำรงตำแหน่งศาสตราจารย์อยู่แล้ว ซึ่งเป็นตำแหน่งทางวิชาการระดับสูงสุด");
             return "redirect:/user/academic/dashboard";
         }
@@ -354,7 +355,7 @@ public class AcademicApplicantController {
     @GetMapping({"/request/{id}/document-1", "/request/{id}/document/1"})
     public String document1Form(@PathVariable Long id, Principal principal, Model model) {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
@@ -405,7 +406,7 @@ public class AcademicApplicantController {
             Principal principal,
             RedirectAttributes redirectAttributes) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
@@ -471,7 +472,7 @@ public class AcademicApplicantController {
     @GetMapping({"/request/{id}/document-2", "/request/{id}/document/2"})
     public String document2Form(@PathVariable Long id, Principal principal, Model model) {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
@@ -542,7 +543,7 @@ public class AcademicApplicantController {
             Principal principal,
             RedirectAttributes redirectAttributes) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
@@ -628,7 +629,7 @@ public class AcademicApplicantController {
             Principal principal,
             RedirectAttributes redirectAttributes) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
@@ -733,7 +734,7 @@ public class AcademicApplicantController {
             Principal principal,
             RedirectAttributes redirectAttributes) {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
@@ -792,14 +793,20 @@ public class AcademicApplicantController {
             @PathVariable Long attachmentId,
             Principal principal) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
         }
 
+        // เลขไฟล์แนบต้องเป็นของคำร้องใน URL — ตรวจแค่เจ้าของคำร้อง ผู้ยื่นใส่เลขคำร้องของตัวเอง
+        // แล้วเดาเลขไฟล์แนบก็เปิดหลักฐานของคำร้องคนอื่นได้
         AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
-                .orElseThrow(() -> new RuntimeException("Attachment not found"));
+                .filter(a -> a.getRequest() != null && id.equals(a.getRequest().getId()))
+                .orElse(null);
+        if (attachment == null) {
+            return ResponseEntity.notFound().build();
+        }
 
         if ("LINK".equalsIgnoreCase(attachment.getFileType())) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
@@ -846,14 +853,20 @@ public class AcademicApplicantController {
             @PathVariable Long attachmentId,
             Principal principal) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
         }
 
+        // เลขไฟล์แนบต้องเป็นของคำร้องใน URL — ตรวจแค่เจ้าของคำร้อง ผู้ยื่นใส่เลขคำร้องของตัวเอง
+        // แล้วเดาเลขไฟล์แนบก็เปิดหลักฐานของคำร้องคนอื่นได้
         AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
-                .orElseThrow(() -> new RuntimeException("Attachment not found"));
+                .filter(a -> a.getRequest() != null && id.equals(a.getRequest().getId()))
+                .orElse(null);
+        if (attachment == null) {
+            return ResponseEntity.notFound().build();
+        }
 
         if ("LINK".equalsIgnoreCase(attachment.getFileType())) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
@@ -926,7 +939,7 @@ public class AcademicApplicantController {
             Principal principal,
             RedirectAttributes redirectAttributes) {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/academic/dashboard";
@@ -966,7 +979,7 @@ public class AcademicApplicantController {
     @PostMapping("/request/{id}/submit")
     public String submitRequest(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
@@ -1085,7 +1098,7 @@ public class AcademicApplicantController {
     @GetMapping("/request/{id}")
     public String viewRequest(@PathVariable Long id, Principal principal, Model model) {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
@@ -1178,7 +1191,7 @@ public class AcademicApplicantController {
             Principal principal,
             RedirectAttributes redirectAttributes) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
@@ -1220,7 +1233,7 @@ public class AcademicApplicantController {
     public ResponseEntity<Resource> downloadRevision(@PathVariable Long id, @PathVariable Long fileId,
             Principal principal) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         if (!request.getApplicant().getId().equals(getUser(principal).getId())) {
             return ResponseEntity.status(403).build();
         }
@@ -1234,7 +1247,7 @@ public class AcademicApplicantController {
             @RequestParam(value = "format", defaultValue = "pdf") String format,
             Principal principal) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
@@ -1249,7 +1262,7 @@ public class AcademicApplicantController {
         AcademicDocument doc = docs.stream()
                 .filter(d -> d.getId().equals(docId))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Document not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Document not found"));
 
         // เอกสารที่ผู้ยื่นเห็นได้: 1, 2 (ของตัวเอง) และ 9 (หนังสือแจ้งผล) ที่เหลือมีรายชื่อกรรมการ
         if (!applicantMaySee(id, doc.getDocumentType())) {
@@ -1344,7 +1357,7 @@ public class AcademicApplicantController {
     public ResponseEntity<Resource> downloadResult(@PathVariable Long id, Principal principal)
             throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {

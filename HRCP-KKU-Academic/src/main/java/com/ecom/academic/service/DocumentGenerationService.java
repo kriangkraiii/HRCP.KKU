@@ -3170,6 +3170,7 @@ public class DocumentGenerationService {
     private String escapeXml(String s) {
         if (s == null)
             return "";
+        s = withoutXmlControlCharacters(s);
         s = s.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
@@ -3180,6 +3181,19 @@ public class DocumentGenerationService {
             s = s.replace("\n", "</w:t><w:br/><w:t xml:space=\"preserve\">");
         }
         return s;
+    }
+
+    /** อักขระที่ XML 1.0 ไม่รับ (เว้น tab และขึ้นบรรทัด) */
+    private static final java.util.regex.Pattern XML_ILLEGAL =
+            java.util.regex.Pattern.compile("[\\x00-\\x08\\x0E-\\x1F\\uFFFE\\uFFFF]");
+
+    /**
+     * ข้อความที่คัดลอกมาจาก Word/PDF มีอักขระควบคุมติดมา — Shift+Enter ของ Word คือ U+000B ขึ้นหน้าใหม่คือ U+000C
+     * ใส่ลง document.xml ตรง ๆ แล้วไฟล์ทั้งไฟล์เปิดไม่ได้ สองตัวนั้นผู้ใช้ตั้งใจขึ้นบรรทัดใหม่ ที่เหลือทิ้ง
+     */
+    static String withoutXmlControlCharacters(String s) {
+        s = s.replace("\r\n", "\n").replace('\r', '\n').replace('\u000B', '\n').replace('\u000C', '\n');
+        return XML_ILLEGAL.matcher(s).replaceAll("");
     }
 
     @SuppressWarnings("unchecked")

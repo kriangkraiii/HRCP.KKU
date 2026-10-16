@@ -441,6 +441,15 @@
       body: h,
     })
       .then(function (r) {
+        // session หมดอายุ (หรือเซิร์ฟเวอร์เพิ่งรีสตาร์ต): POST ถูกส่งต่อไปหน้าเข้าสู่ระบบ และ fetch ตาม redirect เอง
+        // ได้หน้า login สถานะ 200 กลับมา — เดิมจึงขึ้น "บันทึกแล้ว" ทั้งที่ไม่มีอะไรถูกบันทึก ผู้ใช้พิมพ์ต่อเป็นชั่วโมงแล้วหายหมด
+        if (r.redirected) {
+          var expired = getCurrentLang() === "en"
+            ? "Not saved — your session has expired. Sign in again in another tab, then come back and save."
+            : "ยังไม่ได้บันทึก — หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่ในแท็บอื่น แล้วกลับมากดบันทึก";
+          self._show("error", expired);
+          return false;
+        }
         if (r.ok) {
           self.lastHash = h;
           self.lastSavedDate = new Date();

@@ -41,12 +41,12 @@ public class AdminLogService {
     }
 
     public Page<AdminLog> getAllLogs(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"));
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by(Sort.Direction.DESC, "timestamp"));
         return adminLogRepository.findAll(pageable);
     }
 
     public Page<AdminLog> getAllLogs(int page, int size, String search, String action, String dateFrom, String dateTo) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"));
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by(Sort.Direction.DESC, "timestamp"));
         Specification<AdminLog> spec = createFilterSpecification(search, action, dateFrom, dateTo);
         return adminLogRepository.findAll(spec, pageable);
     }

@@ -118,17 +118,13 @@ public final class Doc7Scoring {
         clampSectionScores(formData);
         // ค่าน้ำหนักแต่ละส่วน: ส่วนที่ 1=20, 2=30, 3=30, 4=20
         int[] weights = { 20, 30, 30, 20 };
-        double grandTotal = 0;
+        // คิดเป็นทศนิยมฐานสิบ ไม่ใช่ double — คะแนนรายส่วนอย่าง 1.8/4.8/4.1 รวมกันได้ 56 พอดี แต่ double
+        // ได้ 55.99999999999999 ผลเลยเป็น "ไม่ผ่าน" ทั้งที่เอกสารพิมพ์ 56.00 (น้ำหนัก/5 เป็นจำนวนเต็ม ผลจึงตรงเป๊ะ)
+        java.math.BigDecimal grandTotal = java.math.BigDecimal.ZERO;
 
         for (int sec = 1; sec <= 4; sec++) {
             // Admin กรอกคะแนนรวมต่อส่วน (1 ค่าต่อส่วน) ในช่อง sec_score_X
-            String secScoreVal = formData.getOrDefault("sec_score_" + sec, "0");
-            double secScore = 0;
-            try {
-                secScore = Double.parseDouble(secScoreVal);
-            } catch (NumberFormatException e) {
-                secScore = 0;
-            }
+            double secScore = sectionScore(formData.get("sec_score_" + sec));
 
             // วิเคราะห์ว่าคะแนนตกอยู่ในช่วงไหน (5 ช่วง)
             // ช่วง: 0-1 = score_1, 1.01-2 = score_2, 2.01-3 = score_3, 3.01-4 = score_4,
@@ -136,40 +132,50 @@ public final class Doc7Scoring {
             // placeholder ใน template DOCX: {{score11}}, {{score12}}, ..., {{score45}}
             for (int range = 1; range <= 5; range++) {
                 String key = "score" + sec + range;
-                boolean inRange = false;
-                if (range == 1)
-                    inRange = (secScore > 0 && secScore <= 1);
-                else if (range == 2)
-                    inRange = (secScore > 1 && secScore <= 2);
-                else if (range == 3)
-                    inRange = (secScore > 2 && secScore <= 3);
-                else if (range == 4)
-                    inRange = (secScore > 3 && secScore <= 4);
-                else if (range == 5)
-                    inRange = (secScore > 4 && secScore <= 5);
+                boolean inRange = secScore > range - 1 && secScore <= range;
                 // ช่วงที่ตรง → ใส่คะแนน, ช่วงอื่น → ว่าง
                 formData.put(key, inRange ? String.valueOf(secScore) : "");
             }
 
             // สูตร: (คะแนน / 5) × ค่าน้ำหนัก
-            double weighted = (secScore / 5.0) * weights[sec - 1];
-            formData.put("score" + sec + "x", "%.2f".formatted(weighted));
-            grandTotal += weighted;
+            java.math.BigDecimal weighted = java.math.BigDecimal.valueOf(secScore)
+                    .multiply(java.math.BigDecimal.valueOf(weights[sec - 1]))
+                    .divide(java.math.BigDecimal.valueOf(5));
+            formData.put("score" + sec + "x", twoDecimals(weighted));
+            grandTotal = grandTotal.add(weighted);
         }
 
         // คะแนนรวม — เก็บเป็นเลขอารบิกเสมอ เอกสารที่ 7 พิมพ์เป็นเลขไทยก็จริง แต่การแปลง
         // เป็นเรื่องของตอนสร้างไฟล์ (DocumentGenerationService ดูจากเทมเพลตเอง) ไม่ใช่ของ
         // ข้อมูลที่บันทึกไว้ ซึ่งต้องอ่านกลับมาใส่ฟอร์มและคำนวณต่อได้
-        formData.put("scorex", "%.2f".formatted(grandTotal));
+        formData.put("scorex", twoDecimals(grandTotal));
 
-        // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์ (ใช้คะแนนจริง ไม่ปัดขึ้น)
-        formData.put("ch1", grandTotal < PASS_SCORE ? "☑" : "☐");
-        formData.put("ch2", (grandTotal >= PASS_SCORE && grandTotal < SPECIAL_EXPERT_SCORE) ? "☑" : "☐");
-        formData.put("ch3", (grandTotal >= SPECIAL_EXPERT_SCORE && grandTotal < EXPERT_SCORE) ? "☑" : "☐");
-        formData.put("ch4", grandTotal >= EXPERT_SCORE ? "☑" : "☐");
+        // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์ (ใช้คะแนนจริง ไม่ปัดขึ้น) — ช่องติ๊กกับระดับมาจากค่าเดียวกัน
+        String level = evalLevelFromScore(grandTotal.toPlainString());
+        formData.put("ch1", "ไม่ผ่าน".equals(level) ? "☑" : "☐");
+        formData.put("ch2", "ชำนาญ".equals(level) ? "☑" : "☐");
+        formData.put("ch3", "ชำนาญพิเศษ".equals(level) ? "☑" : "☐");
+        formData.put("ch4", "เชี่ยวชาญ".equals(level) ? "☑" : "☐");
 
         // กำหนด eval_level จากผลคะแนนเพื่อส่งต่อไป doc8/doc9
-        formData.put("eval_result_level", evalLevelFromScore(grandTotal));
+        formData.put("eval_result_level", level);
+    }
+
+    /** คะแนนรายส่วนเป็นตัวเลข — ว่าง อ่านไม่ออก หรือไม่ใช่ตัวเลขจริง (NaN, Infinity) นับเป็น 0 */
+    private static double sectionScore(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return 0;
+        }
+        try {
+            double score = Double.parseDouble(raw.trim());
+            return Double.isFinite(score) ? score : 0;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private static String twoDecimals(java.math.BigDecimal value) {
+        return value.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
     }
 
     /**
@@ -188,6 +194,8 @@ public final class Doc7Scoring {
         try {
             // ใช้คะแนนจริงตามช่วงเกณฑ์ ไม่ปัดเศษขึ้น
             double score = Double.parseDouble(s);
+            if (!Double.isFinite(score))
+                return "";
             if (score < PASS_SCORE)
                 return "ไม่ผ่าน";
             if (score < SPECIAL_EXPERT_SCORE)

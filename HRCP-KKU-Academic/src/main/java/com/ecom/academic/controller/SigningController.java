@@ -779,6 +779,24 @@ public class SigningController {
             return "redirect:" + documentFormLink(module, requestId, documentType, me);
         }
 
+        if (!isAdmin) {
+            // แผงฝั่งผู้ยื่นส่งมาแค่ช่องของตัวเอง ช่องอื่นเจ้าหน้าที่เลือกหลังส่งคำร้อง — ต้องกันที่นี่ด้วย
+            // ไม่อย่างนั้น POST ตรงใส่บัญชีตัวเองในช่องคณบดีได้ ขั้นนั้นรอด่านตรวจ แล้วพอเจ้าหน้าที่ส่งเวียน
+            // การส่งต่อข้ามช่องที่มีคนอยู่แล้ว ผู้ยื่นจึงได้ลงนามแทนคณบดี
+            if (!com.ecom.academic.service.DocumentFieldOwnership.isApplicantDocument(module, documentType)) {
+                redirectAttributes.addFlashAttribute("errorMsg", "ท่านไม่มีสิทธิ์ส่งเอกสารฉบับนี้ไปลงนาม");
+                return "redirect:" + module.userLink(requestId);
+            }
+            boolean foreignSlot = assignments.stream().anyMatch(a -> "applicant".equalsIgnoreCase(a.slotKey())
+                    ? !me.getId().equals(a.signerUserId())
+                    : !SignatureAnchorRegistry.isApplicantSide(module, documentType, a.slotKey()));
+            if (foreignSlot) {
+                redirectAttributes.addFlashAttribute("errorMsg",
+                        "ท่านเลือกผู้ลงนามได้เฉพาะช่องของท่านเอง ผู้ลงนามตำแหน่งอื่นเจ้าหน้าที่จะเลือกให้หลังส่งคำร้อง");
+                return "redirect:" + documentFormLink(module, requestId, documentType, me);
+            }
+        }
+
         Result result;
         try {
             result = workflow.createEnvelope(module, requestId, documentType, documentLabel,
@@ -1050,17 +1068,20 @@ public class SigningController {
         return user != null && ("ROLE_ADMIN".equals(user.getRole()) || "ROLE_STAFF".equals(user.getRole()));
     }
 
-    /** Who may withdraw a round: its initiator, an administrator, or the applicant. */
+    /**
+     * Who may move or withdraw a round: its initiator or an administrator.
+     *
+     * <p>Not the applicant as such. It used to be, which let an applicant post straight to
+     * extend-due and reopen a staff round the clock had closed — the committee's or the dean's —
+     * though the page offers that button to staff only. Rounds the applicant started are still
+     * theirs through the initiator rule; withdrawing has its own applicant path.
+     */
     private boolean mayManage(SignatureRequest envelope, UserDtls user) {
         if ("ROLE_ADMIN".equals(user.getRole())) {
             return true;
         }
-        if (envelope.getInitiatedBy() != null
-                && user.getId().equals(envelope.getInitiatedBy().getId())) {
-            return true;
-        }
-        return documentLabelResolver.isApplicantOf(
-                envelope.getModule(), envelope.getRequestId(), user.getId());
+        return envelope.getInitiatedBy() != null
+                && user.getId().equals(envelope.getInitiatedBy().getId());
     }
 
     /**

@@ -144,7 +144,8 @@ class PositionRankRuleTest extends AbstractFlowTest {
                     .with(user(applicant.getEmail()).roles("USER")))
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/user/academic/dashboard"))
-                    .andExpect(flash().attributeExists("info"));
+                    // แดชบอร์ดผ่าน layout กลางซึ่งแสดง warnMsg — ชื่อ "info" ไม่มีใครแสดง ข้อความเคยหายเงียบ
+                    .andExpect(flash().attributeExists("warnMsg"));
         }
 
         @Test

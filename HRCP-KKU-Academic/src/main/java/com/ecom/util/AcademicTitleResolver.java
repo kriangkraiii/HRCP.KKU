@@ -44,7 +44,9 @@ public final class AcademicTitleResolver {
                 } else if (lower.contains("ผู้ช่วยศาสตราจารย์") || lower.contains("ผศ.") || lower.contains("ผศ")
                         || lower.contains("asst") || lower.contains("assist")) {
                     detectedRank = "ผศ.";
-                } else if ((lower.contains("ศาสตราจารย์") || lower.contains("prof"))
+                } else if ((lower.contains("ศาสตราจารย์") || lower.contains("prof")
+                        // ตัวย่อ "ศ." / "ศ.ดร." — เดิมไม่รู้จัก "ศ.ดร." จึงเหลือแค่ "ดร." (เหมือน resolveThaiAcademicPosition)
+                        || lower.startsWith("ศ.") || lower.equals("ศ"))
                         && !lower.contains("รอง") && !lower.contains("ผู้ช่วย") && !lower.contains("assoc") && !lower.contains("asst")) {
                     detectedRank = "ศ.";
                 } else if (lower.contains("อาจารย์") || lower.contains("lecturer") || lower.contains("instructor")) {

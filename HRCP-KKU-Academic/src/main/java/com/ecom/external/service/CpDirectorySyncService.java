@@ -213,7 +213,7 @@ public class CpDirectorySyncService {
         return new Applied(true, photo, details);
     }
 
-    private boolean isCustomUserPhoto(String filename) {
+    private boolean isCustomUserPhoto(String filename, String syncFileName) {
         if (filename == null || filename.isBlank() || PLACEHOLDER_IMAGE.equalsIgnoreCase(filename)) {
             return false;
         }
@@ -221,9 +221,10 @@ public class CpDirectorySyncService {
         if (!imageStorage.exists(filename)) {
             return false;
         }
-        // If it's a directory sync file, it is managed by the sync
-        String clean = filename.contains("_cp-") ? filename.substring(filename.indexOf("_cp-") + 1) : filename;
-        if (clean.startsWith("cp-")) {
+        // ไฟล์ที่ sync เขียนเองขึ้นต้นด้วย "cp-" เสมอ ส่วนไฟล์ที่ผู้ใช้อัปโหลดมีรหัสสุ่มนำหน้าเสมอ ("1a2b3c4d_ชื่อเดิม")
+        // เดิมนับ "..._cp-..." ทุกไฟล์เป็นของ sync — ผู้ใช้ที่อัปโหลดรูปชื่อ cp-ฉัน.jpg จึงโดนรูปจากเว็บคณะทับทุกวันอาทิตย์
+        // ชื่อแบบมีรหัสนำหน้ายังนับเป็นของ sync เฉพาะเมื่อส่วนที่เหลือคือชื่อไฟล์ที่ sync ตั้งให้คนนี้พอดี
+        if (filename.startsWith("cp-") || filename.endsWith("_" + syncFileName)) {
             return false;
         }
         return true;
@@ -237,11 +238,10 @@ public class CpDirectorySyncService {
             return false;
         }
         String current = user.getProfileImage();
-        if (isCustomUserPhoto(current)) {
+        String targetFileName = fileNameFor(person);
+        if (isCustomUserPhoto(current, targetFileName)) {
             return false;
         }
-
-        String targetFileName = fileNameFor(person);
 
         // Smart Disk Cache: If the photo already exists on disk from a previous sync or upload,
         // reuse it immediately without issuing an unnecessary network HTTP request.

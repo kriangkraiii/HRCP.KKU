@@ -4,9 +4,13 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -169,8 +173,19 @@ public class FsSyncWriter {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int writePublicationBatch(List<JsonNode> batch) {
+        // ล็อกเดียวกับ writeHarvestedBatch — ทั้งสองงานถามฐานข้อมูลว่ามีผลงานนี้หรือยังก่อนเขียน
+        harvestWriteLock.lock();
+        try {
+            return upsertScopusRows(batch);
+        } finally {
+            harvestWriteLock.unlock();
+        }
+    }
+
+    private int upsertScopusRows(List<JsonNode> batch) {
         LocalDateTime now = LocalDateTime.now();
         List<ScopusPublication> toSave = new ArrayList<>(batch.size());
+        Set<Long> adopted = new HashSet<>();
 
         for (JsonNode row : batch) {
             Long fsUserId = FsApiClient.longValue(row, "user_id");
@@ -180,7 +195,13 @@ public class FsSyncWriter {
             }
 
             ScopusPublication p = publicationRepo.findFirstByFsUserIdAndEid(fsUserId, eid)
+                    .or(() -> harvestedCopyOf(fsUserId, row, adopted))
                     .orElseGet(ScopusPublication::new);
+            if (p.getId() != null) {
+                adopted.add(p.getId());
+            }
+            // แถวที่ harvester สร้างไว้ก่อนกลายเป็นแถวของ Scopus — id เดิมอยู่ต่อ ผลงานที่อาจารย์เลือกไว้ยังชี้ถูก
+            p.setDataSource("SCOPUS");
             p.setFsUserId(fsUserId);
             p.setEid(eid);
             p.setUserScopusId(FsSyncService.normalizeScopusId(FsApiClient.text(row, "user_scopus_id")));
@@ -232,12 +253,40 @@ public class FsSyncWriter {
             p.setConferenceCountry(FsApiClient.text(row, "conference_country"));
             p.setConferenceLocation(FsApiClient.text(row, "conference_location"));
             p.setRawJson(row.toString());
+            p.setDedupHash(PublicationDeduplicator.computeDedupHash(
+                    p.getTitle(), p.getPublicationYear(), p.getAuthorNames()));
             p.setSyncedAt(now);
             toSave.add(p);
         }
 
         publicationRepo.saveAll(toSave);
         return toSave.size();
+    }
+
+    /**
+     * ผลงานชิ้นเดียวกันที่ harvester (OpenAlex, Crossref ฯลฯ) บันทึกไว้ก่อน Scopus จะ index
+     *
+     * <p>แถวของ harvester มี eid สังเคราะห์ ("OPENALEX:W…") หาจาก eid จริงของ Scopus ไม่เจอ เดิมจึงได้แถวใหม่อีกแถว
+     * — อาจารย์เห็นผลงานเดียวกันสองรายการในตัวเลือก หาด้วยสองชั้นแรกของการกรองซ้ำ (DOI แล้ว hash ของชื่อเรื่อง+ปี+ผู้แต่ง)
+     * ไม่ใช้ชั้นความคล้ายของชื่อเรื่อง: การยุบผิดแถวตรงนี้คือเขียนทับผลงานอีกชิ้นด้วยข้อมูลของ Scopus
+     */
+    private Optional<ScopusPublication> harvestedCopyOf(Long fsUserId, JsonNode row, Set<Long> adopted) {
+        Predicate<ScopusPublication> harvested = p -> !"SCOPUS".equals(p.getDataSource())
+                && !adopted.contains(p.getId());
+        String doi = PublicationHarmonizer.normalizeDoi(FsApiClient.text(row, "doi"));
+        if (doi != null) {
+            Optional<ScopusPublication> byDoi = publicationRepo.findByFsUserIdAndDoiIgnoreCase(fsUserId, doi)
+                    .stream().filter(harvested).findFirst();
+            if (byDoi.isPresent()) {
+                return byDoi;
+            }
+        }
+        String hash = PublicationDeduplicator.computeDedupHash(FsApiClient.text(row, "title"),
+                FsApiClient.integer(row, "publication_year"), FsApiClient.text(row, "author_names"));
+        if (hash == null) {
+            return Optional.empty();
+        }
+        return publicationRepo.findByFsUserIdAndDedupHash(fsUserId, hash).stream().filter(harvested).findFirst();
     }
 
     /**

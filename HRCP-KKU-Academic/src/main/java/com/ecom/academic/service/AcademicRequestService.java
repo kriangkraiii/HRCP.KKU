@@ -1629,13 +1629,13 @@ public class AcademicRequestService {
 
             String[] parts = normalized.split("[\\s/.\\-]+");
             if (parts.length < 3) {
-                return null;
+                return lenientThaiDate(thaiDate);
             }
 
             int day = Integer.parseInt(parts[0]);
             int month = monthOf(parts[1]);
             if (month < 1 || month > 12) {
-                return null;
+                return lenientThaiDate(thaiDate);
             }
 
             int year = Integer.parseInt(parts[2]);
@@ -1644,9 +1644,21 @@ public class AcademicRequestService {
             }
             return LocalDateTime.of(year, month, day, 0, 0);
         } catch (Exception e) {
+            return lenientThaiDate(thaiDate);
+        }
+    }
+
+    /**
+     * ทางสำรองของ {@link #parseThaiDate}: "วันที่ 17 กุมภาพันธ์ พ.ศ. 2569", "17 ก.พ. 2569" — ช่องวันที่เป็นข้อความ
+     * พิมพ์เองได้ ถ้าอ่านไม่ออก วันหมดอายุในเอกสารที่ 9 จะว่าง และผลประเมินที่ไม่มีวันหมดอายุใช้ได้ตลอดไป
+     */
+    private static LocalDateTime lenientThaiDate(String thaiDate) {
+        java.time.LocalDate date = Doc7AutoFill.parseThaiDate(thaiDate);
+        if (date == null) {
             log.debug("Not a date: '{}'", thaiDate);
             return null;
         }
+        return date.atStartOfDay();
     }
 
     /** A Thai month name or a month number. */

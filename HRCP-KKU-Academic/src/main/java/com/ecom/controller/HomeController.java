@@ -2,7 +2,6 @@ package com.ecom.controller;
 
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +47,13 @@ public class HomeController {
 
 	private final com.ecom.service.LoginAnnouncementService loginAnnouncements;
 
+	/**
+	 * ที่อยู่ของระบบในลิงก์อีเมล — ไม่เอาจาก Host ของคำขอ ใครก็ส่ง Host ปลอมมาขอรีเซ็ตรหัสผ่านของคนอื่นได้
+	 * แล้วเหยื่อจะได้อีเมลจริงจากระบบที่ลิงก์พาโทเค็นไปที่โดเมนของผู้โจมตี
+	 */
+	@org.springframework.beans.factory.annotation.Value("${app.public-base-url:https://hrd.computing.kku.ac.th}")
+	private String publicBaseUrl = "https://hrd.computing.kku.ac.th";
+
 	public HomeController(
 			UserService userService,
 			CommonUtil commonUtil,
@@ -71,8 +77,23 @@ public class HomeController {
 	}
 
 	@GetMapping("/")
-	public String index() {
+	public String index(Principal p) {
+		if (p != null) {
+			UserDtls user = userService.getUserByEmail(p.getName());
+			if (user != null && Boolean.TRUE.equals(user.getIsEnable())) {
+				if (user.isExternal()) {
+					return "redirect:/esign/inbox";
+				}
+				return "ROLE_ADMIN".equals(user.getRole())
+						? "redirect:/admin/academic/dashboard"
+						: "redirect:/user/academic/dashboard";
+			}
+		}
 		return "redirect:/signin";
+	}
+
+	public String index() {
+		return index(null);
 	}
 
 	/**
@@ -139,8 +160,12 @@ public class HomeController {
 	 * Target of SecurityConfig's accessDeniedPage. Spring Security already sets
 	 * 403 before forwarding here; the annotation repeats it so that reaching the
 	 * page directly reports 403 as well instead of a misleading 200.
+	 *
+	 * <p>Every method, not just GET: the forward keeps the original method, so a
+	 * refused POST (a CSRF token that went stale, a form posted without the role)
+	 * used to land on a GET-only mapping and answer 405 Method Not Allowed.
 	 */
-	@GetMapping("/403")
+	@org.springframework.web.bind.annotation.RequestMapping("/403")
 	@ResponseStatus(HttpStatus.FORBIDDEN)
 	public String accessDenied() {
 		return "error/403";
@@ -260,14 +285,14 @@ public class HomeController {
 	}
 
 	@PostMapping("/forgot-password")
-	public String processForgotPassword(@RequestParam String email, HttpSession session, HttpServletRequest request) {
+	public String processForgotPassword(@RequestParam String email, HttpSession session) {
 		UserDtls userByEmail = userService.getUserByEmail(email);
 		if (ObjectUtils.isEmpty(userByEmail)) {
 			session.setAttribute("errorMsg", "ไม่พบอีเมลนี้ในระบบ");
 		} else {
-			String resetToken = UUID.randomUUID().toString();
+			String resetToken = com.ecom.util.PasswordResetTokens.issue(java.time.Instant.now());
 			userService.updateUserResetToken(email, resetToken);
-			String url = CommonUtil.generateUrl(request) + "/reset-password?token=" + resetToken;
+			String url = publicBaseUrl.replaceAll("/+$", "") + "/reset-password?token=" + resetToken;
 			try {
 				commonUtil.sendMail(url, email);
 				session.setAttribute("succMsg", "กรุณาตรวจสอบอีเมลของท่าน ลิงก์รีเซ็ตรหัสผ่านถูกส่งแล้ว");
@@ -281,7 +306,7 @@ public class HomeController {
 
 	@GetMapping("/reset-password")
 	public String showResetPassword(@RequestParam String token, HttpSession session, Model m) {
-		UserDtls userByToken = userService.getUserByToken(token);
+		UserDtls userByToken = usableResetToken(token);
 		if (userByToken == null) {
 			m.addAttribute("msg", "ลิงก์ไม่ถูกต้องหรือหมดอายุ");
 			return "guest/message";
@@ -295,7 +320,7 @@ public class HomeController {
 			@RequestParam String password,
 			@RequestParam String confirmPassword,
 			HttpSession session, Model m) {
-		UserDtls userByToken = userService.getUserByToken(token);
+		UserDtls userByToken = usableResetToken(token);
 		if (userByToken == null) {
 			m.addAttribute("msg", "ลิงก์ไม่ถูกต้องหรือหมดอายุ");
 			return "guest/message";
@@ -327,6 +352,15 @@ public class HomeController {
 
 		session.setAttribute("succMsg", "รีเซ็ตรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบใหม่");
 		return "redirect:/signin";
+	}
+
+	/** บัญชีของโทเค็นนี้ เมื่อโทเค็นยังไม่หมดอายุ — ไม่อย่างนั้น null */
+	private UserDtls usableResetToken(String token) {
+		if (token == null || token.isBlank()
+				|| !com.ecom.util.PasswordResetTokens.isFresh(token, java.time.Instant.now())) {
+			return null;
+		}
+		return userService.getUserByToken(token);
 	}
 
 	/** Audit logging must never break the user's action, but it must leave a trace. */

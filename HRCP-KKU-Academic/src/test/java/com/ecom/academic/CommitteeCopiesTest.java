@@ -132,7 +132,9 @@ class CommitteeCopiesTest extends AbstractFlowTest {
                     .with(org.springframework.security.test.web.servlet.request
                             .SecurityMockMvcRequestPostProcessors.csrf())
                     .with(as(officer)))
-                    .andExpect(status().is3xxRedirection());
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash()
+                            .attribute("succMsg", org.hamcrest.Matchers.containsString("ส่งคำขอแก้ไขและลงนามใหม่")));
 
             String after = mvc.perform(get(page).with(as(officer)))
                     .andExpect(status().isOk())

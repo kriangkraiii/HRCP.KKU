@@ -119,8 +119,81 @@ class SearchDocumentFactoryTest {
                 .as("ชื่อฟิลด์ไม่ใช่คำที่คนค้น และจะทำให้ trigram index สกปรก")
                 .doesNotContain("course_name")
                 .doesNotContain("is_draft");
+        assertThat(d.getVisibility())
+                .as("เอกสารที่ 6 มีรายชื่อคณะอนุกรรมการ — หน้าเว็บของผู้ยื่นไม่เปิดให้ดู การค้นหาก็ต้องไม่เปิด")
+                .isEqualTo(SearchVisibility.ADMIN);
+        assertThat(d.getOwnerUserId()).isNull();
+    }
+
+    @Test
+    @DisplayName("เอกสารของผู้ยื่นเอง (เอกสารที่ 1) ผู้ยื่นค้นเจอ")
+    void applicantsOwnDocumentStaysSearchableByThem() {
+        AcademicDocument doc = new AcademicDocument();
+        doc.setId(12L);
+        doc.setRequest(request(applicant()));
+        doc.setDocumentType(1);
+        doc.setJsonData("{\"course_name\":\"การเรียนรู้ของเครื่อง\"}");
+
+        SearchDocument d = factory.fromAcademicDocument(doc);
+
         assertThat(d.getVisibility()).isEqualTo(SearchVisibility.OWNER_OR_ADMIN);
         assertThat(d.getOwnerUserId()).isEqualTo(42);
+    }
+
+    @Test
+    @DisplayName("เอกสารของเจ้าหน้าที่ — คำสั่งแต่งตั้ง ผลประเมิน หนังสือแจ้งผล — ผู้ยื่นค้นไม่เจอ")
+    void officeDocumentsAreAdminOnly() {
+        for (int type : new int[] { 3, 4, 5, 7, 8, 9 }) {
+            AcademicDocument doc = new AcademicDocument();
+            doc.setId(20L + type);
+            doc.setRequest(request(applicant()));
+            doc.setDocumentType(type);
+            doc.setJsonData("{\"committee_1_name\":\"รศ.ดร. มาลี ตั้งใจ\"}");
+
+            assertThat(factory.fromAcademicDocument(doc).getVisibility())
+                    .as("เอกสารที่ %d", type).isEqualTo(SearchVisibility.ADMIN);
+        }
+    }
+
+    @Test
+    @DisplayName("เฟส 2: ไฟล์แนบที่เจ้าหน้าที่อัปโหลด ผู้ยื่นค้นไม่เจอ")
+    void positionAttachmentsAreAdminOnly() {
+        com.ecom.academic.model.PositionRequest request = new com.ecom.academic.model.PositionRequest();
+        request.setId(9L);
+        request.setApplicant(applicant());
+        com.ecom.academic.model.PositionAttachment a = new com.ecom.academic.model.PositionAttachment();
+        a.setId(41L);
+        a.setRequest(request);
+        a.setOriginalFilename("ผลการพิจารณาของผู้ทรงคุณวุฒิ.pdf");
+        a.setStoredFilePath("position/9/attachments/x.pdf");
+        a.setFileType("PDF");
+
+        SearchDocument d = factory.fromPositionAttachment(a);
+
+        assertThat(d.getVisibility()).isEqualTo(SearchVisibility.ADMIN);
+        assertThat(d.getOwnerUserId()).isNull();
+    }
+
+    @Test
+    @DisplayName("เฟส 2: รายชื่อผู้ทรงคุณวุฒิ (เอกสารที่ 8) ผู้ยื่นค้นไม่เจอ เอกสารของผู้ยื่นค้นเจอ")
+    void positionExpertListIsAdminOnly() {
+        com.ecom.academic.model.PositionRequest request = new com.ecom.academic.model.PositionRequest();
+        request.setId(9L);
+        request.setApplicant(applicant());
+
+        com.ecom.academic.model.PositionDocument experts = new com.ecom.academic.model.PositionDocument();
+        experts.setId(31L);
+        experts.setRequest(request);
+        experts.setDocumentType(8);
+        experts.setJsonData("{\"name1\":\"ศ.ดร. ผู้ทรงคุณวุฒิ ลับมาก\"}");
+        assertThat(factory.fromPositionDocument(experts).getVisibility()).isEqualTo(SearchVisibility.ADMIN);
+
+        com.ecom.academic.model.PositionDocument own = new com.ecom.academic.model.PositionDocument();
+        own.setId(32L);
+        own.setRequest(request);
+        own.setDocumentType(1);
+        own.setJsonData("{\"major\":\"วิทยาการคอมพิวเตอร์\"}");
+        assertThat(factory.fromPositionDocument(own).getVisibility()).isEqualTo(SearchVisibility.OWNER_OR_ADMIN);
     }
 
     /**

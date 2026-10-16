@@ -63,7 +63,7 @@ public class SignatureReminderScheduler {
      * <p>08:30 by default — after the expiry mailer at 08:00, so the two do not
      * compete for the mail server or arrive as one indistinguishable burst.
      */
-    @Scheduled(cron = "${app.esign.reminder-cron:0 30 8 * * *}")
+    @Scheduled(cron = "${app.esign.reminder-cron:0 30 8 * * *}", zone = "Asia/Bangkok")
     @Transactional
     public void run() {
         int reminded = sendReminders();

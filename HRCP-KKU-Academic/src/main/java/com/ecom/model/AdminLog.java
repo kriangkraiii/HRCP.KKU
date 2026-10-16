@@ -44,19 +44,27 @@ public class AdminLog {
 	}
 
 	public AdminLog(String adminEmail, String adminName, String action, String details, String ipAddress) {
-		this.adminEmail = adminEmail;
-		this.adminName = adminName;
-		this.action = action;
-		this.details = details;
-		this.ipAddress = ipAddress;
+		this.adminEmail = clip(adminEmail, 255);
+		this.adminName = clip(adminName, 255);
+		this.action = clip(action, 255);
+		this.details = clip(details, 1000);
+		this.ipAddress = clip(ipAddress, 255);
 		this.timestamp = LocalDateTime.now();
 	}
 
 	public AdminLog(String adminEmail, String adminName, String action, String details, String ipAddress,
 			String resource, String userAgent) {
 		this(adminEmail, adminName, action, details, ipAddress);
-		this.resource = resource;
-		this.userAgent = userAgent;
+		this.resource = clip(resource, 500);
+		this.userAgent = clip(userAgent, 500);
+	}
+
+	/**
+	 * ตัดให้พอดีคอลัมน์ — ค่าหลายช่องมาจากผู้ใช้ (อีเมลที่พิมพ์ตอนเข้าสู่ระบบ, URL, User-Agent)
+	 * เกินความยาวแล้วการบันทึกบนเธรด async ล้มเงียบ ๆ แถวนั้นหายจากบันทึกกิจกรรมทั้งแถว
+	 */
+	private static String clip(String value, int max) {
+		return value == null || value.length() <= max ? value : value.substring(0, max);
 	}
 
 	// Getters and Setters

@@ -86,7 +86,8 @@
                             </div>
                             <!--/* วิธีเสนอผลงาน — เฉพาะขอ รศ./ศ. (ผศ. ไม่แบ่งวิธี) วิธีที่ ๓ ชะลอการใช้ (ข้อ ๔๐) จึงไม่มีให้เลือก
                                  วิธีพิเศษเสนอได้เฉพาะวิธีที่ ๑ (ข้อ 18.2, 18.3) — แสดง/ซ่อนตามตำแหน่งที่ขอในสคริปต์ด้านล่าง */-->
-                            <div class="col-md-4" id="worksMethodGroup" style="display:none">
+                            <!--/* ไม่มี style="display:none" — CSP ไม่รับ style attribute (เบราว์เซอร์ทิ้งพร้อม error ใน console) สคริปต์ท้ายหน้าซ่อนให้ตอนโหลด */-->
+                            <div class="col-md-4" id="worksMethodGroup">
                                 <label class="form-label">เสนอผลงานตาม <span class="text-danger">*</span><span
                                         th:replace="~{academic/_info_tip :: tip('เกณฑ์ผลงานของแต่ละวิธีดูได้ที่หัวข้อผลงานทางวิชาการด้านล่าง วิธีที่ ๓ ชะลอการใช้ตามข้อบังคับ ข้อ ๔๐')}"></span></label>
                                 <th:block th:if="${lockedFields != null and lockedFields.containsKey('works_method')}">

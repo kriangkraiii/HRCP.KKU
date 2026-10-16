@@ -111,6 +111,37 @@ class CpDirectorySyncServiceTest {
     }
 
     @Test
+    @DisplayName("รูปที่ผู้ใช้อัปโหลดเองซึ่งชื่อไฟล์เดิมขึ้นต้นด้วย cp- ต้องไม่ถูกทับ")
+    void anUploadNamedLikeASyncFileIsStillTheUsers() {
+        UserDtls u = user();
+        // ProfileImageStorage.store ตั้งชื่อเป็น "<รหัสสุ่ม 8 ตัว>_<ชื่อไฟล์เดิม>"
+        u.setProfileImage("1a2b3c4d_cp-graduation.jpg");
+        when(imageStorage.exists("1a2b3c4d_cp-graduation.jpg")).thenReturn(true);
+        when(userRepo.findByEmail(EMAIL)).thenReturn(u);
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
+
+        sync.sync();
+
+        assertThat(u.getProfileImage()).isEqualTo("1a2b3c4d_cp-graduation.jpg");
+        verify(client, never()).fetchImage(anyString());
+    }
+
+    @Test
+    @DisplayName("รูปจาก sync ที่เคยเก็บแบบมีรหัสนำหน้า ยังถูก sync ดูแลต่อ")
+    void aPrefixedCopyOfThisPersonsSyncPhotoIsStillManaged() {
+        UserDtls u = user();
+        u.setProfileImage("1a2b3c4d_cp-somchai.jaidee.png");
+        when(imageStorage.exists("1a2b3c4d_cp-somchai.jaidee.png")).thenReturn(true);
+        when(imageStorage.exists("cp-somchai.jaidee.png")).thenReturn(true);
+        when(userRepo.findByEmail(EMAIL)).thenReturn(u);
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
+
+        sync.sync();
+
+        assertThat(u.getProfileImage()).isEqualTo("cp-somchai.jaidee.png");
+    }
+
+    @Test
     @DisplayName("ถ้ามีไฟล์รูปภาพอยู่บนดิสก์แล้ว ต้องนำมาใช้งานทันทีโดยไม่ยิงเน็ตไปโหลดซ้ำ")
     void existingPhotoOnDiskIsReusedWithoutNetworkCall() {
         UserDtls u = user();

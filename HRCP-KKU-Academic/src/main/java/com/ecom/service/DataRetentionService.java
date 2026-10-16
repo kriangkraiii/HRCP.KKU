@@ -116,7 +116,7 @@ public class DataRetentionService {
      * Daily Cron job to enforce data retention policies.
      * Default schedule: 03:30 AM every day.
      */
-    @Scheduled(cron = "${app.retention.cron:0 30 3 * * ?}")
+    @Scheduled(cron = "${app.retention.cron:0 30 3 * * ?}", zone = "Asia/Bangkok")
     public void scheduledDailyRetention() {
         log.info("[Scheduled Retention] Starting daily data retention maintenance...");
         try {

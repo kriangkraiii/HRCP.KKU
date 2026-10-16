@@ -462,7 +462,7 @@ public class AcademicAdminController {
     @GetMapping("/request/{id}")
     public String viewRequest(@PathVariable Long id, Model model) {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         List<AcademicDocument> documents = requestService.getDocumentsSorted(id);
         for (AcademicDocument d : documents) {
@@ -614,7 +614,7 @@ public class AcademicAdminController {
         } catch (Exception e) {
             logger.error("Status update failed for request #{}: {}", id, e.getMessage(), e);
             // กติกาของกระบวนการ (ลำดับสถานะ / ต้องลงนามใหม่ก่อน) เป็นข้อความสำหรับคน ไม่ใช่ชื่อ exception
-            redirectAttributes.addFlashAttribute("errorDetail", e instanceof IllegalStateException
+            redirectAttributes.addFlashAttribute("errorDetail", (e instanceof IllegalStateException || e instanceof IllegalArgumentException)
                     ? e.getMessage()
                     : e.getClass().getSimpleName() + ": " + e.getMessage());
             return "redirect:/admin/academic/request/" + id + "?error=status_update_failed";
@@ -638,7 +638,7 @@ public class AcademicAdminController {
             return "redirect:/admin/academic/request/" + id;
         }
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, type);
         String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
@@ -804,7 +804,7 @@ public class AcademicAdminController {
         }
 
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         // เอกสารที่กำลังเวียนลงนามอยู่ห้ามแก้ มิฉะนั้นลายเซ็นที่ให้ไว้กับเนื้อหาเดิมจะกลายเป็น
         // ลายเซ็นบนเนื้อหาใหม่ที่ผู้ลงนามคนก่อนไม่เคยเห็น
@@ -1030,7 +1030,7 @@ public class AcademicAdminController {
             RedirectAttributes redirectAttributes) {
         UserDtls admin = getUser(principal);
         requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         // หนังสือออกเลขไปแล้ว ส่งกลับให้แก้ไม่ได้ — ต้องออกหนังสือฉบับใหม่แทน
         if (officeIssued(id, type)) {
             return "redirect:/admin/academic/request/" + id
@@ -1073,7 +1073,7 @@ public class AcademicAdminController {
             auditLogFailed(e);
         }
 
-        redirectAttributes.addFlashAttribute("success", "ส่งคำขอแก้ไขและลงนามใหม่สำหรับเอกสารที่ " + type + " เรียบร้อยแล้ว");
+        redirectAttributes.addFlashAttribute("succMsg", "ส่งคำขอแก้ไขและลงนามใหม่สำหรับเอกสารที่ " + type + " เรียบร้อยแล้ว");
         return "redirect:/admin/academic/request/" + id;
     }
 
@@ -1081,7 +1081,7 @@ public class AcademicAdminController {
     public String sendSuggestionEmail(@PathVariable Long id, Principal principal,
             RedirectAttributes redirectAttributes) {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         UserDtls admin = getUser(principal);
 
         // ส่งกลับให้แก้ได้เฉพาะหลังประชุมอนุกรรมการ — เมื่อผู้ยื่นส่งฉบับแก้มาแล้ว ต้องส่งต่ออนุกรรมการ
@@ -1136,12 +1136,12 @@ public class AcademicAdminController {
             @PathVariable Long docId,
             @RequestParam(value = "format", defaultValue = "docx") String format) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         List<AcademicDocument> docs = requestService.getDocuments(id);
         AcademicDocument doc = docs.stream()
                 .filter(d -> d.getId().equals(docId))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Document not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Document not found"));
 
         byte[] data = null;
 
@@ -1252,7 +1252,7 @@ public class AcademicAdminController {
     public ResponseEntity<byte[]> downloadCommitteeLetter(@PathVariable Long id, @PathVariable int number,
             @RequestParam(value = "format", defaultValue = "pdf") String format) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         List<CommitteeLetter> letters = committeeLetters(id);
         if (number < 1 || number > letters.size()) {
             return ResponseEntity.notFound().build();
@@ -1275,7 +1275,7 @@ public class AcademicAdminController {
             @PathVariable int type,
             @RequestParam(value = "format", defaultValue = "docx") String format) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         List<AcademicDocument> docs = requestService.getDocumentsByType(id, type);
         if (!docs.isEmpty()) {
             return downloadDocument(id, docs.get(0).getId(), format);
@@ -1311,7 +1311,7 @@ public class AcademicAdminController {
     @GetMapping("/request/{id}/download-all")
     public ResponseEntity<ByteArrayResource> downloadAll(@PathVariable Long id) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         List<AcademicDocument> docs = requestService.getDocuments(id);
 
         List<CommitteeLetter> letters = committeeLetters(id);
@@ -1400,7 +1400,7 @@ public class AcademicAdminController {
         }
 
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
 
         // ตรวจสอบประเภทไฟล์ (.pdf, .docx, .doc, .zip)
         String originalFilename = file.getOriginalFilename();
@@ -1458,7 +1458,7 @@ public class AcademicAdminController {
     @GetMapping("/request/{id}/revision-file")
     public ResponseEntity<Resource> downloadRevisionFile(@PathVariable Long id) throws IOException {
         AcademicRequest request = requestService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Request not found"));
         String stored = request.getRevisionFilePath();
         Path path = uploadPaths.resolve(stored);
         if (path == null || !Files.exists(path)) {
@@ -1489,7 +1489,7 @@ public class AcademicAdminController {
     public ResponseEntity<Resource> downloadAttachment(@PathVariable Long id,
             @PathVariable Long attachmentId) throws IOException {
         com.ecom.academic.model.AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
-                .orElseThrow(() -> new RuntimeException("Attachment not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Attachment not found"));
 
         if ("LINK".equalsIgnoreCase(attachment.getFileType())) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
@@ -1523,7 +1523,7 @@ public class AcademicAdminController {
     public ResponseEntity<Resource> viewAttachment(@PathVariable Long id,
             @PathVariable Long attachmentId) throws IOException {
         com.ecom.academic.model.AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
-                .orElseThrow(() -> new RuntimeException("Attachment not found"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("Attachment not found"));
 
         if ("LINK".equalsIgnoreCase(attachment.getFileType())) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)

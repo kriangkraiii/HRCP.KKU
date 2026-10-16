@@ -207,7 +207,13 @@ class EvaluationEligibilityTest extends AbstractFlowTest {
             assertThat(AcademicRequestService.parseThaiDate("17-2-2569")).isEqualTo(expected);
             assertThat(AcademicRequestService.parseThaiDate("๑๗ กุมภาพันธ์ ๒๕๖๙")).isEqualTo(expected);
             assertThat(AcademicRequestService.parseThaiDate("17 กุมภาพันธ์ 2026")).isEqualTo(expected);
+            // แบบที่พิมพ์เองในช่องข้อความ — เคยอ่านไม่ออก วันหมดอายุในเอกสารที่ 9 จึงว่าง และผลประเมินไม่มีวันหมดอายุ
+            assertThat(AcademicRequestService.parseThaiDate("17 กุมภาพันธ์ พ.ศ. 2569")).isEqualTo(expected);
+            assertThat(AcademicRequestService.parseThaiDate("วันที่ 17 กุมภาพันธ์ 2569")).isEqualTo(expected);
+            assertThat(AcademicRequestService.parseThaiDate("17 ก.พ. 2569")).isEqualTo(expected);
+            assertThat(AcademicRequestService.parseThaiDate("๑๗ ก.พ. ๒๕๖๙")).isEqualTo(expected);
 
+            assertThat(AcademicRequestService.parseThaiDate("31 กุมภาพันธ์ 2569")).isNull();
             assertThat(AcademicRequestService.parseThaiDate("ไม่ใช่วันที่")).isNull();
             assertThat(AcademicRequestService.parseThaiDate("")).isNull();
             assertThat(AcademicRequestService.parseThaiDate(null)).isNull();

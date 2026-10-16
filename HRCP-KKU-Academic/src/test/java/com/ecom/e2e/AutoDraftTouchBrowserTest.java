@@ -77,6 +77,28 @@ class AutoDraftTouchBrowserTest extends PlaywrightTestBase {
     }
 
     @Test
+    @DisplayName("session หมดระหว่างกรอก — ต้องขึ้นว่าบันทึกไม่ได้ ไม่ใช่ \"บันทึกแล้ว\"")
+    void anExpiredSessionIsNotReportedAsSaved() {
+        openDocumentOne();
+        // หมดอายุ/รีสตาร์ตเซิร์ฟเวอร์: เบราว์เซอร์ไม่มี session ที่ใช้ได้อีก — POST ถูก redirect ไปหน้าเข้าสู่ระบบ
+        // fetch ตาม redirect เองแล้วได้หน้า login สถานะ 200 กลับมา เดิมจึงขึ้น "บันทึกแล้ว" ทั้งที่ไม่มีอะไรถูกบันทึก
+        // ลบเฉพาะคุกกี้ session — คุกกี้ CSRF เป็นคนละตัวและอยู่ต่อ เหมือน session หมดอายุจริง
+        var keep = page.context().cookies().stream()
+                .filter(c -> !c.name.equals("HRCPSID") && !c.name.equals("JSESSIONID"))
+                .toList();
+        page.context().clearCookies();
+        page.context().addCookies(keep);
+        page.locator("input[name='major']").pressSequentially("วิทยาการคอมพิวเตอร์");
+        page.waitForTimeout(WAIT_PAST_DEBOUNCE_MS);
+
+        assertThat(draftSaves).as("ต้องพยายามบันทึกจริง").isNotEmpty();
+        assertThat(positionService.getDocumentsByType(draft.getId(), 1)).as("ไม่มีอะไรถูกบันทึก").isEmpty();
+        String barClass = page.locator(".adb").first().getAttribute("class");
+        assertThat(barClass).as("แถบสถานะต้องบอกว่าบันทึกไม่สำเร็จ").contains("adb--error")
+                .doesNotContain("adb--saved");
+    }
+
+    @Test
     @DisplayName("พิมพ์ลงฟอร์ม — บันทึกอัตโนมัติ และแบบร่างยังอยู่ใน dashboard")
     void typingIntoTheFormSavesTheDraft() {
         openDocumentOne();

@@ -61,6 +61,9 @@
           <span th:if="${param.error[0] == 'upload_failed'}"
             >อัปโหลดเอกสารไม่สำเร็จ</span
           >
+          <span th:if="${param.error[0] == 'total_size_exceeded'}"
+            >ขนาดไฟล์แนบรวมเกิน 75 MB ต่อคำร้อง กรุณาลบไฟล์ที่ไม่ใช้หรือบีบอัดไฟล์ก่อนอัปโหลด</span
+          >
           <small
             th:if="${errorDetail != null}"
             class="d-block mt-1 text-danger"
@@ -232,8 +235,8 @@
               <i class="fas fa-external-link-alt"></i> ดูคำร้องต้นทาง
             </a>
             <a
-              th:if="${evalDoc9GeneratedFile != null}"
-              th:href="@{/admin/academic/document/download(path=${evalDoc9GeneratedFile})}"
+              th:if="${linkedEvalRequest != null}"
+              th:href="@{/admin/academic/request/{rid}/document/9/download(rid=${linkedEvalRequest.id},format='pdf')}"
               class="btn btn-sm btn-outline-success"
               target="_blank"
             >

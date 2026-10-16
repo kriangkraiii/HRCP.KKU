@@ -225,15 +225,23 @@ public class SignatureNotifier {
         }
     }
 
-    /** Tells the initiator that a signer requested a due date extension. */
+    /**
+     * Tells the initiator that a signer requested a due date extension.
+     *
+     * <p>รับ id และค่าธรรมดา ไม่ใช่ entity — ผู้ริเริ่มซองเป็น LAZY proxy ที่ยังไม่โหลด แตะมันบนเธรดนี้
+     * คือโหลดผ่าน session ของเธรดคำขอ (ดู {@link #notifyResignRequested}) การแจ้งเตือนจึงหายหรือทำให้คำขอพัง
+     */
     @Async
-    public void notifyExtensionRequested(UserDtls initiator, SignatureRequest envelope, UserDtls signer, String reason) {
+    public void notifyExtensionRequested(Integer initiatorId, SignatureModule module, Long requestId,
+            String documentLabel, String signerName, String reason) {
+        if (initiatorId == null) return;
+        UserDtls initiator = userRepository.findById(initiatorId).orElse(null);
         if (initiator == null) return;
-        String title = "ขอขยายเวลาลงนาม: " + (envelope.getDocumentLabel() != null ? envelope.getDocumentLabel() : "เอกสาร");
-        String message = (signer != null ? signer.getName() : "ผู้ลงนาม") + " ขอขยายเวลาลงนาม"
+        String title = "ขอขยายเวลาลงนาม: " + (documentLabel != null ? documentLabel : "เอกสาร");
+        String message = (signerName != null ? signerName : "ผู้ลงนาม") + " ขอขยายเวลาลงนาม"
                 + (reason != null && !reason.isBlank() ? " (เหตุผล: " + reason + ")" : "");
-        String link = envelope.getModule() != null
-                ? requestLinkFor(initiator, envelope.getModule(), envelope.getRequestId())
+        String link = module != null
+                ? requestLinkFor(initiator, module, requestId)
                 : "/esign/inbox";
 
         notify(initiator, title, message, link, NotificationType.SIGNATURE_REMINDER, true);

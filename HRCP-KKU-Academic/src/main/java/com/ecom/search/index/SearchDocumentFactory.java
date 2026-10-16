@@ -108,8 +108,22 @@ public class SearchDocumentFactory {
         d.setOccurredAt(firstNonNull(doc.getUpdatedAt(), doc.getCreatedAt()));
         d.setSourceUpdatedAt(doc.getUpdatedAt());
         d.setDeleted(Boolean.TRUE.equals(doc.getIsDeleted()));
-        scopeToApplicant(d, request != null ? request.getApplicant() : null, parentId);
+        scopeToApplicant(d, applicantSees(com.ecom.academic.model.SignatureModule.ACADEMIC, doc.getDocumentType())
+                && request != null ? request.getApplicant() : null, parentId);
         return d;
+    }
+
+    /**
+     * ผู้ยื่นค้นเจอเนื้อหาเอกสารฉบับนี้ได้หรือไม่ — เฉพาะเอกสารของผู้ยื่นเอง
+     *
+     * <p>เอกสารของเจ้าหน้าที่มีรายชื่อคณะอนุกรรมการ คะแนน และรายชื่อผู้ทรงคุณวุฒิ ซึ่งหน้าเว็บของผู้ยื่นไม่เปิดให้ดู
+     * ({@code AcademicApplicantController.applicantMaySee}, {@code PositionRequestService.isApplicantDocType})
+     * เดิมทุกฉบับถูกทำดัชนีให้เจ้าของคำร้องค้นได้ พิมพ์ชื่อใครก็รู้ว่าเป็นกรรมการของตัวเองหรือไม่
+     * หนังสือแจ้งผล (เอกสารที่ 9 เฟส 1) ก็ไม่นับ — ผู้ยื่นเห็นได้หลังออกหนังสือแล้วเท่านั้น ซึ่งดัชนีตัดสินเองไม่ได้
+     */
+    static boolean applicantSees(com.ecom.academic.model.SignatureModule module, Integer documentType) {
+        return documentType != null
+                && com.ecom.academic.service.DocumentFieldOwnership.isApplicantDocument(module, documentType);
     }
 
     // ------------------------------------------------------------------
@@ -165,7 +179,8 @@ public class SearchDocumentFactory {
         d.setOccurredAt(firstNonNull(doc.getUpdatedAt(), doc.getCreatedAt()));
         d.setSourceUpdatedAt(doc.getUpdatedAt());
         d.setDeleted(Boolean.TRUE.equals(doc.getIsDeleted()));
-        scopeToApplicant(d, request != null ? request.getApplicant() : null, parentId);
+        scopeToApplicant(d, applicantSees(com.ecom.academic.model.SignatureModule.POSITION, doc.getDocumentType())
+                && request != null ? request.getApplicant() : null, parentId);
         return d;
     }
 
@@ -319,8 +334,9 @@ public class SearchDocumentFactory {
                 request != null ? request.getRequestCode() : null,
                 a.getUploadedAt());
         d.setDeleted(Boolean.TRUE.equals(a.getIsDeleted()));
-        scopeToApplicant(d, request != null ? request.getApplicant() : null,
-                request != null ? request.getId() : null);
+        // ไฟล์แนบของคำร้องตำแหน่งมีแต่เจ้าหน้าที่อัปโหลด (PositionAdminController.uploadAttachment) และหน้าเว็บ
+        // ของผู้ยื่นไม่แสดง — เดิมผู้ยื่นค้นเจอทั้งชื่อไฟล์และข้อความในไฟล์
+        scopeToApplicant(d, null, request != null ? request.getId() : null);
         applyExternalLink(d, a.getStoredFilePath(), a.getFileType());
         return d;
     }

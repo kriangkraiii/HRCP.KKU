@@ -37,7 +37,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @Import({ NoRealMailConfig.class, TestDataFactory.class })
 @TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:flowdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE",
+        // ฐานข้อมูลของใครของมัน: subclass ที่เพิ่ม @TestPropertySource ได้ context ใหม่ ถ้าชื่อฐานข้อมูลตายตัว
+        // ทุก context ใช้ฐานเดียวกัน แล้วพอ context หนึ่งปิด (ถูกไล่ออกจาก cache) create-drop ลบตารางทิ้ง
+        // context ที่เหลือเจอ "Table user_dtls not found" กลางชุดเทส ทั้งที่รันเดี่ยวผ่าน — cache key ใช้สตริงดิบ
+        // จึงยังใช้ context ร่วมกันได้เหมือนเดิม
+        "spring.datasource.url=jdbc:h2:mem:flowdb-${random.uuid};DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE",
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
         "spring.jpa.hibernate.ddl-auto=create-drop",

@@ -208,14 +208,7 @@ public class SecurityHeadersFilter implements Filter {
                 // tags
                 HtmlNonceResponseWrapper responseWrapper = new HtmlNonceResponseWrapper(httpRes, nonce);
                 chain.doFilter(request, responseWrapper);
-
-                byte[] processed = responseWrapper.getProcessedBytes();
-                if (!httpRes.isCommitted()) {
-                        httpRes.setContentLength(processed.length);
-                }
-                ServletOutputStream out = httpRes.getOutputStream();
-                out.write(processed);
-                out.flush();
+                responseWrapper.commitToUnderlyingResponse();
         }
 
         private String contentSecurityPolicy(String nonce) {
@@ -255,6 +248,7 @@ public class SecurityHeadersFilter implements Filter {
                 private ServletOutputStream output;
                 private PrintWriter writer;
                 private final String nonce;
+                private boolean committedToUnderlying;
 
                 private static final Pattern SCRIPT_PATTERN = Pattern
                                 .compile("(?i)<script\\b(?![^>]*\\bnonce=)([^>]*)>");
@@ -267,6 +261,10 @@ public class SecurityHeadersFilter implements Filter {
 
                 @Override
                 public ServletOutputStream getOutputStream() throws IOException {
+                        if (getStatus() == HttpServletResponse.SC_FORBIDDEN) {
+                                committedToUnderlying = true;
+                                return super.getOutputStream();
+                        }
                         if (writer != null) {
                                 throw new IllegalStateException(
                                                 "getWriter() has already been called on this response.");
@@ -298,6 +296,16 @@ public class SecurityHeadersFilter implements Filter {
 
                 @Override
                 public PrintWriter getWriter() throws IOException {
+                        // Spring Security's AccessDeniedHandlerImpl sets status 403 and forwards
+                        // to /403 via RequestDispatcher.forward(), which closes the underlying
+                        // response stream before returning to SecurityHeadersFilter. Since
+                        // error/403.html uses only external /css/ and /js/ assets (no inline
+                        // scripts or styles), writing directly to super.getWriter() ensures
+                        // Tomcat sends the full 403 page before closing the forward stream.
+                        if (getStatus() == HttpServletResponse.SC_FORBIDDEN) {
+                                committedToUnderlying = true;
+                                return super.getWriter();
+                        }
                         if (output != null) {
                                 throw new IllegalStateException(
                                                 "getOutputStream() has already been called on this response.");
@@ -311,11 +319,30 @@ public class SecurityHeadersFilter implements Filter {
 
                 @Override
                 public void flushBuffer() throws IOException {
+                        if (committedToUnderlying) {
+                                super.flushBuffer();
+                                return;
+                        }
                         if (writer != null) {
                                 writer.flush();
                         } else if (output != null) {
                                 output.flush();
                         }
+                }
+
+                public void commitToUnderlyingResponse() throws IOException {
+                        if (committedToUnderlying) {
+                                return;
+                        }
+                        committedToUnderlying = true;
+                        byte[] processed = getProcessedBytes();
+                        HttpServletResponse rawRes = (HttpServletResponse) getResponse();
+                        if (!rawRes.isCommitted()) {
+                                rawRes.setContentLength(processed.length);
+                        }
+                        ServletOutputStream out = rawRes.getOutputStream();
+                        out.write(processed);
+                        out.flush();
                 }
 
                 public byte[] getProcessedBytes() throws IOException {

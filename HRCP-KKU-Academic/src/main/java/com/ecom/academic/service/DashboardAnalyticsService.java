@@ -204,7 +204,10 @@ public class DashboardAnalyticsService {
 
         Map<String, Long> dist = new LinkedHashMap<>();
         dist.put("แบบร่าง", draft);
-        dist.put("กำลังดำเนินการ", active - passedOrEndorsed - revising);
+        // ไม่ผ่านที่ยังไม่แจ้งผล (รอรับรอง/รอแจ้งผล) ยังไม่ใช่สถานะปลายทาง จึงอยู่ใน active ด้วย — หักออก
+        // ไม่อย่างนั้นถูกนับซ้ำทั้งที่นี่และใน "ไม่ผ่าน" ผลรวมทุกส่วนของแผนภูมิเกินจำนวนคำร้องจริง
+        long failedInFlight = countOf(acad, RequestStatus.SUBCOMMITTEE_FAIL, RequestStatus.COLLEGE_ENDORSED_FAIL);
+        dist.put("กำลังดำเนินการ", active - passedOrEndorsed - revising - failedInFlight);
         dist.put("รอแก้ไข", revising);
         dist.put("ผ่านการประเมิน", passedOrEndorsed);
         dist.put("เสร็จสิ้น", completed);

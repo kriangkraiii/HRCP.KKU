@@ -70,4 +70,22 @@ class SsoUserProvisionerTest {
 
         assertThat(refreshed.getTwoFactorEnabled()).isTrue();
     }
+
+    @Test
+    @DisplayName("บัญชีที่แอดมินพิมพ์อีเมลตัวพิมพ์ใหญ่ไว้ — เข้าด้วย SSO ได้บัญชีเดิม ไม่สร้างบัญชีใหม่ซ้ำ")
+    void aMixedCaseAddressFindsTheExistingAccount() {
+        repositoryEchoesSaves();
+
+        UserDtls admin = new UserDtls();
+        admin.setEmail("Somchai@KKU.ac.th");
+        admin.setRole("ROLE_ADMIN");
+        admin.setIsEnable(true);
+        when(userRepository.findByEmail("somchai@kku.ac.th")).thenReturn(null);
+        when(userRepository.findByEmailIgnoreCase("somchai@kku.ac.th")).thenReturn(admin);
+
+        UserDtls signedIn = provisioner.provision(token(), null);
+
+        assertThat(signedIn).as("ต้องเป็นบัญชีเดิม ไม่ใช่บัญชี ROLE_USER ใหม่").isSameAs(admin);
+        assertThat(signedIn.getRole()).isEqualTo("ROLE_ADMIN");
+    }
 }

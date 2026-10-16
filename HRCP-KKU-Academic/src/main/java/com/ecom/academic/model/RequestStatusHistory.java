@@ -49,7 +49,7 @@ public class RequestStatusHistory {
     @Column(name = "changed_at")
     private LocalDateTime changedAt;
 
-    @Column(name = "note")
+    @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
     @PrePersist

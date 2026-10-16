@@ -130,7 +130,11 @@ public class FeedbackController {
 
         // --- Send ---
         try {
-            feedbackService.sendFeedback(user, category, subject, detail, validImages);
+            List<FeedbackService.Image> attached = new ArrayList<>();
+            for (MultipartFile img : validImages) {
+                attached.add(FeedbackService.Image.of(img));
+            }
+            feedbackService.sendFeedback(user, category, subject, detail, attached);
             String successText = "ส่งรายงานปัญหาและข้อเสนอแนะเรียบร้อยแล้ว สำเนาจะถูกส่งไปยังอีเมลของท่านด้วย";
             redirectAttributes.addFlashAttribute("succMsg", successText);
             redirectAttributes.addFlashAttribute("success", successText);

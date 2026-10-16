@@ -45,7 +45,7 @@
     </div>
     <div class="col-12">
       <label class="form-label small mb-1" th:for="${idPrefix + 'Location'}">สถานที่ประชุม</label>
-      <input type="text" name="meetingLocation" th:id="${idPrefix + 'Location'}"
+      <input type="text" name="meetingLocation" maxlength="255" th:id="${idPrefix + 'Location'}"
         class="form-control form-control-sm" th:value="${request.meetingLocation}"
         placeholder="เช่น ห้องประชุมสารบรรณ ชั้น 1" />
     </div>

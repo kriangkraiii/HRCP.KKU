@@ -169,6 +169,14 @@ public class AdminController {
 	@PostMapping("/updateSts")
 	public String updateUserAccountStatus(@RequestParam Boolean status, @RequestParam Integer id,
 			@RequestParam Integer type, HttpSession session) {
+		// ระงับบัญชีตัวเองไม่ได้ (เหมือนลบบัญชีตัวเองไม่ได้) — แอดมินคนสุดท้ายที่เผลอกดจะล็อกทุกคนออกจากงานแอดมิน
+		Principal self = request.getUserPrincipal();
+		UserDtls target = userService.getUserById(id);
+		if (Boolean.FALSE.equals(status) && self != null && target != null
+				&& self.getName().equalsIgnoreCase(target.getEmail())) {
+			session.setAttribute("errorMsg", "ไม่สามารถระงับบัญชีของตัวเองได้");
+			return "redirect:/admin/users?type=" + type;
+		}
 		Boolean f = userService.updateAccountStatus(id, status);
 		if (f) {
 			session.setAttribute("succMsg", "อัปเดตสถานะบัญชีสำเร็จ");

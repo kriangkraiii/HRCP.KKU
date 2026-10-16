@@ -33,8 +33,8 @@
         form.appendChild(box);
       }
     }
-    box.innerHTML =
-      '<i class="fas fa-triangle-exclamation me-1"></i>' + (msg || FAIL_MSG);
+    box.innerHTML = '<i class="fas fa-triangle-exclamation me-1"></i>';
+    box.appendChild(document.createTextNode(msg || FAIL_MSG));
     box.hidden = false;
   }
 

@@ -321,7 +321,7 @@ public class PositionApplicantController {
     public String requestDetail(@PathVariable Long id, Principal principal, Model model) {
         UserDtls user = getUser(principal);
         PositionRequest request = positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/position/dashboard";
@@ -446,7 +446,7 @@ public class PositionApplicantController {
             Principal principal, Model model) {
         UserDtls user = getUser(principal);
         PositionRequest request = positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/position/dashboard";
@@ -579,7 +579,7 @@ public class PositionApplicantController {
             RedirectAttributes redirectAttributes) {
         UserDtls user = getUser(principal);
         PositionRequest request = positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/position/dashboard";
@@ -649,7 +649,7 @@ public class PositionApplicantController {
             RedirectAttributes redirectAttributes) {
         UserDtls user = getUser(principal);
         PositionRequest request = positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/position/dashboard";
@@ -736,7 +736,7 @@ public class PositionApplicantController {
             Principal principal) throws IOException {
         UserDtls user = getUser(principal);
         PositionRequest request = positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
         if (!request.getApplicant().getId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -788,9 +788,7 @@ public class PositionApplicantController {
                     Path filePath = uploadPaths.resolve(generatedPath);
                     if (filePath != null && Files.exists(filePath)) {
                         data = Files.readAllBytes(filePath);
-                        doc.setGeneratedFilePath(generatedPath);
-                        positionService.saveDocument(request, type, doc.getJsonData(),
-                                generatedPath, label, doc.getCopyNumber(), doc.getFilledBy());
+                        positionService.rememberGeneratedFile(doc, generatedPath);
                     }
                 }
             } catch (Exception e) {

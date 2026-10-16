@@ -86,7 +86,7 @@ public class ImageSyncAuditService {
      * Daily Cron job to clean up unused orphan images, purge expired trash, and synchronize database references.
      * Default schedule: 03:00 AM every day.
      */
-    @Scheduled(cron = "${app.images.cleanup-cron:0 0 3 * * ?}")
+    @Scheduled(cron = "${app.images.cleanup-cron:0 0 3 * * ?}", zone = "Asia/Bangkok")
     public void scheduledDailyCleanup() {
         log.info("[Scheduled Storage Cleanup] Starting daily cron image audit, orphan cleanup, and 30-day trash purge...");
         try {

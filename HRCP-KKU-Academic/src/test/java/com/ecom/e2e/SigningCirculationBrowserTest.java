@@ -321,6 +321,13 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
             signHere(who, null);
         }
 
+        // ผู้ประพันธ์ที่ผู้เสนอขอเลือกต้องลงนามก่อนส่งคำร้อง (b826e04) — ระบบส่งให้เขาทันทีหลังผู้เสนอขอลงนาม
+        signOut();
+        for (int copy : workCopies) {
+            signEveryActiveStep(SignatureModule.POSITION, id, copy, null);
+        }
+        signIn(TestDataFactory.APPLICANT_EMAIL, TestDataFactory.PASSWORD);
+
         // ---------- ส่งคำร้อง ----------
         page.navigate(baseUrl() + "/user/position/request/" + id);
         assertThat(page.locator("body").innerText())
@@ -673,13 +680,14 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                 .containsExactlyInAnyOrder("applicant", "dean");
 
         // ---------- ข้อ 20-31: ลงนามใหม่ครบแล้ว เดินเรื่องจนส่งกองทรัพยากรบุคคล ----------
-        // ลงนามใหม่ครบทุกคน คำร้องกลับเข้าขั้นตรวจสอบเอกสารเอง (resumeAfterRevision)
-        awaitPositionStatus(id, PositionRequestStatus.DOCUMENT_VERIFICATION, "ลงนามใหม่ครบแล้วกลับเข้าตรวจสอบเอกสารเอง");
+        // ลงนามใหม่ครบทุกคน คำร้องกลับเข้าขั้นตรวจสอบเองอัตโนมัติ (resumeAfterRevision) — ฉากนี้ข้ามแบบตรวจสอบ
+        // คุณสมบัติ (เอกสารที่ 7) จึงกลับไปที่รับคำร้อง ไม่ใช่ตรวจสอบความถูกต้อง ซึ่งต้องมาจากเอกสารที่ 7 ที่ลงนามครบ
+        awaitPositionStatus(id, PositionRequestStatus.DOCUMENT_RECEIVED, "ลงนามใหม่ครบแล้วกลับเข้าขั้นตรวจสอบเอง");
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
         page.navigate(baseUrl() + "/admin/position/request/" + id);
         page.waitForLoadState();
         assertThat(page.locator("#awaitingResignAlert").count()).as("ลงนามใหม่ครบแล้ว ต้องไม่มีป้ายรอลงนามใหม่").isZero();
-        for (PositionRequestStatus st : new PositionRequestStatus[] {
+        for (PositionRequestStatus st : new PositionRequestStatus[] { PositionRequestStatus.DOCUMENT_VERIFICATION,
                 PositionRequestStatus.SCREENING_COMMITTEE, PositionRequestStatus.SCREENING_APPROVED,
                 PositionRequestStatus.COLLEGE_COMMITTEE, PositionRequestStatus.COLLEGE_APPROVED,
                 PositionRequestStatus.SENT_TO_HR }) {
@@ -913,6 +921,12 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                       if (!el.value) {
                         const opt = [...el.options].find(o => o.value);
                         if (opt) { el.value = opt.value; n++; }
+                      }
+                    } else if (el.name === 'meeting_no') {
+                      // เอกสารที่ 8 ตรวจรูปแบบ ครั้งที่/ปี พ.ศ. ตอนส่งลงนาม (b483f4e)
+                      if (!el.value || !new RegExp('^[0-9]{1,3}/[0-9]{4}$').test(el.value)) {
+                        el.value = '1/2569';
+                        n++;
                       }
                     } else if (el.name === 'academic_year' || el.getAttribute('pattern') === '^[1-3]/[0-9]{4}$') {
                       if (!el.value || !new RegExp('^[1-3]/[0-9]{4}$').test(el.value)) {

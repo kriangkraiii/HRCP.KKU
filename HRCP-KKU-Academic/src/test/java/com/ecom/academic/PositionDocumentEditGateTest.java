@@ -121,7 +121,10 @@ class PositionDocumentEditGateTest extends AbstractFlowTest {
                     + "/document/" + APPLICANT_DOC + "/request-resign")
                     .with(user(officer.getEmail()).roles("ADMIN")).with(csrf())
                     .param("reason", "ชื่อรายวิชาไม่ตรงกับที่ลงทะเบียน"))
-                    .andExpect(status().is3xxRedirection());
+                    .andExpect(status().is3xxRedirection())
+                    // หน้าคำร้องแสดงข้อความผ่าน layout กลางซึ่งอ่านเฉพาะ succMsg — ชื่ออื่นหายไปเงียบ ๆ
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash()
+                            .attribute("succMsg", org.hamcrest.Matchers.containsString("ส่งคำขอแก้ไขและลงนามใหม่")));
 
             assertThat(positionService.canApplicantEditDocument(
                     positionService.findById(request.getId()).orElseThrow(), APPLICANT_DOC)).isTrue();

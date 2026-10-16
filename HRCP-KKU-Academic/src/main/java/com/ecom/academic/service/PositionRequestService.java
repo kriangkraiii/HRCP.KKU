@@ -175,7 +175,11 @@ public class PositionRequestService {
         List<PositionDocument> docs = getDocumentsByType(requestId, documentType);
         if (docs.isEmpty())
             return null;
-        String json = docs.get(docs.size() - 1).getJsonData();
+        // แบบร่างที่ยังไม่กดบันทึกคือค่าล่าสุด ไม่มีก็ฉบับที่บันทึกล่าสุด (แถวแรก — id มากสุด)
+        // เดิมหยิบแถวสุดท้าย: คำร้องที่บันทึกมาแล้วสองครั้งมีฉบับบันทึกสองแถว แถวสุดท้ายคือฉบับเก่า
+        // ช่องของเจ้าหน้าที่ที่ merge กลับตอนผู้ยื่นบันทึกจึงถูกย้อนเป็นค่าเก่า
+        String json = docs.stream().filter(d -> Boolean.TRUE.equals(d.getIsDraft())).findFirst()
+                .orElse(docs.get(0)).getJsonData();
         if (json == null || json.isBlank())
             return null;
         try {
@@ -1460,6 +1464,7 @@ public class PositionRequestService {
         doc.setIsDraft(false);
         doc.setFilledBy(filledBy);
         PositionDocument saved = documentRepository.save(doc);
+        retireSupersededCopies(saved);
         changed(request.getId());
 
         // Sync doc 2 fields back to request
@@ -1472,6 +1477,48 @@ public class PositionRequestService {
         syncPublicationLinks(request, documentType, jsonData);
 
         return saved;
+    }
+
+    /**
+     * จำที่อยู่ไฟล์ที่เพิ่งสร้างให้ดาวน์โหลดครั้งต่อไป — แตะแค่แถวนั้น ไม่แตะเนื้อหาหรือแบบร่าง
+     *
+     * <p>เดิมหน้าดาวน์โหลดเรียก {@link #saveDocument} แทน ซึ่งเจอแบบร่างที่ผู้ยื่นพิมพ์ค้างไว้ก็เอาเนื้อหาฉบับเก่า
+     * ทับแบบร่างนั้นแล้วบันทึกเป็นฉบับจริง แค่กดดาวน์โหลดสิ่งที่พิมพ์ไว้ก็หาย
+     */
+    public void rememberGeneratedFile(PositionDocument doc, String generatedPath) {
+        doc.setGeneratedFilePath(generatedPath);
+        documentRepository.save(doc);
+    }
+
+    /**
+     * แบบร่างที่เพิ่งถูกบันทึกเป็นฉบับจริงแทนที่ฉบับที่บันทึกไว้ก่อน — ฉบับเก่าของสำเนาเดียวกันถูกปิด (isDeleted)
+     * ไม่อย่างนั้นแต่ละการบันทึกทิ้งแถวไว้อีกแถว และผู้อ่านแต่ละที่หยิบคนละแถว
+     *
+     * <p>ธงส่งกลับให้แก้ไข ({@link #openDocumentForRevision}) อยู่บนแถวที่มีตอนส่งกลับ แบบร่างที่ผู้ยื่นเริ่มหลังจากนั้น
+     * ไม่มีธง — ต้องย้ายธงมาที่แถวที่เหลืออยู่ ไม่อย่างนั้นด่าน "ต้องลงนามใหม่ก่อนเดินต่อ" หายไปพร้อมแถวเก่า
+     */
+    private void retireSupersededCopies(PositionDocument saved) {
+        boolean flagsMoved = false;
+        for (PositionDocument other : documentRepository.findByRequestIdAndDocType(
+                saved.getRequest().getId(), saved.getDocumentType())) {
+            if (other.getId().equals(saved.getId()) || Boolean.TRUE.equals(other.getIsDraft())
+                    || !java.util.Objects.equals(other.getCopyNumber(), saved.getCopyNumber())) {
+                continue;
+            }
+            if (other.getRevisionRequestedAt() != null && (saved.getRevisionRequestedAt() == null
+                    || other.getRevisionRequestedAt().isAfter(saved.getRevisionRequestedAt()))) {
+                saved.setRevisionRequestedAt(other.getRevisionRequestedAt());
+                saved.setRevisionNote(other.getRevisionNote());
+                saved.setRevisionSubmittedAt(other.getRevisionSubmittedAt());
+                flagsMoved = true;
+            }
+            other.setIsDeleted(true);
+            other.setDeletedAt(LocalDateTime.now());
+            documentRepository.save(other);
+        }
+        if (flagsMoved) {
+            documentRepository.save(saved);
+        }
     }
 
     public PositionDocument saveDraft(PositionRequest request, int documentType, String jsonData,
@@ -1501,6 +1548,8 @@ public class PositionRequestService {
             }
         }
         doc.setJsonData(jsonData);
+        // ไฟล์ที่สร้างไว้จากเนื้อหาก่อนหน้าใช้ไม่ได้แล้ว — ดาวน์โหลดครั้งหน้าต้องสร้างใหม่
+        doc.setGeneratedFilePath(null);
         doc.setDocumentLabel(label);
         doc.setIsDraft(true);
         doc.setFilledBy(filledBy);

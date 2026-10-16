@@ -141,4 +141,54 @@ class HarvestDeduplicationTest extends AbstractFlowTest {
                         (adapter รันขนานกันด้วย virtual thread และ V14 ไม่มี unique index บน dedup_hash)""")
                 .hasSize(1);
     }
+
+    private static com.fasterxml.jackson.databind.JsonNode scopusRow(String json) throws Exception {
+        return new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+    }
+
+    @Test
+    @DisplayName("OpenAlex เจอก่อน แล้ว Scopus ตามมาทีหลังด้วย DOI เดียวกัน — ต้องเหลือรายการเดียว (แถวเดิม)")
+    void scopusArrivingAfterAHarvesterTakesOverTheHarvestedRow() throws Exception {
+        writer.writeHarvestedBatch(List.of(
+                work("OPENALEX").externalId("W999").doi("10.1234/abc").build()), NO_FUZZY);
+        Long harvestedId = publications.findByFsUserIdOrderByPublicationYearDescCitedByDesc(FS_ID).get(0).getId();
+
+        writer.writePublicationBatch(List.of(scopusRow("""
+                {"user_id":9301,"eid":"2-s2.0-85000000001","doi":"10.1234/ABC",
+                 "title":"Attention is all Thai NLP needs: a multi-source study","publication_year":2024,
+                 "author_names":"Jaidee S.; Tangjai M."}""")));
+
+        List<ScopusPublication> stored = publications.findByFsUserIdOrderByPublicationYearDescCitedByDesc(FS_ID);
+        assertThat(stored).as("เดิม Scopus หาแถวของ OpenAlex จาก eid ไม่เจอ จึงเพิ่มอีกแถว").hasSize(1);
+        assertThat(stored.get(0).getId()).as("id เดิมอยู่ต่อ — ผลงานที่อาจารย์เลือกไว้ยังชี้ถูก").isEqualTo(harvestedId);
+        assertThat(stored.get(0).getEid()).isEqualTo("2-s2.0-85000000001");
+        assertThat(stored.get(0).getDataSource()).isEqualTo("SCOPUS");
+    }
+
+    @Test
+    @DisplayName("ไม่มี DOI: ผลงานจาก Scopus กับจาก harvester ต้องจับคู่กันได้ด้วยชื่อเรื่อง+ปี+ผู้แต่ง ทั้งสองทิศ")
+    void scopusRowsTakePartInContentMatching() throws Exception {
+        writer.writeHarvestedBatch(List.of(work("DBLP").externalId("dblp-1").build()), NO_FUZZY);
+        writer.writePublicationBatch(List.of(scopusRow("""
+                {"user_id":9301,"eid":"2-s2.0-85000000002",
+                 "title":"Attention is all Thai NLP needs: a multi-source study","publication_year":2024,
+                 "author_names":"Somchai Jaidee | Malee Tangjai"}""")));
+        // แล้วแหล่งที่สามตามมาทีหลัง — แถวของ Scopus ต้องมี hash ให้จับคู่ได้
+        writer.writeHarvestedBatch(List.of(work("THAIJO").externalId("tj-1").build()), NO_FUZZY);
+
+        assertThat(publications.findByFsUserIdOrderByPublicationYearDescCitedByDesc(FS_ID)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("ผลงาน Scopus สองชิ้นที่ต่างกันจริง ต้องไม่ถูกยุบเข้าแถวเดียวกัน")
+    void twoScopusRecordsAreNeverMergedIntoOne() throws Exception {
+        writer.writeHarvestedBatch(List.of(
+                work("OPENALEX").externalId("W999").doi("10.1234/abc").build()), NO_FUZZY);
+        writer.writePublicationBatch(List.of(
+                scopusRow("{\"user_id\":9301,\"eid\":\"E-A\",\"doi\":\"10.1234/abc\",\"title\":\"Paper A\"}"),
+                scopusRow("{\"user_id\":9301,\"eid\":\"E-B\",\"doi\":\"10.1234/abc\",\"title\":\"Paper A erratum\"}")));
+
+        assertThat(publications.findByFsUserIdOrderByPublicationYearDescCitedByDesc(FS_ID))
+                .extracting(ScopusPublication::getEid).containsExactlyInAnyOrder("E-A", "E-B");
+    }
 }

@@ -253,6 +253,12 @@ class ScopusPickerBrowserTest extends PlaywrightTestBase {
         page.evaluate("""
                 () => document.querySelectorAll('#doc1Form [required]').forEach(el => {
                   if (el.disabled || el.readOnly || el.type === 'hidden' || !el.offsetParent) return;
+                  // กลุ่มตัวเลือกที่บังคับ (เช่น วิธีเสนอผลงาน works_method ตั้งแต่ 7b3ea26) — เลือกตัวแรกถ้ายังไม่มีตัวไหนถูกเลือก
+                  if (el.type === 'radio') {
+                    const group = document.querySelectorAll('#doc1Form input[type=radio][name="' + el.name + '"]');
+                    if (![...group].some(r => r.checked)) el.checked = true;
+                    return;
+                  }
                   if (!el.value) el.value = el.tagName === 'SELECT' ? (el.options[1] || {}).value : 'ทดสอบ';
                 })
                 """);
@@ -265,9 +271,12 @@ class ScopusPickerBrowserTest extends PlaywrightTestBase {
                 .not().isVisible();
         // บันทึกแล้วอยู่หน้าเดิม (แผงลงนามอยู่ใต้ฟอร์ม) URL จึงไม่เปลี่ยน — สิ่งที่บอกว่า
         // ฟอร์มถูกส่งจริงคือข้อความยืนยันจากเซิร์ฟเวอร์ ไม่ใช่การเปลี่ยนหน้า
+        // ปุ่มบันทึกส่งฟอร์มหลัง flush ร่างอัตโนมัติ (async) และเซิร์ฟเวอร์สร้างเอกสารก่อน redirect — เกิน 5 วินาทีได้
+        // ".alert-success" เฉย ๆ ยังจับ toast ของตัวเลือกผลงานบนหน้าเดิมได้ จึงรอข้อความจาก layout กลางโดยตรง
         com.microsoft.playwright.assertions.PlaywrightAssertions
-                .assertThat(page.locator(".alert-success").first())
-                .containsText("บันทึก");
+                .assertThat(page.locator(".global-flash-alert .alert-success").first())
+                .containsText("บันทึก",
+                        new com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions().setTimeout(30_000));
     }
 
     /** กรอกให้เฉพาะช่องที่ยังว่าง เพื่อไม่ทับค่าที่ autofill หรือเทสใส่ไว้แล้ว */

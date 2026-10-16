@@ -243,6 +243,23 @@ class DashboardAnalyticsServiceTest {
     }
 
     @Test
+    void everyRequestLandsInExactlyOneDistributionSlice() {
+        // ไม่ผ่านที่ยังไม่แจ้งผล (รอรับรอง / รอแจ้งผล) เคยนับทั้งใน "กำลังดำเนินการ" และ "ไม่ผ่าน"
+        when(acadRepo.countGroupedByStatus()).thenReturn(List.of(
+                new Object[] { RequestStatus.RECEIVED, 3L },
+                new Object[] { RequestStatus.SUBCOMMITTEE_FAIL, 2L },
+                new Object[] { RequestStatus.COLLEGE_ENDORSED_FAIL, 1L },
+                new Object[] { RequestStatus.COMPLETED_FAIL, 1L }));
+        when(posRepo.countGroupedByStatus()).thenReturn(List.of());
+
+        Map<String, Long> dist = analyticsService.getStatusDistribution();
+
+        assertEquals(3L, dist.get("กำลังดำเนินการ"));
+        assertEquals(4L, dist.get("ไม่ผ่าน"));
+        assertEquals(7L, dist.values().stream().mapToLong(Long::longValue).sum());
+    }
+
+    @Test
     void testStalledRequestAnalytics() {
         UserDtls user = new UserDtls();
         user.setFirstName("ทดสอบ");

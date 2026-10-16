@@ -60,7 +60,7 @@ public class SearchReconciler {
         this.enabled = enabled;
     }
 
-    @Scheduled(cron = "${app.search.reconcile-cron:0 20 2 * * *}")
+    @Scheduled(cron = "${app.search.reconcile-cron:0 20 2 * * *}", zone = "Asia/Bangkok")
     public void scheduledReconcile() {
         if (!enabled) {
             return;

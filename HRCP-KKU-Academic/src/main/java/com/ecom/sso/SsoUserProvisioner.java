@@ -77,6 +77,12 @@ public class SsoUserProvisioner {
 
         UserDtls user = userRepository.findByEmail(email);
         if (user == null) {
+            // บัญชีที่แอดมินสร้าง/แก้เองเก็บอีเมลตามที่พิมพ์ (เช่น "Somchai@KKU.ac.th") — findByEmail ตัวพิมพ์ต้องตรง
+            // บน PostgreSQL ไม่เจอแล้วจะสร้างบัญชี ROLE_USER ใหม่ซ้ำ เจ้าของบัญชีเดิมเข้าไม่ถึงคำร้องและสิทธิ์ของตัวเอง
+            // (SsoAccessPolicy ค้นแบบไม่สนตัวพิมพ์อยู่แล้ว สองที่จึงต้องเห็นบัญชีเดียวกัน)
+            user = userRepository.findByEmailIgnoreCase(email);
+        }
+        if (user == null) {
             user = createFrom(token, faculty, email);
             log.info("Provisioned a new local account for an SSO sign-in");
         } else {

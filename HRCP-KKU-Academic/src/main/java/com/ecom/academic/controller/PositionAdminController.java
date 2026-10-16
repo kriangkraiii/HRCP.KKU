@@ -161,7 +161,7 @@ public class PositionAdminController {
     @GetMapping("/request/{id}")
     public String requestDetail(@PathVariable Long id, Model model) {
         PositionRequest request = positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
         List<PositionDocument> documents = positionService.getDocuments(id);
         for (PositionDocument d : documents) {
@@ -266,8 +266,12 @@ public class PositionAdminController {
         }
 
         // ดึงเอกสารที่ 9 (ผลประเมินการสอน) จากคำร้องประเมินผลการสอน (AcademicRequest) ของผู้ยื่นคนเดียวกัน
+        // ผลประเมินที่ผูกกับคำร้องนี้ก่อน — เดิมหยิบฉบับล่าสุดของผู้ยื่นเสมอ ผู้ยื่นที่ประเมินหลายครั้ง (ไม่ผ่านแล้วประเมินใหม่
+        // หรือคนละรายวิชา) เจ้าหน้าที่จึงเห็นผลของอีกฉบับข้างคำร้องที่กำลังตรวจ คำร้องที่ไม่ได้ผูก (ขอ ศ. / ข้อมูลเก่า) ใช้ฉบับล่าสุดเหมือนเดิม
         Integer applicantId = request.getApplicant().getId();
-        List<com.ecom.academic.model.AcademicRequest> evalRequests = academicRequestRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId);
+        List<com.ecom.academic.model.AcademicRequest> evalRequests = request.getLinkedEvaluation() != null
+                ? List.of(request.getLinkedEvaluation())
+                : academicRequestRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId);
         for (com.ecom.academic.model.AcademicRequest evalReq : evalRequests) {
             List<com.ecom.academic.model.AcademicDocument> evalDoc9List = academicDocumentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(evalReq.getId(), 9);
             if (!evalDoc9List.isEmpty() && evalDoc9List.get(0).getJsonData() != null) {
@@ -305,7 +309,7 @@ public class PositionAdminController {
             org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
         try {
             PositionRequest request = positionService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                    .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
             if (request.getCurrentStatus().isDraft()) {
                 redirectAttributes.addFlashAttribute("errorDetail",
@@ -336,7 +340,7 @@ public class PositionAdminController {
             } catch (Exception logEx) { /* ignore */ }
         } catch (Exception e) {
             // กติกาของกระบวนการ (ลำดับสถานะ / ต้องลงนามใหม่ก่อน) เป็นข้อความสำหรับคน ไม่ใช่ชื่อ exception
-            redirectAttributes.addFlashAttribute("errorDetail", e instanceof IllegalStateException
+            redirectAttributes.addFlashAttribute("errorDetail", (e instanceof IllegalStateException || e instanceof IllegalArgumentException)
                     ? e.getMessage()
                     : e.getClass().getSimpleName() + ": " + e.getMessage());
             return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
@@ -376,7 +380,7 @@ public class PositionAdminController {
     public String documentForm(@PathVariable Long id, @PathVariable int type, Model model,
             Principal principal) {
         PositionRequest request = positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
         // แบบร่างยังเป็นของผู้ยื่น เจ้าหน้าที่จึงยังเปิดแบบฟอร์มไม่ได้ — แต่ต้องบอก
         // เหตุผลนั้นตรง ๆ เดิมใช้ error=status_update_failed ซึ่งขึ้นข้อความว่า
@@ -497,7 +501,7 @@ public class PositionAdminController {
             @RequestParam Map<String, String> formData, Principal principal,
             RedirectAttributes redirectAttributes) {
         PositionRequest request = positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
         if (request.getCurrentStatus().isDraft()) {
             return "redirect:/admin/position/request/" + id + "?error=still_a_draft";
@@ -644,7 +648,7 @@ public class PositionAdminController {
             RedirectAttributes redirectAttributes) {
         UserDtls admin = getUser(principal);
         positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + id));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง ID: " + id));
         // หนังสือออกเลขไปแล้ว ส่งกลับให้แก้ไม่ได้ — ต้องออกหนังสือฉบับใหม่แทน
         if (officeIssued(id, type)) {
             return "redirect:/admin/position/request/" + id
@@ -685,7 +689,7 @@ public class PositionAdminController {
                     getClientIpAddress());
         } catch (Exception logEx) { /* ignore */ }
 
-        redirectAttributes.addFlashAttribute("success", "ส่งคำขอแก้ไขและลงนามใหม่สำหรับเอกสารที่ " + PositionRequestService.docNumber(type) + " เรียบร้อยแล้ว");
+        redirectAttributes.addFlashAttribute("succMsg", "ส่งคำขอแก้ไขและลงนามใหม่สำหรับเอกสารที่ " + PositionRequestService.docNumber(type) + " เรียบร้อยแล้ว");
         return "redirect:/admin/position/request/" + id;
     }
 
@@ -696,7 +700,7 @@ public class PositionAdminController {
             @PathVariable int type,
             @RequestParam(value = "format", defaultValue = "docx") String format) throws IOException {
         PositionRequest request = positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
         List<PositionDocument> docs = positionService.getDocumentsByType(id, type);
         PositionDocument doc = docs.isEmpty() ? null : docs.get(0);
@@ -735,9 +739,7 @@ public class PositionAdminController {
                     if (filePath != null && Files.exists(filePath)) {
                         data = Files.readAllBytes(filePath);
                         // Save the path for future downloads
-                        doc.setGeneratedFilePath(generatedPath);
-                        positionService.saveDocument(request, type, doc.getJsonData(),
-                                generatedPath, label, doc.getCopyNumber(), doc.getFilledBy());
+                        positionService.rememberGeneratedFile(doc, generatedPath);
                     }
                 }
             } catch (Exception e) {
@@ -765,7 +767,7 @@ public class PositionAdminController {
     @GetMapping("/request/{id}/download-all")
     public ResponseEntity<ByteArrayResource> downloadAll(@PathVariable Long id) throws IOException {
         PositionRequest request = positionService.findById(id)
-                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
         List<PositionDocument> documents = positionService.getDocuments(id);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -842,7 +844,7 @@ public class PositionAdminController {
             Principal principal) {
         try {
             PositionRequest request = positionService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+                    .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบคำร้อง"));
 
             if (positionService.countAttachments(id) >= 20) {
                 return "redirect:/admin/position/request/" + id + "?error=max_attachments";
@@ -909,7 +911,7 @@ public class PositionAdminController {
     public ResponseEntity<Resource> downloadAttachment(@PathVariable Long id,
             @PathVariable Long attachmentId) throws IOException {
         PositionAttachment attachment = positionService.findAttachmentById(attachmentId)
-                .orElseThrow(() -> new RuntimeException("ไม่พบเอกสาร"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบเอกสาร"));
 
         Path path = uploadPaths.resolve(attachment.getStoredFilePath());
         if (path == null || !Files.exists(path)) {
@@ -938,7 +940,7 @@ public class PositionAdminController {
     public ResponseEntity<Resource> viewAttachment(@PathVariable Long id,
             @PathVariable Long attachmentId) throws IOException {
         PositionAttachment attachment = positionService.findAttachmentById(attachmentId)
-                .orElseThrow(() -> new RuntimeException("ไม่พบเอกสาร"));
+                .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบเอกสาร"));
 
         Path path = uploadPaths.resolve(attachment.getStoredFilePath());
         if (path == null || !Files.exists(path)) {

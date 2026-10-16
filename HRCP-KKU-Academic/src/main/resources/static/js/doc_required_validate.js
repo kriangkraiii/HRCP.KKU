@@ -16,6 +16,13 @@
     var SKIP_TYPES = ['hidden', 'checkbox', 'radio', 'file', 'submit', 'button', 'reset'];
     var TRAILING_INDEX = /(\d+)$/;
 
+    /** ป้ายกำกับอ่านมาจาก textContent (ถอดรหัส &lt; แล้ว) — ต้องเข้ารหัสกลับก่อนใส่ลง innerHTML */
+    function escapeHtml(text) {
+        return String(text == null ? '' : text).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
     function toSet(raw) {
         var set = Object.create(null);
         (raw || '').split(',').forEach(function (item) {
@@ -150,13 +157,13 @@
             }
         }
 
-        var names = missing.slice(0, 8).map(function (item) { return item.label; });
+        var names = missing.slice(0, 8).map(function (item) { return escapeHtml(item.label); });
         var more = missing.length > names.length
             ? ' และอีก ' + (missing.length - names.length) + ' ช่อง'
             : '';
         var title = panelForm.getAttribute('data-required-title') || 'ยังส่งไปลงนามไม่ได้';
         box.innerHTML = '<i class="fas fa-triangle-exclamation me-1"></i>'
-            + '<strong>' + title + ' — กรอกข้อมูลไม่ครบ ' + missing.length + ' ช่อง</strong>'
+            + '<strong>' + escapeHtml(title) + ' — กรอกข้อมูลไม่ครบ ' + missing.length + ' ช่อง</strong>'
             + '<div class="mt-1">' + names.join(', ') + more + '</div>';
         box.hidden = false;
     }
@@ -252,7 +259,7 @@
                 box.setAttribute('role', 'alert');
                 host.insertBefore(box, host.firstChild);
             }
-            var names = missing.slice(0, 8).map(function (item) { return item.label; });
+            var names = missing.slice(0, 8).map(function (item) { return escapeHtml(item.label); });
             var more = missing.length > names.length
                 ? ' และอีก ' + (missing.length - names.length) + ' ช่อง'
                 : '';

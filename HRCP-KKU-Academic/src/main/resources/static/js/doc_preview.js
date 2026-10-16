@@ -313,7 +313,18 @@ class DocPreviewEngine {
                 'X-HRCP-CT': this.getCsrfToken()
             },
             body: JSON.stringify(this.getFormData())
-        });
+        }).then(DocPreviewEngine.refuseLoginRedirect);
+    }
+
+    /**
+     * session หมด: server redirect ไปหน้าเข้าสู่ระบบ แล้ว fetch ตามไปเองได้หน้า login สถานะ 200
+     * ไม่ดักไว้ หน้า login ไปโผล่ในกรอบตัวอย่าง และปุ่ม Word ได้ไฟล์ .docx ที่เป็น HTML ของหน้า login
+     */
+    static refuseLoginRedirect(response) {
+        if (response.redirected) {
+            throw new Error('หมดเวลาเข้าสู่ระบบ — กรุณาเข้าสู่ระบบใหม่ในแท็บอื่น แล้วกดอัปเดตตัวอย่างอีกครั้ง');
+        }
+        return response;
     }
 
     /** จัดการแสดง / ซ่อน loading state พร้อมแอนิเมชันนุ่มนวล */
@@ -364,7 +375,7 @@ class DocPreviewEngine {
                     headers: {
                         'X-HRCP-CT': this.getCsrfToken()
                     }
-                });
+                }).then(DocPreviewEngine.refuseLoginRedirect);
                 if (!response.ok) {
                     throw new Error('Server error: ' + response.status);
                 }
@@ -494,8 +505,9 @@ class DocPreviewEngine {
             <div class="u-p-40px-ta-center-c-ef5350">
                 <i class="fas fa-exclamation-triangle u-fs-2rem"></i>
                 <p class="u-mt-10px">เกิดข้อผิดพลาดในการสร้างตัวอย่างเอกสาร</p>
-                <p class="u-fs-0-85rem-c-999">${message}</p>
+                <p class="u-fs-0-85rem-c-999"></p>
             </div>`;
+        this.renderContainer.querySelector('p.u-fs-0-85rem-c-999').textContent = message;
     }
 
     setBanner(show) {
@@ -628,6 +640,7 @@ class DocPreviewEngine {
             URL.revokeObjectURL(url);
         } catch (err) {
             console.error('Download error:', err);
+            alert('ดาวน์โหลดไม่สำเร็จ: ' + err.message);
         }
     }
 

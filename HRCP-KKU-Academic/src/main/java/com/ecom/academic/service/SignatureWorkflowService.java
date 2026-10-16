@@ -535,7 +535,19 @@ public class SignatureWorkflowService {
 
         UserDtls initiator = envelope.getInitiatedBy();
         if (initiator != null) {
-            notifier.notifyExtensionRequested(initiator, envelope, signer, reason);
+            // ส่งแต่ค่า — การแจ้งเตือนรันบนเธรดอื่น ส่ง entity ข้ามไปไม่ได้
+            Integer initiatorId = initiator.getId();
+            SignatureModule module = envelope.getModule();
+            Long requestId = envelope.getRequestId();
+            String label = envelope.getDocumentLabel();
+            String signerName = signer != null ? signer.getName() : null;
+            Runnable announce = () -> notifier.notifyExtensionRequested(initiatorId, module, requestId, label,
+                    signerName, reason);
+            if (afterCommitRunner != null) {
+                afterCommitRunner.run(announce);
+            } else {
+                announce.run();
+            }
         }
 
         return new Result(envelope, null);

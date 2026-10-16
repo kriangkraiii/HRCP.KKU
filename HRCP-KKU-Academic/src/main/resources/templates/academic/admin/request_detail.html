@@ -24,6 +24,7 @@
         <span th:if="${param.error[0] == 'max_attachments'}">อัปโหลดไม่ได้ เนื่องจากครบ 20 ไฟล์แล้ว</span>
         <span th:if="${param.error[0] == 'invalid_file_type'}">รองรับเฉพาะไฟล์ .pdf, .docx, .doc และ .zip</span>
         <span th:if="${param.error[0] == 'status_update_failed'}">ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่อีกครั้ง</span>
+        <span th:if="${param.error[0] == 'total_size_exceeded'}">ขนาดไฟล์แนบรวมเกิน 75 MB ต่อคำร้อง กรุณาลบไฟล์ที่ไม่ใช้หรือบีบอัดไฟล์ก่อนอัปโหลด</span>
         <small th:if="${errorDetail != null}" class="d-block mt-1 text-danger"
           th:text="'รายละเอียด: ' + ${errorDetail}"></small>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>

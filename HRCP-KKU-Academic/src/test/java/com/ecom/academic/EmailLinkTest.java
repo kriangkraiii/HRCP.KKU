@@ -236,7 +236,8 @@ class EmailLinkTest extends AbstractFlowTest {
         java.util.Set<String> links = new java.util.LinkedHashSet<>();
         while (m.find()) {
             String href = m.group(1).replace("&amp;", "&");
-            if (href.startsWith(FOOTER_SITE)) {
+            // ท้ายอีเมลมีลิงก์เว็บไซต์คณะและลิงก์หน้าแรกของระบบเสมอ — ไม่ใช่ปุ่มของอีเมลฉบับนั้น
+            if (href.startsWith(FOOTER_SITE) || href.equals(com.ecom.util.EmailTemplateHelper.SYSTEM_URL)) {
                 continue;
             }
             URI uri = URI.create(href);

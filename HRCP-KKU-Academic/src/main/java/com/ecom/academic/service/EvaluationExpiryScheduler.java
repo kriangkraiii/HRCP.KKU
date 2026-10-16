@@ -47,14 +47,16 @@ public class EvaluationExpiryScheduler {
     }
 
     /** Run daily at 8:00 AM */
-    @Scheduled(cron = "0 0 8 * * *")
+    @Scheduled(cron = "0 0 8 * * *", zone = "Asia/Bangkok")
     @Transactional
     public void checkExpiryAndNotify() {
         log.info("Starting evaluation expiry check...");
 
         List<AcademicRequest> completedRequests = requestRepository.findByCurrentStatusInWithApplicant(
                 List.of(RequestStatus.COMPLETED_PASS, RequestStatus.COMPLETED));
-        LocalDateTime now = LocalDateTime.now();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        // คนเดียวมีผลประเมินหลายฉบับที่หมดอายุวันเดียวกันได้ (ฉบับเก่าที่ยังค้างสถานะผ่าน) — แจ้งครั้งเดียวต่อวันหมดอายุ
+        java.util.Set<String> alerted = new java.util.HashSet<>();
 
         for (AcademicRequest request : completedRequests) {
 
@@ -69,50 +71,17 @@ public class EvaluationExpiryScheduler {
                 continue;
             }
 
-            LocalDateTime expiry = academicService.getLatestEvaluationExpiry(user.getId());
-            if (expiry == null) {
-                expiry = request.getEvaluationExpiryDate();
-            }
+            // วันหมดอายุของคำร้องฉบับนี้เอง ตามลำดับเดียวกับแดชบอร์ด — เดิมใช้ของฉบับล่าสุดของผู้ใช้กับทุกฉบับ
+            com.ecom.academic.dto.EvaluationSummary summary = academicService.summarize(request);
+            LocalDateTime expiry = summary != null && summary.expiryAt() != null
+                    ? summary.expiryAt() : request.getEvaluationExpiryDate();
             if (expiry == null) {
                 continue;
             }
 
-            long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(now, expiry);
-            if (daysLeft < 0) {
-                continue; // Already expired
-            }
-
-            // Check which alerts are enabled and match the interval
-            boolean shouldAlert = false;
-            String alertLabel = "";
-
-            if (daysLeft <= 7 && Boolean.TRUE.equals(user.getExpiryAlert1w())) {
-                shouldAlert = true;
-                alertLabel = "1 สัปดาห์";
-            } else if (daysLeft <= 30 && daysLeft > 7 && Boolean.TRUE.equals(user.getExpiryAlert1m())) {
-                shouldAlert = true;
-                alertLabel = "1 เดือน";
-            } else if (daysLeft <= 90 && daysLeft > 30 && Boolean.TRUE.equals(user.getExpiryAlert3m())) {
-                shouldAlert = true;
-                alertLabel = "3 เดือน";
-            } else if (daysLeft <= 180 && daysLeft > 90 && Boolean.TRUE.equals(user.getExpiryAlert6m())) {
-                shouldAlert = true;
-                alertLabel = "6 เดือน";
-            }
-
-            // Check user-configured custom expiry alerts (up to 5)
-            if (!shouldAlert && user.getCustomExpiryAlerts() != null && !user.getCustomExpiryAlerts().isBlank()) {
-                List<com.ecom.model.CustomExpiryAlert> customAlerts = parseCustomAlerts(user.getCustomExpiryAlerts());
-                for (com.ecom.model.CustomExpiryAlert ca : customAlerts) {
-                    if (ca.isEnabled() && daysLeft == ca.getDays()) {
-                        shouldAlert = true;
-                        alertLabel = ca.getLabel();
-                        break;
-                    }
-                }
-            }
-
-            if (shouldAlert) {
+            long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(today, expiry.toLocalDate());
+            String alertLabel = alertLabelFor(user, daysLeft);
+            if (alertLabel != null && alerted.add(user.getId() + ":" + expiry.toLocalDate())) {
                 sendExpiryEmail(user, request, daysLeft, alertLabel, expiry);
             }
         }
@@ -120,7 +89,39 @@ public class EvaluationExpiryScheduler {
         log.info("Evaluation expiry check completed.");
     }
 
-    private List<com.ecom.model.CustomExpiryAlert> parseCustomAlerts(String json) {
+    /**
+     * การแจ้งเตือนที่ถึงกำหนดวันนี้ หรือ null — แต่ละรายการแจ้ง<em>ครั้งเดียว</em> ในวันที่เหลือพอดี
+     *
+     * <p>งานนี้รันทุกวัน เดิมตัวเลือกมาตรฐานเทียบเป็นช่วง (เช่น 91–180 วัน) จึงส่งอีเมลและการแจ้งเตือนทุกวัน
+     * ตลอดช่วง — เปิด "6 เดือน" ไว้ได้อีเมลราวเก้าสิบฉบับ ตอนนี้ใช้หลักเดียวกับการแจ้งเตือนที่ผู้ใช้ตั้งเอง
+     */
+    static String alertLabelFor(UserDtls user, long daysLeft) {
+        if (daysLeft < 0) {
+            return null; // Already expired
+        }
+        if (daysLeft == 7 && Boolean.TRUE.equals(user.getExpiryAlert1w())) {
+            return "1 สัปดาห์";
+        }
+        if (daysLeft == 30 && Boolean.TRUE.equals(user.getExpiryAlert1m())) {
+            return "1 เดือน";
+        }
+        if (daysLeft == 90 && Boolean.TRUE.equals(user.getExpiryAlert3m())) {
+            return "3 เดือน";
+        }
+        if (daysLeft == 180 && Boolean.TRUE.equals(user.getExpiryAlert6m())) {
+            return "6 เดือน";
+        }
+        if (user.getCustomExpiryAlerts() != null && !user.getCustomExpiryAlerts().isBlank()) {
+            for (com.ecom.model.CustomExpiryAlert ca : parseCustomAlerts(user.getCustomExpiryAlerts())) {
+                if (ca.isEnabled() && daysLeft == ca.getDays()) {
+                    return ca.getLabel();
+                }
+            }
+        }
+        return null;
+    }
+
+    private static List<com.ecom.model.CustomExpiryAlert> parseCustomAlerts(String json) {
         if (json == null || json.isBlank()) {
             return List.of();
         }
