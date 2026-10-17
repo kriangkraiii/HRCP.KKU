@@ -118,4 +118,30 @@ class SearchReconcilerTest extends AbstractFlowTest {
                 .contains("เขียน 0")
                 .contains("ลบ 0");
     }
+
+    @Autowired
+    private com.ecom.external.repository.KkuRegulationDocRepository regulationRepo;
+
+    @Autowired
+    private com.ecom.search.index.SearchSourceCatalog catalog;
+
+    @Test
+    @DisplayName("เอกสารข้อบังคับที่ถูกถอด (retiredAt != null) ไม่นับรวมใน sourceIds และ findDistinctCategoriesOrdered")
+    void retiredRegulationDocsAreExcludedFromSourceIdsAndCategories() {
+        regulationRepo.deleteAll();
+
+        com.ecom.external.model.KkuRegulationDoc active = new com.ecom.external.model.KkuRegulationDoc(
+                "ข้อบังคับ", "ข้อบังคับปัจจุบัน", "https://hr2.kku.ac.th/active.pdf", "active.pdf", 1);
+        active = regulationRepo.save(active);
+
+        com.ecom.external.model.KkuRegulationDoc retired = new com.ecom.external.model.KkuRegulationDoc(
+                "ประกาศที่ยกเลิกแล้ว", "ประกาศเดิม", "https://hr2.kku.ac.th/retired.pdf", "retired.pdf", 2);
+        retired.setRetiredAt(java.time.LocalDateTime.now());
+        retired = regulationRepo.save(retired);
+
+        assertThat(catalog.sourceIds(SearchEntityType.REGULATION_DOC))
+                .containsExactly(active.getId());
+        assertThat(regulationRepo.findDistinctCategoriesOrdered())
+                .containsExactly("ข้อบังคับ");
+    }
 }

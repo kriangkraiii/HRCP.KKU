@@ -73,8 +73,10 @@ public class SearchSourceCatalog {
         if (entityName == null) {
             return List.of();
         }
+        String jpql = "SELECT e.id FROM " + entityName + " e"
+                + (type == SearchEntityType.REGULATION_DOC ? " WHERE e.retiredAt IS NULL" : "");
         List<?> raw = entityManager
-                .createQuery("SELECT e.id FROM " + entityName + " e")
+                .createQuery(jpql)
                 .getResultList();
 
         List<Long> ids = new ArrayList<>(raw.size());

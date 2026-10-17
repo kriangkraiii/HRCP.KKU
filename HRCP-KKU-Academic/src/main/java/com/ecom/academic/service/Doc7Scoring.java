@@ -124,7 +124,10 @@ public final class Doc7Scoring {
 
         for (int sec = 1; sec <= 4; sec++) {
             // Admin กรอกคะแนนรวมต่อส่วน (1 ค่าต่อส่วน) ในช่อง sec_score_X
-            double secScore = sectionScore(formData.get("sec_score_" + sec));
+            String rawSection = formData.get("sec_score_" + sec);
+            double secScore = sectionScore(rawSection);
+            // กรอก 0 จริงอยู่ช่วงแรก (๐–๑) — ช่องที่ยังว่างก็นับเป็น 0 แต่ต้องไม่ถูกติ๊ก
+            boolean entered = rawSection != null && !rawSection.isBlank();
 
             // วิเคราะห์ว่าคะแนนตกอยู่ในช่วงไหน (5 ช่วง)
             // ช่วง: 0-1 = score_1, 1.01-2 = score_2, 2.01-3 = score_3, 3.01-4 = score_4,
@@ -132,7 +135,9 @@ public final class Doc7Scoring {
             // placeholder ใน template DOCX: {{score11}}, {{score12}}, ..., {{score45}}
             for (int range = 1; range <= 5; range++) {
                 String key = "score" + sec + range;
-                boolean inRange = secScore > range - 1 && secScore <= range;
+                boolean inRange = range == 1
+                        ? entered && secScore >= 0 && secScore <= 1
+                        : secScore > range - 1 && secScore <= range;
                 // ช่วงที่ตรง → ใส่คะแนน, ช่วงอื่น → ว่าง
                 formData.put(key, inRange ? String.valueOf(secScore) : "");
             }

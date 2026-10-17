@@ -487,32 +487,41 @@ public class DocumentGenerationService {
                         // ตัวเทมเพลตหรือจากค่าที่เพิ่งเติมเข้าไป
                         boolean thaiNumeralTemplate = usesThaiNumerals(xml);
 
-                        // Step 2: Simple replace - แทนค่า {{placeholder}} ทั้งหมด
-                        for (Map.Entry<String, String> ph : placeholders.entrySet()) {
-                            String token = "{{" + ph.getKey() + "}}";
-                            if (xml.contains(token)) {
-                                String raw = ph.getValue();
-                                if (TICK_BLANK_KEY.matcher(ph.getKey()).matches()) {
-                                    raw = plainTick(raw);
-                                }
-                                // ค่าวันที่ที่ขึ้นต้นด้วย "วันที่" ใส่ลงช่องที่เทมเพลตพิมพ์ "วันที่" ไว้แล้ว — ตัดคำซ้ำ
-                                // ช่องอื่น (เช่น "เมื่อ {{lecturer_appointment_date}}") ต้องการคำนั้นอยู่
-                                if (ThaiDateUtil.followsDayLabel(xml, xml.indexOf(token))) {
-                                    raw = ThaiDateUtil.withoutDayLabel(ph.getKey(), raw);
-                                }
-                                // แปลงเลขก่อน escape เสมอ มิฉะนั้นจะไปโดนตัวเลขใน entity
-                                // หรือใน markup ที่ escapeXml แทรกเข้ามาเอง — ยกเว้น overlay token (@@OVL_...@@)
-                                // ของ BasePdfBuilder มิฉะนั้นชื่อฟิลด์ที่มีเลข (เช่น s3_sign_date)
-                                // จะถูกแปลงเลข 3 เป็น ๓ ทำให้ BasePdfBuilder ค้นหา token ไม่เจอ
-                                if (thaiNumeralTemplate && raw != null && !raw.startsWith("@@OVL_")) {
-                                    raw = ThaiDateUtil.toThaiDigits(raw);
-                                }
-                                String value = (raw == null || raw.isBlank())
-                                        ? blankFormFiller(ph.getKey())
-                                        : escapeXml(raw);
-                                xml = xml.replace(token, value);
+                        // Step 2: แทนค่า {{placeholder}} ทั้งหมดในรอบเดียว — ไล่ token ในเทมเพลต ไม่ใช่ไล่ค่าทีละตัว
+                        // แล้ว replace ทั้งไฟล์ เดิมค่าที่ผู้ใช้พิมพ์ "{{applicant_name}}" ถูกแทนด้วยค่าของช่องอื่นในรอบถัดไป
+                        java.util.regex.Matcher tokens = LEFTOVER_PLACEHOLDER.matcher(xml);
+                        StringBuilder filled = new StringBuilder(xml.length());
+                        while (tokens.find()) {
+                            String key = tokens.group(1);
+                            if (!placeholders.containsKey(key)) {
+                                // ไม่มีค่า — Step 2.5 เติมจุดไข่ปลาให้
+                                tokens.appendReplacement(filled, java.util.regex.Matcher.quoteReplacement(tokens.group()));
+                                continue;
                             }
+                            String raw = placeholders.get(key);
+                            if (TICK_BLANK_KEY.matcher(key).matches()) {
+                                raw = plainTick(raw);
+                            }
+                            // ค่าวันที่ที่ขึ้นต้นด้วย "วันที่" ใส่ลงช่องที่เทมเพลตพิมพ์ "วันที่" ไว้แล้ว — ตัดคำซ้ำ
+                            // ช่องอื่น (เช่น "เมื่อ {{lecturer_appointment_date}}") ต้องการคำนั้นอยู่
+                            if (ThaiDateUtil.followsDayLabel(xml, tokens.start())) {
+                                raw = ThaiDateUtil.withoutDayLabel(key, raw);
+                            }
+                            boolean overlayToken = raw != null && raw.equals("@@OVL_" + key + "@@");
+                            // แปลงเลขก่อน escape เสมอ มิฉะนั้นจะไปโดนตัวเลขใน entity
+                            // หรือใน markup ที่ escapeXml แทรกเข้ามาเอง — ยกเว้น overlay token (@@OVL_...@@)
+                            // ของ BasePdfBuilder มิฉะนั้นชื่อฟิลด์ที่มีเลข (เช่น s3_sign_date)
+                            // จะถูกแปลงเลข 3 เป็น ๓ ทำให้ BasePdfBuilder ค้นหา token ไม่เจอ
+                            if (thaiNumeralTemplate && raw != null && !overlayToken) {
+                                raw = ThaiDateUtil.toThaiDigits(raw);
+                            }
+                            String value = (raw == null || raw.isBlank())
+                                    ? blankFormFiller(key)
+                                    : overlayToken ? raw : inertText(raw);
+                            tokens.appendReplacement(filled, java.util.regex.Matcher.quoteReplacement(value));
                         }
+                        tokens.appendTail(filled);
+                        xml = filled.toString();
 
                         // Step 2.5: Cleanup - {{...}} ที่เหลือซึ่งไม่มีค่าจากฟอร์ม
                         // ช่องผลงานที่ผู้ขอไม่ได้ใช้จะคืนเป็นจุดไข่ปลา/ช่องติ๊กว่าง
@@ -3166,6 +3175,15 @@ public class DocumentGenerationService {
     // =====================================================================
     // Utilities
     // =====================================================================
+
+    /**
+     * ค่าที่ผู้ใช้กรอก ในรูปที่ขั้นถัดไปของไฟล์อ่านเป็นข้อความเฉย ๆ — "{" กับ "@" เป็น character reference
+     * Word/LibreOffice แสดงเป็นอักขระเดิม แต่ "{{...}}" (Step 2.5) และ "@@OVL_...@@" (BasePdfBuilder ใช้หาตำแหน่ง
+     * ช่องที่กรอกทีหลังและช่องติ๊ก) ที่พิมพ์มาในช่องข้อความจะไม่ถูกมองเป็น token
+     */
+    private String inertText(String raw) {
+        return escapeXml(raw).replace("{", "&#123;").replace("@", "&#64;");
+    }
 
     private String escapeXml(String s) {
         if (s == null)

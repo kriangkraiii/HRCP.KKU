@@ -562,6 +562,13 @@
                     const data = await response.json();
                     if (verifyBox) verifyBox.classList.remove('d-none');
 
+                    const escCert = (s) => String(s == null ? '' : s)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+
                     if (data.ok) {
                         if (verifyAlert) {
                             verifyAlert.className = 'alert alert-success py-2 px-3 small mb-0 border-success shadow-sm';
@@ -569,8 +576,8 @@
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="fas fa-circle-check fs-4 text-success"></i>
                                     <div>
-                                        <strong>ตรวจสอบสำเร็จ</strong> ใบรับรองของ <u>${data.commonName}</u> พร้อมใช้งาน<br>
-                                        <span class="text-muted">ผู้ออก: ${data.issuer} · ใช้ได้ถึง: ${data.validTo}</span>
+                                        <strong>ตรวจสอบสำเร็จ</strong> ใบรับรองของ <u>${escCert(data.commonName)}</u> พร้อมใช้งาน<br>
+                                        <span class="text-muted">ผู้ออก: ${escCert(data.issuer)} · ใช้ได้ถึง: ${escCert(data.validTo)}</span>
                                     </div>
                                 </div>`;
                         }
@@ -579,7 +586,7 @@
                     } else {
                         if (verifyAlert) {
                             verifyAlert.className = 'alert alert-danger py-2 px-3 small mb-0 border-danger shadow-sm';
-                            verifyAlert.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> ${data.error || 'รหัสผ่านไม่ถูกต้อง หรือไฟล์ไม่สมบูรณ์'}`;
+                            verifyAlert.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> ${escCert(data.error || 'รหัสผ่านไม่ถูกต้อง หรือไฟล์ไม่สมบูรณ์')}`;
                         }
                         if (btnSubmit) btnSubmit.disabled = true;
                         if (verifyNotice) verifyNotice.classList.remove('d-none');
@@ -588,7 +595,7 @@
                     if (verifyBox) verifyBox.classList.remove('d-none');
                     if (verifyAlert) {
                         verifyAlert.className = 'alert alert-danger py-2 px-3 small mb-0 border-danger shadow-sm';
-                        verifyAlert.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อตรวจสอบได้: ${err.message}`;
+                        verifyAlert.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อตรวจสอบได้: ${String(err && err.message ? err.message : '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}`;
                     }
                     if (btnSubmit) btnSubmit.disabled = true;
                 } finally {

@@ -67,6 +67,17 @@ public class AcademicCommitteeService {
         member.setLastName(member.getLastName() != null ? member.getLastName().trim() : null);
         rejectDuplicate(member);
 
+        if (member.getId() != null) {
+            committeeRepository.findById(member.getId()).ifPresent(existing -> {
+                if (member.getCreatedAt() == null) {
+                    member.setCreatedAt(existing.getCreatedAt());
+                }
+                if (member.getIsActive() == null) {
+                    member.setIsActive(existing.getIsActive());
+                }
+            });
+        }
+
         // Link with user account if exists or create placeholder
         UserDtls existingUser = userRepository.findByEmail(member.getEmail());
         if (existingUser != null) {

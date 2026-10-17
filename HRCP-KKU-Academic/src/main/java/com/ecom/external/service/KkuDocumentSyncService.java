@@ -116,43 +116,9 @@ public class KkuDocumentSyncService {
             // ซิงค์ไว้ก่อนเพิ่มหน้าข้าราชการ — ดึงใหม่ทันที ไม่ต้องรอรอบรายเดือน
             log.info("No civil-servant documents yet. Triggering sync of every source page...");
             syncNow();
-        } else {
-            fixStaleIsNewFlags();
         }
-    }
-
-    /**
-     * Reconciles existing database records where isNew was previously hardcoded to true.
-     */
-    @Transactional
-    public void fixStaleIsNewFlags() {
-        List<KkuRegulationDoc> docs = docRepo.findAll();
-        boolean anyChanged = false;
-        for (KkuRegulationDoc doc : docs) {
-            boolean shouldBeNew = isActuallyNew(doc.getTitle(), doc.getPublishedYear());
-            if (doc.getIsNew() == null || !doc.getIsNew().equals(shouldBeNew)) {
-                doc.setIsNew(shouldBeNew);
-                docRepo.save(doc);
-                anyChanged = true;
-            }
-        }
-        if (anyChanged) {
-            log.info("Repaired stale isNew flags for KKU regulation documents in database.");
-        }
-    }
-
-    public static boolean isActuallyNew(String title, String year) {
-        if (title == null) return false;
-        if (title.contains("🆕") || title.contains("NEW") || title.matches(".*\\(\\s*ใหม่\\s*\\).*")) {
-            return true;
-        }
-        if (year != null) {
-            try {
-                int y = Integer.parseInt(year.trim());
-                if (y >= 2569) return true;
-            } catch (NumberFormatException ignored) {}
-        }
-        return title.contains("2569");
+        // isNew ไม่คำนวณใหม่ตอนเปิดระบบ — เครื่องหมาย 🆕/NEW/(ใหม่) ถูกตัดออกจากชื่อก่อนบันทึก อ่านจากชื่อที่เก็บไว้
+        // ไม่ได้ ป้ายจะหายทุกครั้งที่รีสตาร์ท ซิงก์แต่ละรอบตั้ง isNew ตามหน้าเว็บ HR อยู่แล้ว
     }
 
     /**
@@ -199,7 +165,7 @@ public class KkuDocumentSyncService {
 
         try {
             List<KkuRegulationDoc> parsedDocs = new ArrayList<>();
-            java.util.Set<String> seenKeys = new java.util.HashSet<>();
+            Map<String, String> urlByKey = new java.util.HashMap<>();
             List<String> failures = new ArrayList<>();
             String[][] sources = { { kkuHrUrl, null }, { civilServantUrl, CIVIL_SERVANT_AUDIENCE } };
             for (int i = 0; i < sources.length; i++) {
@@ -212,7 +178,12 @@ public class KkuDocumentSyncService {
                     }
                     for (KkuRegulationDoc doc : fromPage) {
                         // ไฟล์เดียวกันอยู่ได้ทั้งสองหน้า — หน้าแรกที่เจอเป็นเจ้าของ ไม่อย่างนั้นหมวดจะสลับไปมาทุกรอบ
-                        if (seenKeys.add(doc.getFileKey())) {
+                        // ชื่อไฟล์ซ้ำแต่คนละ URL (อัปโหลดคนละเดือน) เป็นอีกไฟล์ — ใช้ key ที่มีโฟลเดอร์แทน
+                        String ownerUrl = urlByKey.get(doc.getFileKey());
+                        if (ownerUrl != null && !ownerUrl.equals(doc.getFileUrl())) {
+                            doc.setFileKey(KkuDocumentParser.folderQualifiedFileKey(doc.getFileUrl()));
+                        }
+                        if (urlByKey.putIfAbsent(doc.getFileKey(), doc.getFileUrl()) == null) {
                             doc.setDisplayOrder(i * ORDER_STRIDE + (doc.getDisplayOrder() == null ? 0 : doc.getDisplayOrder()));
                             parsedDocs.add(doc);
                         }

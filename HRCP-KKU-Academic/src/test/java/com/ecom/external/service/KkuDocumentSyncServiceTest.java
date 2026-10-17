@@ -137,43 +137,22 @@ class KkuDocumentSyncServiceTest {
         assertEquals(1, groups.get(1).getDocs().size());
     }
 
+    /** ป้าย "ใหม่" จาก 🆕/NEW/(ใหม่) ไม่อยู่ในชื่อที่บันทึกไว้ — เปิดระบบใหม่ต้องไม่ล้างป้ายทิ้ง */
     @Test
-    void fixStaleIsNewFlags_correctsErroneouslyMarkedNewDocs() {
-        KkuRegulationDoc oldDoc1 = new KkuRegulationDoc("ข้อบังคับ", "ข้อบังคับ พ.ศ. 2565", "url1", "key1", 1);
-        oldDoc1.setPublishedYear("2565");
-        oldDoc1.setIsNew(true); // Erroneously true in DB
+    void onStartup_keepsTheNewBadgeTheLastSyncSet() {
+        KkuRegulationDoc marked = new KkuDocumentParser().parse("""
+                <div class="fusion_builder_column"><h2>ประกาศมหาวิทยาลัยขอนแก่น</h2>
+                <a href="https://hr2.kku.ac.th/wp-content/uploads/a.pdf">ประกาศ เรื่อง หลักเกณฑ์ พ.ศ. 2565 🆕</a></div>
+                """).get(0);
+        assertTrue(marked.getIsNew());
+        when(docRepo.count()).thenReturn(1L);
+        when(docRepo.existsByCategoryStartingWith("ข้าราชการ")).thenReturn(true);
+        when(docRepo.findAll()).thenReturn(List.of(marked));
 
-        KkuRegulationDoc oldDoc2 = new KkuRegulationDoc("ข้อบังคับ", "ข้อบังคับ พ.ศ. 2560", "url2", "key2", 2);
-        oldDoc2.setPublishedYear("2560");
-        oldDoc2.setIsNew(true); // Erroneously true in DB
+        syncService.onStartup();
 
-        KkuRegulationDoc newDoc = new KkuRegulationDoc("ข้อบังคับ", "ข้อบังคับ พ.ศ. 2569", "url3", "key3", 3);
-        newDoc.setPublishedYear("2569");
-        newDoc.setIsNew(true); // Should stay true
-
-        when(docRepo.findAll()).thenReturn(List.of(oldDoc1, oldDoc2, newDoc));
-
-        syncService.fixStaleIsNewFlags();
-
-        assertFalse(oldDoc1.getIsNew());
-        assertFalse(oldDoc2.getIsNew());
-        assertTrue(newDoc.getIsNew());
-
-        verify(docRepo).save(oldDoc1);
-        verify(docRepo).save(oldDoc2);
-    }
-
-    @Test
-    void isActuallyNew_identifiesNewDocsAccurately() {
-        assertTrue(KkuDocumentSyncService.isActuallyNew("ข้อบังคับ พ.ศ. 2569", "2569"));
-        assertTrue(KkuDocumentSyncService.isActuallyNew("ประกาศฯ ( ใหม่ )", "2566"));
-        assertTrue(KkuDocumentSyncService.isActuallyNew("ประกาศฯ 🆕", "2565"));
-        assertTrue(KkuDocumentSyncService.isActuallyNew("ประกาศฯ NEW", null));
-
-        assertFalse(KkuDocumentSyncService.isActuallyNew("ข้อบังคับ พ.ศ. 2565", "2565"));
-        assertFalse(KkuDocumentSyncService.isActuallyNew("ข้อบังคับ พ.ศ. 2566", "2566"));
-        assertFalse(KkuDocumentSyncService.isActuallyNew("ข้อบังคับ พ.ศ. 2560", "2560"));
-        assertFalse(KkuDocumentSyncService.isActuallyNew("ลักษณะการมีส่วนร่วมในผลงานทางวิชาการทั่วไป", null));
+        assertTrue(marked.getIsNew());
+        verify(docRepo, org.mockito.Mockito.never()).save(any());
     }
 
     // ---- เอกสารที่ HR ถอดออกจากหน้าเว็บ (docs/PLAN-bughunt-decisions.md ข้อ 5) ----
@@ -275,5 +254,26 @@ class KkuDocumentSyncServiceTest {
         serviceSeeing(List.of(doc("d1.pdf")), doc("c.pdf")).syncNow();
 
         assertEquals(null, returned.getRetiredAt());
+    }
+
+    /** WordPress เก็บไฟล์ชื่อเดียวกันได้ถ้าอัปโหลดคนละเดือน — เป็นสองเอกสาร ไม่ใช่ไฟล์เดียวที่ซ้ำ */
+    @Test
+    void syncNow_keepsTwoFilesThatShareOnlyAName() {
+        KkuRegulationDoc older = new KkuRegulationDoc("ข้อบังคับมหาวิทยาลัยขอนแก่น", "แบบฟอร์ม ก.พ.อ. 03",
+                "https://hr2.kku.ac.th/wp-content/uploads/2023/05/form.pdf", "form.pdf", 1);
+        KkuRegulationDoc newer = new KkuRegulationDoc("ข้อบังคับมหาวิทยาลัยขอนแก่น", "แบบฟอร์มประเมินผลการสอน",
+                "https://hr2.kku.ac.th/wp-content/uploads/2026/01/form.pdf", "form.pdf", 2);
+        KkuRegulationDoc sameFileOnCivilPage = new KkuRegulationDoc("ข้าราชการ · ข้อบังคับมหาวิทยาลัยขอนแก่น",
+                "แบบฟอร์ม ก.พ.อ. 03", "https://hr2.kku.ac.th/wp-content/uploads/2023/05/form.pdf", "form.pdf", 1);
+        when(docRepo.findByFileKey(any())).thenReturn(Optional.empty());
+
+        KkuDocumentSyncService.SyncResult result = serviceSeeing(List.of(older, newer), sameFileOnCivilPage).syncNow();
+
+        assertEquals(2, result.getTotalParsed());
+        assertEquals("form.pdf", older.getFileKey());
+        assertEquals("2026/01/form.pdf", newer.getFileKey());
+        verify(docRepo).save(older);
+        verify(docRepo).save(newer);
+        verify(docRepo, org.mockito.Mockito.never()).save(sameFileOnCivilPage);
     }
 }

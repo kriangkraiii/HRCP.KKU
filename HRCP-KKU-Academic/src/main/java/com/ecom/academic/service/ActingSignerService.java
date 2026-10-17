@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.model.ActingSigner;
+import com.ecom.academic.model.StaffMember;
 import com.ecom.academic.repository.ActingSignerRepository;
 import com.ecom.academic.repository.StaffMemberRepository;
 import com.ecom.model.UserDtls;
@@ -141,12 +142,30 @@ public class ActingSignerService {
         if (own.startsWith(role.label())) {
             return own;
         }
+        // ถือตำแหน่งบริหารอื่นอยู่ (เช่นรองคณบดีที่ลงนามช่องคณบดี) — ไม่พิมพ์ตำแหน่งที่เขาไม่ได้ดำรง
+        // คืน null ให้แบบฟอร์มคงตำแหน่งที่กรอกไว้
+        if (ADMINISTRATIVE_POST.matcher(own).find()) {
+            return null;
+        }
+        StaffMember staff = signer.getId() == null ? null : staffMembers.findByUserId(signer.getId()).orElse(null);
+        // ทะเบียนบุคลากรบอกบทบาทอื่นไว้ชัด (DEAN = คณบดี/รองคณบดี, HEAD = หัวหน้าสาขา) — ไม่ใช่ผู้ดำรงตำแหน่งนี้
+        String registered = staff == null || staff.getStaffRole() == null ? "" : staff.getStaffRole().strip();
+        if (!registered.isEmpty() && !registered.equalsIgnoreCase(registryRoleOf(slotKey))) {
+            return null;
+        }
         if ("head".equals(slotKey)) {
-            return staffMembers.findByUserId(signer.getId())
-                    .map(staff -> headOf(staff.getDepartment()))
-                    .orElse(null);
+            return staff == null ? null : headOf(staff.getDepartment());
         }
         return role.example();
+    }
+
+    /** ตำแหน่งบริหารที่พิมพ์อยู่ในบัญชี — ขึ้นต้นด้วยชื่อตำแหน่งแบบนี้คือดำรงตำแหน่งนั้นอยู่ */
+    private static final Pattern ADMINISTRATIVE_POST =
+            Pattern.compile("^(?:คณบดี|รองคณบดี|ผู้ช่วยคณบดี|หัวหน้าสาขา|ผู้อำนวยการ|รองผู้อำนวยการ)");
+
+    /** บทบาทใน {@code staff_member.staff_role} ของผู้ดำรงตำแหน่งในช่องนี้ */
+    private static String registryRoleOf(String slotKey) {
+        return "head".equals(slotKey) ? "HEAD" : "DEAN";
     }
 
     /** "สาขาวิชาวิทยาการคอมพิวเตอร์" หรือ "วิทยาการคอมพิวเตอร์" → "หัวหน้าสาขาวิชาวิทยาการคอมพิวเตอร์" */

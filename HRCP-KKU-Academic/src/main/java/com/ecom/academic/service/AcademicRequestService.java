@@ -1639,8 +1639,14 @@ public class AcademicRequestService {
             }
 
             int year = Integer.parseInt(parts[2]);
+            if (year < 100) {
+                year += 2500; // ปีย่อ "1/10/72" คือ พ.ศ. 2572 — เดิมกลายเป็น ค.ศ. 0072 ผลประเมินจึงหมดอายุทันที
+            }
             if (year > 2400) {
                 year -= 543; // Buddhist era
+            }
+            if (year < 1900) {
+                return null;
             }
             return LocalDateTime.of(year, month, day, 0, 0);
         } catch (Exception e) {
@@ -1797,7 +1803,7 @@ public class AcademicRequestService {
 
         LocalDateTime expiryAt = resolveExpiry(request, doc9, evaluationDate);
         Long daysLeft = expiryAt == null ? null
-                : java.time.temporal.ChronoUnit.DAYS.between(LocalDateTime.now(), expiryAt);
+                : java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), expiryAt.toLocalDate());
 
         return new EvaluationSummary(
                 request.getId(),
@@ -1987,7 +1993,8 @@ public class AcademicRequestService {
                 return false;
             }
             LocalDateTime expiry = parseThaiDate(raw.toString());
-            return expiry != null && expiry.isBefore(LocalDateTime.now());
+            // "ใช้ได้ถึง 1 ต.ค." — วันนั้นทั้งวันยังใช้ได้ หมดอายุเมื่อพ้นวันนั้นไปแล้ว
+            return expiry != null && expiry.toLocalDate().isBefore(java.time.LocalDate.now());
         } catch (Exception e) {
             log.warn("Could not read the expiry date on document 9: {}", e.getMessage());
             return false;
@@ -2071,7 +2078,14 @@ public class AcademicRequestService {
      * ซึ่งไม่นับวันแรกและจะได้ 2 ต.ค. 2572 — ดู docs/PLAN-bughunt-decisions.md ข้อ 1
      */
     public static LocalDateTime expiryFromEvaluation(LocalDateTime evaluated) {
-        return evaluated == null ? null : evaluated.minusDays(1).plusYears(EVALUATION_VALID_YEARS);
+        if (evaluated == null) {
+            return null;
+        }
+        // บวกปีก่อนแล้วค่อยถอยหนึ่งวัน แบบเดียวกับ calculateExpiry (doc_fragments/9.html) — ถอยก่อนบวกปีให้ผลต่างกัน
+        // เมื่อปีที่หมดอายุเป็นปีอธิกสุรทิน (ประเมิน 1 มี.ค. 2568 ต้องได้ 29 ก.พ. 2571 ไม่ใช่ 28 ก.พ.)
+        LocalDateTime matching = evaluated.plusYears(EVALUATION_VALID_YEARS);
+        // ประเมิน 29 ก.พ. ปีที่ครบไม่มีวันนั้น วันที่ตรงกันจึงเลื่อนเป็น 1 มี.ค. — วันก่อนหน้าคือ 28 ก.พ. ที่ได้มาแล้ว
+        return matching.getDayOfMonth() != evaluated.getDayOfMonth() ? matching : matching.minusDays(1);
     }
 
     /**

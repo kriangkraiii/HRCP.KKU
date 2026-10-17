@@ -51,6 +51,9 @@ public class ExternalSignerService {
     private final KkuEmailDomains kkuDomains;
     private final ExternalLinkService externalLinks;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ecom.service.UserDirectorySync directory;
+
     public ExternalSignerService(UserRepository users, PasswordEncoder passwordEncoder, JavaMailSender mailSender,
             @Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}") String senderEmail,
             @Value("${app.public-base-url:https://hrd.computing.kku.ac.th}") String publicBaseUrl,
@@ -85,6 +88,15 @@ public class ExternalSignerService {
         UserDtls existing = users.findByEmailIgnoreCase(email);
         if (existing != null) {
             return existing;
+        }
+        // บุคลากรในทะเบียนของวิทยาลัยที่ยังไม่มีบัญชี — ได้บัญชีปกติจากทะเบียน ไม่ใช่บัญชีภายนอกที่ผู้เชิญตั้งชื่อเอง
+        if (directory != null) {
+            java.util.Optional<UserDtls> member = directory.accountForDirectoryMember(email);
+            if (member.isPresent()) {
+                log.info("Invited signer {} is in the faculty directory — created a regular account instead",
+                        email);
+                return member.get();
+            }
         }
         String first = strip(in.firstName());
         String last = strip(in.lastName());

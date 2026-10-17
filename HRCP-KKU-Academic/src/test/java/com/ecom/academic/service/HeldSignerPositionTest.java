@@ -135,4 +135,21 @@ class HeldSignerPositionTest {
 
         assertThat(filled).contains("\"dean_position_line\":\"รักษาการแทนคณบดีวิทยาลัยการคอมพิวเตอร์\"");
     }
+
+    @Test
+    @DisplayName("รองคณบดีที่ลงนามช่องคณบดี — ไม่พิมพ์ว่าเป็นคณบดี ให้แบบฟอร์มคงตำแหน่งที่กรอกไว้")
+    void associateDeanInTheDeanSlotIsNotPrintedAsDean() {
+        assertThat(actingSigners.heldPosition("dean", user(5, "รองคณบดีฝ่ายวิชาการ"))).isNull();
+    }
+
+    @Test
+    @DisplayName("ช่องหัวหน้าสาขา — ทะเบียนบอกว่าเป็นกรรมการ ไม่ใช่หัวหน้าสาขา ไม่พิมพ์ว่าเป็นหัวหน้าสาขา")
+    void aRegisteredNonHeadIsNotPrintedAsHead() {
+        StaffMember staff = new StaffMember();
+        staff.setDepartment("สาขาวิชาวิทยาการคอมพิวเตอร์");
+        staff.setStaffRole("COMMITTEE");
+        when(staffMembers.findByUserId(6)).thenReturn(Optional.of(staff));
+
+        assertThat(actingSigners.heldPosition("head", user(6, "รองศาสตราจารย์"))).isNull();
+    }
 }

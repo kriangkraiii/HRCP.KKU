@@ -328,4 +328,66 @@ class EvaluationEligibilityTest extends AbstractFlowTest {
             assertThat(academicService.getLatestEvaluationExpiry(applicant.getId())).isNull();
         }
     }
+
+    @Nested
+    @DisplayName("ขอบของวันหมดอายุ")
+    class ExpiryEdges {
+
+        @Test
+        @DisplayName("วันหมดอายุคือวันนี้ — \"ใช้ได้ถึง\" วันนี้ทั้งวัน ยังใช้ยื่นได้")
+        void theLastValidDayIsStillUsable() {
+            UserDtls applicant = data.applicant();
+            AcademicRequest evaluation = data.completedEvaluation(applicant, RequestStatus.COMPLETED,
+                    numericThaiDate(LocalDate.now()));
+
+            assertThat(positionService.getEligibleEvaluations(applicant.getId()))
+                    .extracting(AcademicRequest::getId).containsExactly(evaluation.getId());
+        }
+
+        @Test
+        @DisplayName("ปีที่ครบเป็นปีอธิกสุรทิน — ตรงกับ calculateExpiry ในหน้าเอกสารที่ 9")
+        void leapYearExpiryMatchesTheFormScript() {
+            // ประเมิน 1 มี.ค. 2568 → วันที่ตรงกัน 1 มี.ค. 2571 → วันก่อนหน้า 29 ก.พ. 2571
+            assertThat(AcademicRequestService.expiryFromEvaluation(LocalDateTime.of(2025, 3, 1, 0, 0)))
+                    .isEqualTo(LocalDateTime.of(2028, 2, 29, 0, 0));
+            // ประเมิน 29 ก.พ. — ปีที่ครบไม่มีวันนั้น JS เลื่อนเป็น 1 มี.ค. แล้วถอยหนึ่งวัน
+            assertThat(AcademicRequestService.expiryFromEvaluation(LocalDateTime.of(2028, 2, 29, 0, 0)))
+                    .isEqualTo(LocalDateTime.of(2031, 2, 28, 0, 0));
+        }
+
+        @Test
+        @DisplayName("ปีย่อ 2 หลักคือ พ.ศ. 25xx ไม่ใช่ ค.ศ. 00xx")
+        void aTwoDigitYearIsABuddhistShortYear() {
+            assertThat(AcademicRequestService.parseThaiDate("1/10/72")).isEqualTo(LocalDateTime.of(2029, 10, 1, 0, 0));
+            assertThat(AcademicRequestService.parseThaiDate("1/10/872")).isNull();
+        }
+
+        @Autowired
+        private com.ecom.academic.service.EvaluationExpiryScheduler expiryScheduler;
+
+        @Autowired
+        private com.ecom.repository.NotificationRepository notifications;
+
+        @Test
+        @DisplayName("ยื่นขอตำแหน่งด้วยผลประเมินนี้ไปแล้ว — ไม่เตือนให้ \"ยื่นก่อนหมดอายุ\" อีก แบบร่างยังเตือน")
+        void noExpiryWarningOnceTheEvaluationBacksASubmittedRequest() {
+            UserDtls applicant = data.applicant();
+            AcademicRequest submitted = data.completedEvaluation(applicant, RequestStatus.COMPLETED,
+                    numericThaiDate(LocalDate.now().plusDays(30)));
+            data.positionRequest(applicant, com.ecom.academic.model.PositionRequestStatus.DOCUMENT_RECEIVED, submitted);
+
+            expiryScheduler.checkExpiryAndNotify();
+            assertThat(notifications.findByRecipientOrderByCreatedAtDesc(applicant))
+                    .noneMatch(n -> n.getType() == com.ecom.model.NotificationType.EXPIRY_WARNING);
+
+            UserDtls other = data.otherApplicant();
+            AcademicRequest drafted = data.completedEvaluation(other, RequestStatus.COMPLETED,
+                    numericThaiDate(LocalDate.now().plusDays(30)));
+            data.positionRequest(other, com.ecom.academic.model.PositionRequestStatus.DRAFT, drafted);
+
+            expiryScheduler.checkExpiryAndNotify();
+            assertThat(notifications.findByRecipientOrderByCreatedAtDesc(other))
+                    .anyMatch(n -> n.getType() == com.ecom.model.NotificationType.EXPIRY_WARNING);
+        }
+    }
 }

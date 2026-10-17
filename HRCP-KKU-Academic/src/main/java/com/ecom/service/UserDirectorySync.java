@@ -94,6 +94,28 @@ public class UserDirectorySync {
     }
 
     /**
+     * บัญชีของบุคลากรในทะเบียน (fs_faculty ที่ยังปฏิบัติงาน) สำหรับอีเมลนี้ — สร้างให้ตอนนี้ถ้ายังไม่มี
+     * ไม่รอรอบซิงก์รายคืน
+     *
+     * <p>ผู้เชิญผู้ลงนามภายนอกใช้ทางนี้ก่อนสร้างบัญชีภายนอก: อาจารย์ของวิทยาลัยที่ยังไม่มีบัญชีเคยถูกสร้างเป็น
+     * {@code ROLE_EXTERNAL} และติดบทบาทนั้นไปตลอด เพราะการเข้า SSO ไม่แตะบทบาท
+     *
+     * @return บัญชี หรือว่างเมื่ออีเมลนี้ไม่ใช่บุคลากรในทะเบียนที่ยังปฏิบัติงาน
+     */
+    public java.util.Optional<UserDtls> accountForDirectoryMember(String email) {
+        if (email == null || email.isBlank()) {
+            return java.util.Optional.empty();
+        }
+        FsFaculty faculty = facultyRepo.findByEmailNormalized(email.strip()).orElse(null);
+        if (faculty == null || !faculty.isActive()) {
+            return java.util.Optional.empty();
+        }
+        String normalized = normalizedEmail(faculty);
+        UserDtls existing = userRepository.findByEmailIgnoreCase(normalized);
+        return java.util.Optional.of(existing != null ? existing : createFrom(faculty, normalized));
+    }
+
+    /**
      * Builds the account and hands it to {@link UserService#saveUser} to be
      * created.
      *

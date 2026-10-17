@@ -186,4 +186,16 @@ class Doc7ScoringTest {
         assertThat(Doc7Scoring.levelMismatch(Map.of("eval_result_level", "ชำนาญ"))).isNull();
         assertThat(Doc7Scoring.levelMismatch(null)).isNull();
     }
+
+    @Test
+    void anEnteredZeroIsTickedInTheFirstBandButABlankIsNot() {
+        java.util.Map<String, String> form = new java.util.HashMap<>(java.util.Map.of(
+                "sec_score_1", "0", "sec_score_2", "5", "sec_score_3", "5", "sec_score_4", "5"));
+        Doc7Scoring.derive(form);
+        org.assertj.core.api.Assertions.assertThat(form.get("score11")).isNotBlank();
+
+        java.util.Map<String, String> draft = new java.util.HashMap<>(java.util.Map.of("sec_score_2", "5"));
+        Doc7Scoring.derive(draft);
+        org.assertj.core.api.Assertions.assertThat(draft.get("score11")).isBlank();
+    }
 }

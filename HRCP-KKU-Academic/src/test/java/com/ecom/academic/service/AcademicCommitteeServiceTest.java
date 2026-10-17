@@ -151,15 +151,18 @@ class AcademicCommitteeServiceTest {
     }
 
     @Test
-    @DisplayName("แก้ไขข้อมูลกรรมการเดิมได้โดยไม่ถือว่าซ้ำกับตัวเอง")
+    @DisplayName("แก้ไขข้อมูลกรรมการเดิมได้โดยไม่ถือว่าซ้ำกับตัวเอง และยังคงค่า createdAt เดิมไว้")
     void allowsEditingSelf() {
         AcademicCommitteeMember saved = committeeService.save(member("สมศักดิ์", "ดีมาก", "somsak.d@kku.ac.th"));
+        assertThat(saved.getCreatedAt()).isNotNull();
 
         AcademicCommitteeMember edit = member("สมศักดิ์", "ดีมาก", "somsak.d@kku.ac.th");
         edit.setId(saved.getId());
         edit.setPhoneNumber("089-9999999");
 
-        assertThat(committeeService.save(edit).getPhoneNumber()).isEqualTo("089-9999999");
+        AcademicCommitteeMember updated = committeeService.save(edit);
+        assertThat(updated.getPhoneNumber()).isEqualTo("089-9999999");
+        assertThat(updated.getCreatedAt()).isEqualTo(saved.getCreatedAt());
     }
 
     @Test

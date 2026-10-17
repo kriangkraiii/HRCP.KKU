@@ -383,5 +383,34 @@ class SearchDocumentFactoryTest {
             assertThat(regulation.getExtractionState()).isEqualTo(ExtractionState.PENDING);
             assertThat(regulation.getFilePath()).isEqualTo("https://hr2.kku.ac.th/files/reg-2569.pdf");
         }
+
+        @Test
+        @DisplayName("กรรมการและบุคลากรที่ถูกปิดใช้งาน (isActive = false) ต้องถูกทำเครื่องหมาย deleted ใน index")
+        void inactiveCommitteeAndStaffAreMarkedDeleted() {
+            com.ecom.academic.model.AcademicCommitteeMember member = new com.ecom.academic.model.AcademicCommitteeMember();
+            member.setId(10L);
+            member.setTitle("ศ.ดร.");
+            member.setFirstName("วิชัย");
+            member.setLastName("เก่งการ");
+            member.setIsActive(false);
+
+            SearchDocument committeeDoc = factory.fromCommitteeMember(member);
+            assertThat(committeeDoc.isDeleted()).isTrue();
+
+            member.setIsActive(true);
+            assertThat(factory.fromCommitteeMember(member).isDeleted()).isFalse();
+
+            com.ecom.academic.model.StaffMember staff = new com.ecom.academic.model.StaffMember();
+            staff.setId(20L);
+            staff.setFirstName("สมหมาย");
+            staff.setLastName("สายตรง");
+            staff.setIsActive(false);
+
+            SearchDocument staffDoc = factory.fromStaffMember(staff);
+            assertThat(staffDoc.isDeleted()).isTrue();
+
+            staff.setIsActive(true);
+            assertThat(factory.fromStaffMember(staff).isDeleted()).isFalse();
+        }
     }
 }

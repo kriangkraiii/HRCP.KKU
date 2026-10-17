@@ -88,9 +88,18 @@ function renameFolderPrompt(card) {
         });
 }
 
+function escHtmlStorage(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function deleteFolderPrompt(card) {
     var id = card.getAttribute('data-id');
-    var name = card.getAttribute('data-name');
+    var name = escHtmlStorage(card.getAttribute('data-name'));
     showConfirm('ลบโฟลเดอร์',
         'ยืนยันการลบโฟลเดอร์ <strong>' + name + '</strong> และไฟล์ทั้งหมดในโฟลเดอร์?<br><small class="text-danger">กู้คืนไม่ได้</small>',
         function() {
@@ -126,7 +135,7 @@ function renameFilePrompt(btn) {
 
 function deleteFilePrompt(btn) {
     var id = btn.getAttribute('data-id');
-    var name = btn.getAttribute('data-name');
+    var name = escHtmlStorage(btn.getAttribute('data-name'));
     showConfirm('ย้ายไปถังขยะ',
         'ต้องการย้าย <strong>' + name + '</strong> ไปถังขยะหรือไม่?',
         function() {
@@ -163,7 +172,7 @@ function restoreStorageFile(btn) {
 
 function permanentDeleteStorageFile(btn) {
     var id = btn.getAttribute('data-id');
-    var name = btn.getAttribute('data-name');
+    var name = escHtmlStorage(btn.getAttribute('data-name'));
     showConfirm('ลบถาวร',
         'ยืนยันการลบ <strong>' + name + '</strong> ถาวร?<br><small class="text-danger">กู้คืนไม่ได้</small>',
         function() {

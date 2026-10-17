@@ -913,6 +913,12 @@ public class PositionAdminController {
         PositionAttachment attachment = positionService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบเอกสาร"));
 
+        if (attachment.getRequest() == null
+                || !id.equals(attachment.getRequest().getId())
+                || Boolean.TRUE.equals(attachment.getIsDeleted())) {
+            return ResponseEntity.notFound().build();
+        }
+
         Path path = uploadPaths.resolve(attachment.getStoredFilePath());
         if (path == null || !Files.exists(path)) {
             return ResponseEntity.notFound().build();
@@ -941,6 +947,12 @@ public class PositionAdminController {
             @PathVariable Long attachmentId) throws IOException {
         PositionAttachment attachment = positionService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new com.ecom.exception.NotFoundException("ไม่พบเอกสาร"));
+
+        if (attachment.getRequest() == null
+                || !id.equals(attachment.getRequest().getId())
+                || Boolean.TRUE.equals(attachment.getIsDeleted())) {
+            return ResponseEntity.notFound().build();
+        }
 
         Path path = uploadPaths.resolve(attachment.getStoredFilePath());
         if (path == null || !Files.exists(path)) {
@@ -998,23 +1010,27 @@ public class PositionAdminController {
 
     @PostMapping("/request/{id}/attachment/{attachmentId}/delete")
     public String deleteAttachment(@PathVariable Long id, @PathVariable Long attachmentId, Principal principal) {
+        PositionAttachment toDelete = positionService.findAttachmentById(attachmentId).orElse(null);
+        if (toDelete == null
+                || toDelete.getRequest() == null
+                || !id.equals(toDelete.getRequest().getId())
+                || Boolean.TRUE.equals(toDelete.getIsDeleted())) {
+            return "redirect:/admin/position/request/" + id + "?error=attachment_not_found";
+        }
+
         // Log activity before deleting
         try {
-            PositionAttachment att = positionService.findAttachmentById(attachmentId).orElse(null);
             UserDtls admin = getUser(principal);
             adminLogService.log(principal.getName(),
                     admin != null ? admin.getName() : principal.getName(),
                     "DELETE_POSITION_ATTACHMENT",
-                    "ลบเอกสารเพิ่มเติม" + (att != null ? " \"" + att.getOriginalFilename() + "\"" : "") + " จากคำร้องตำแหน่ง #" + id,
+                    "ลบเอกสารเพิ่มเติม \"" + toDelete.getOriginalFilename() + "\" จากคำร้องตำแหน่ง #" + id,
                     getClientIpAddress());
         } catch (Exception logEx) { /* ignore */ }
 
-        PositionAttachment toDelete = positionService.findAttachmentById(attachmentId).orElse(null);
         positionService.deleteAttachment(attachmentId);
-        if (toDelete != null) {
-            positionService.logDocumentChange(toDelete.getRequest(), PositionRequestService.REQUEST_FILES_DOC_TYPE,
-                    "ลบ: " + toDelete.getOriginalFilename(), getUser(principal), PositionDocumentEditLog.EditAction.ATTACHMENT_DELETED);
-        }
+        positionService.logDocumentChange(toDelete.getRequest(), PositionRequestService.REQUEST_FILES_DOC_TYPE,
+                "ลบ: " + toDelete.getOriginalFilename(), getUser(principal), PositionDocumentEditLog.EditAction.ATTACHMENT_DELETED);
         return "redirect:/admin/position/request/" + id + "?success=attachment_deleted";
     }
 

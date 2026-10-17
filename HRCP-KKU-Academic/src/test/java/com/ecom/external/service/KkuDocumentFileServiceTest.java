@@ -74,4 +74,22 @@ class KkuDocumentFileServiceTest {
         assertThatThrownBy(() -> service.bytes(d)).isInstanceOf(IOException.class);
         assertThat(downloads).hasValue(2);
     }
+
+    /** hr2 ตอบ 200 เป็นหน้า HTML (ปิดปรับปรุง / WAF) — ไม่ส่งต่อเป็น PDF และไม่เก็บไว้ทั้งวัน */
+    @Test
+    void anHtmlPageIsRefusedAndNotCached() {
+        KkuRegulationDoc d = doc(5L, "https://hr2.kku.ac.th/wp-content/uploads/a.pdf");
+        served = "<html><body>Site under maintenance</body></html>".getBytes();
+
+        assertThatThrownBy(() -> service.bytes(d)).isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> service.bytes(d)).isInstanceOf(IOException.class);
+        assertThat(downloads).hasValue(2);
+    }
+
+    @Test
+    void aPdfWithLeadingBytesIsAccepted() {
+        assertThat(KkuDocumentFileService.looksLikePdf("\n\r%PDF-1.4".getBytes())).isTrue();
+        assertThat(KkuDocumentFileService.looksLikePdf("%PD".getBytes())).isFalse();
+        assertThat(KkuDocumentFileService.looksLikePdf(new byte[0])).isFalse();
+    }
 }

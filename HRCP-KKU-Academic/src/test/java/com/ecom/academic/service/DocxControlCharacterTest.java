@@ -39,4 +39,19 @@ class DocxControlCharacterTest {
             assertThat(extractor.getText()).contains("โครงสร้าง").contains("และอัลกอริทึม");
         }
     }
+
+    @Test
+    @DisplayName("ค่าที่พิมพ์ {{ชื่อช่อง}} หรือ @@OVL_...@@ ลงไป — ออกมาตามที่พิมพ์ ไม่ถูกแทนด้วยค่าของช่องอื่น")
+    void typedTokensStayAsTyped() throws IOException {
+        Map<String, String> d = new LinkedHashMap<>();
+        d.put("course_name", "วิชา {{applicant_name}} @@OVL_dean_name@@");
+        d.put("applicant_name", "สมชาย ทดสอบยื่น");
+
+        byte[] docx = service.generatePreviewDocx(1, new ObjectMapper().writeValueAsString(d));
+
+        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(docx));
+                XWPFWordExtractor extractor = new XWPFWordExtractor(document)) {
+            assertThat(extractor.getText()).contains("วิชา {{applicant_name}} @@OVL_dean_name@@");
+        }
+    }
 }

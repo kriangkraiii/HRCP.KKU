@@ -127,7 +127,7 @@ public class PeopleApiController {
             Person p = acting != null && acting.user().getId().equals(u.getId())
                     ? actingPerson(u, acting, fullEmail)
                     : toPerson(u, recommended.contains(u.getId()), fullEmail);
-            if (needle.isEmpty() ? p.recommended() : matches(u, p, needle)) {
+            if (needle.isEmpty() ? p.recommended() : matches(u, p, needle, fullEmail)) {
                 found.add(p);
             }
         }
@@ -242,9 +242,13 @@ public class PeopleApiController {
         return slotKey == null ? null : actingSigners.activeFor(slotKey).orElse(null);
     }
 
-    private static boolean matches(UserDtls u, Person p, String needle) {
-        for (String hay : new String[] { p.name(), u.getEmail(), u.getPositionTitle(), u.getAffiliation(),
-                u.getFirstNameEn() + " " + u.getLastNameEn() }) {
+    /**
+     * @param fullEmail ผู้ถามเห็นอีเมลเต็ม — ไม่อย่างนั้นค้นได้แค่ส่วนที่แสดง ค้นจากอีเมลเต็มเท่ากับเดาส่วนที่ปิดไว้
+     *                  ได้ทีละตัวอักษร การปิดอีเมลจะไม่มีผล
+     */
+    private static boolean matches(UserDtls u, Person p, String needle, boolean fullEmail) {
+        for (String hay : new String[] { p.name(), fullEmail ? u.getEmail() : p.email(), u.getPositionTitle(),
+                u.getAffiliation(), u.getFirstNameEn() + " " + u.getLastNameEn() }) {
             if (normalize(hay).contains(needle)) {
                 return true;
             }

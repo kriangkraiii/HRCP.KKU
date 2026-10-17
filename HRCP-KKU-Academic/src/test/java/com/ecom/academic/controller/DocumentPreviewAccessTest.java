@@ -103,4 +103,40 @@ class DocumentPreviewAccessTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(401);
     }
+
+    @Test
+    @DisplayName("ผู้ลงนามภายนอก (ROLE_EXTERNAL) ต้องดูเอกสารแอดมิน (Doc 7) ไม่ได้ และถูกบังคับเป็น PDF เสมอ")
+    void externalSigner_cannotPreviewAdminDoc_andIsForcedToPdf() throws Exception {
+        UserDtls externalUser = new UserDtls();
+        externalUser.setId(3);
+        externalUser.setEmail("external@reader.ac.th");
+        externalUser.setRole(UserDtls.ROLE_EXTERNAL);
+        when(userRepository.findByEmail("external@reader.ac.th")).thenReturn(externalUser);
+        when(documentService.isPdfConversionAvailable()).thenReturn(true);
+        when(documentService.convertDocxToPdfCached(org.mockito.ArgumentMatchers.any()))
+                .thenReturn("%PDF-1.4".getBytes());
+
+        Principal externalPrincipal = () -> "external@reader.ac.th";
+
+        ResponseEntity<byte[]> adminDocResp = controller.previewDocument(7, "docx", formData(), externalPrincipal);
+        assertThat(adminDocResp.getStatusCode().value()).isEqualTo(403);
+
+        ResponseEntity<byte[]> allowedDocResp = controller.previewDocument(1, "docx", formData(), externalPrincipal);
+        assertThat(allowedDocResp.getStatusCode().value()).isEqualTo(200);
+        assertThat(allowedDocResp.getHeaders().getContentType())
+                .isEqualTo(org.springframework.http.MediaType.APPLICATION_PDF);
+
+        // PositionDocumentPreviewController must also block ROLE_EXTERNAL on Doc 7 and force PDF on Doc 1
+        PositionDocumentPreviewController posController = new PositionDocumentPreviewController(
+                documentService,
+                org.mockito.Mockito.mock(com.ecom.academic.service.PositionRequestService.class),
+                org.mockito.Mockito.mock(com.ecom.academic.service.TeachingEvaluationPartResolver.class));
+        org.springframework.security.core.Authentication externalAuth =
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        "external@reader.ac.th", null,
+                        java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_EXTERNAL")));
+
+        ResponseEntity<byte[]> posAdminDocResp = posController.previewDocument(7, "docx", null, formData(), externalAuth);
+        assertThat(posAdminDocResp.getStatusCode().value()).isEqualTo(403);
+    }
 }

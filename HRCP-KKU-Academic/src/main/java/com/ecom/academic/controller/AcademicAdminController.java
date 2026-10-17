@@ -1498,6 +1498,12 @@ public class AcademicAdminController {
         com.ecom.academic.model.AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new com.ecom.exception.NotFoundException("Attachment not found"));
 
+        if (attachment.getRequest() == null
+                || !id.equals(attachment.getRequest().getId())
+                || Boolean.TRUE.equals(attachment.getIsDeleted())) {
+            return ResponseEntity.notFound().build();
+        }
+
         if ("LINK".equalsIgnoreCase(attachment.getFileType())) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
                     .location(java.net.URI.create(attachment.getStoredFilePath()))
@@ -1531,6 +1537,12 @@ public class AcademicAdminController {
             @PathVariable Long attachmentId) throws IOException {
         com.ecom.academic.model.AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new com.ecom.exception.NotFoundException("Attachment not found"));
+
+        if (attachment.getRequest() == null
+                || !id.equals(attachment.getRequest().getId())
+                || Boolean.TRUE.equals(attachment.getIsDeleted())) {
+            return ResponseEntity.notFound().build();
+        }
 
         if ("LINK".equalsIgnoreCase(attachment.getFileType())) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
@@ -1600,32 +1612,37 @@ public class AcademicAdminController {
         com.ecom.academic.model.AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
                 .orElse(null);
 
-        if (attachment != null) {
-            // ลบไฟล์จริง (ถ้าไม่ใช่ลิงก์)
-            if (!"LINK".equalsIgnoreCase(attachment.getFileType())) {
-                try {
-                    Path stored = uploadPaths.resolve(attachment.getStoredFilePath());
-                    if (stored != null) {
-                        Files.deleteIfExists(stored);
-                    }
-                } catch (Exception e) {
-                    // ignore
-                }
-            }
-            requestService.deleteAttachment(attachmentId);
-
-            // Log activity
-            UserDtls admin = getUser(principal);
-            requestService.logDocumentChange(attachment.getRequest(),
-                    attachment.getChecklistItem() != null ? 2 : AcademicRequestService.REQUEST_FILES_DOC_TYPE,
-                    "ลบ: " + attachment.getOriginalFilename(), admin,
-                    AcademicDocumentEditLog.EditAction.ATTACHMENT_DELETED);
-            adminLogService.log(principal.getName(),
-                    admin != null ? admin.getName() : principal.getName(),
-                    "DELETE_ATTACHMENT",
-                    "ลบเอกสารเพิ่มเติม \"" + attachment.getOriginalFilename() + "\" จากคำร้อง #" + id,
-                    getClientIpAddress());
+        if (attachment == null
+                || attachment.getRequest() == null
+                || !id.equals(attachment.getRequest().getId())
+                || Boolean.TRUE.equals(attachment.getIsDeleted())) {
+            return "redirect:/admin/academic/request/" + id + "?error=attachment_not_found";
         }
+
+        // ลบไฟล์จริง (ถ้าไม่ใช่ลิงก์)
+        if (!"LINK".equalsIgnoreCase(attachment.getFileType())) {
+            try {
+                Path stored = uploadPaths.resolve(attachment.getStoredFilePath());
+                if (stored != null) {
+                    Files.deleteIfExists(stored);
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        requestService.deleteAttachment(attachmentId);
+
+        // Log activity
+        UserDtls admin = getUser(principal);
+        requestService.logDocumentChange(attachment.getRequest(),
+                attachment.getChecklistItem() != null ? 2 : AcademicRequestService.REQUEST_FILES_DOC_TYPE,
+                "ลบ: " + attachment.getOriginalFilename(), admin,
+                AcademicDocumentEditLog.EditAction.ATTACHMENT_DELETED);
+        adminLogService.log(principal.getName(),
+                admin != null ? admin.getName() : principal.getName(),
+                "DELETE_ATTACHMENT",
+                "ลบเอกสารเพิ่มเติม \"" + attachment.getOriginalFilename() + "\" จากคำร้อง #" + id,
+                getClientIpAddress());
 
         return "redirect:/admin/academic/request/" + id + "?success=attachment_deleted";
     }

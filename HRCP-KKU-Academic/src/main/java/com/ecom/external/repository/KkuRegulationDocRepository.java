@@ -25,6 +25,6 @@ public interface KkuRegulationDocRepository extends JpaRepository<KkuRegulationD
 
     boolean existsByCategoryStartingWith(String prefix);
 
-    @Query("SELECT DISTINCT d.category FROM KkuRegulationDoc d ORDER BY MIN(d.displayOrder) ASC")
+    @Query("SELECT d.category FROM KkuRegulationDoc d WHERE d.retiredAt IS NULL GROUP BY d.category ORDER BY MIN(d.displayOrder) ASC")
     List<String> findDistinctCategoriesOrdered();
 }

@@ -265,4 +265,19 @@ class AttachmentPreviewTest {
         assertThat(disposition).contains("inline");
         assertThat(disposition).contains("admin_doc.pdf");
     }
+
+    @Test
+    @DisplayName("แอดมินต้องดาวน์โหลด เปิดดู หรือลบไฟล์แนบที่ไม่ได้อยู่ในคำร้องตาม URL ไม่ได้")
+    void adminCannotAccessOrDeleteAttachmentBelongingToAnotherRequest() throws Exception {
+        someoneElsesAttachment("cross-request.pdf");
+
+        assertThat(adminController.downloadAttachment(1L, 99L).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(adminController.viewAttachment(1L, 99L).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        String redirect = adminController.deleteAttachment(1L, 99L, () -> "admin@kku.ac.th");
+        assertThat(redirect).contains("error=attachment_not_found");
+        org.mockito.Mockito.verify(requestService, org.mockito.Mockito.never()).deleteAttachment(99L);
+    }
 }

@@ -379,6 +379,9 @@ public class UserServiceImpl implements UserService {
 	public void activateAccount(String email, String password) {
 		UserDtls user = userRepository.findByEmail(email);
 		if (user != null) {
+			if (!Boolean.TRUE.equals(user.getIsFirstLogin())) {
+				throw new IllegalStateException("บัญชีนี้ได้ตั้งรหัสผ่านไปแล้ว กรุณาเข้าสู่ระบบตามปกติ");
+			}
 			user.setPassword(passwordEncoder.encode(password));
 			user.setIsFirstLogin(false);
 			user.setOtpCode(null);

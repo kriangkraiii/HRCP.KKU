@@ -119,6 +119,14 @@ public class SsoUserProvisioner {
     private void refresh(UserDtls user, KkuSsoClient.SsoToken token, FsFaculty faculty) {
         // Only the display name is refreshed. Role, enabled state and quotas are
         // local decisions that an upstream directory must not silently override.
+        //
+        // ข้อยกเว้นเดียว: ROLE_EXTERNAL แปลว่า "ไม่อยู่ในทะเบียนบุคลากรของวิทยาลัย" (KkuEmailDomains) พอทะเบียนมีชื่อ
+        // บทบาทนั้นก็ผิดแล้ว — เกิดจากผู้ยื่นเชิญอาจารย์ที่ยังไม่มีบัญชีเป็นผู้ลงนามภายนอก เจ้าตัวเลยยื่นคำร้องไม่ได้
+        if (faculty != null && faculty.isActive() && user.isExternal()) {
+            log.info("SSO sign-in: {} is in the faculty directory — external role changed to {}",
+                    user.getEmail(), ROLE_USER);
+            user.setRole(ROLE_USER);
+        }
         applyIdentity(user, token, faculty);
     }
 

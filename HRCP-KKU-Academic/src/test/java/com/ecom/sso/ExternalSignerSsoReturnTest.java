@@ -135,4 +135,51 @@ class ExternalSignerSsoReturnTest extends AbstractFlowTest {
 
         assertThat(afterSignIn).isEqualTo(filesLink);
     }
+
+    /**
+     * อาจารย์ของวิทยาลัยที่ยังไม่มีบัญชี (ทะเบียนบุคลากรมีชื่อ แต่ซิงก์รายคืนยังไม่สร้างบัญชี) ถูกผู้ยื่นเชิญเป็นผู้ลงนาม —
+     * เดิมได้บัญชี ROLE_EXTERNAL ที่ผู้เชิญตั้งชื่อเอง และ SSO ไม่แตะบทบาท เจ้าตัวจึงยื่นคำร้องไม่ได้ตลอดไป
+     */
+    @Test
+    @DisplayName("เชิญอาจารย์ที่อยู่ในทะเบียนบุคลากร — ได้บัญชีปกติจากทะเบียน ไม่ใช่บัญชีภายนอก")
+    void invitingADirectoryMemberCreatesARegularAccount() {
+        String email = "test.cp.lecturer@kku.ac.th";
+        com.ecom.external.model.FsFaculty faculty = data.faculty(990101L, email);
+        faculty.setFirstName("อาจารย์");
+        faculty.setLastName("ในทะเบียน");
+        faculty.setIsActive("A");
+        faculties.save(faculty);
+        try {
+            UserDtls invited = externalSigners.invite(new ExternalSignerService.Invite("ดร.", "ชื่อที่ผู้เชิญตั้ง",
+                    "เอง", email, "ที่ไหนก็ได้"), data.applicant());
+
+            assertThat(invited.isExternal()).isFalse();
+            assertThat(invited.getFirstName()).isEqualTo("อาจารย์");
+        } finally {
+            java.util.Optional.ofNullable(users.findByEmailIgnoreCase(email)).ifPresent(users::delete);
+        }
+    }
+
+    /** บัญชีที่ติด ROLE_EXTERNAL ไปแล้ว (ก่อนแก้) — เข้า SSO ครั้งถัดไปทะเบียนมีชื่อ ได้ ROLE_USER คืน */
+    @Test
+    @DisplayName("บัญชีภายนอกที่ทะเบียนบุคลากรมีชื่อ — เข้า SSO แล้วกลับเป็นผู้ใช้ปกติ")
+    void aDirectoryMemberStuckAsExternalIsRestoredOnSso() {
+        String email = "test.cp.stuck@kku.ac.th";
+        UserDtls stuck = data.user(email, "ติด", "ภายนอก", UserDtls.ROLE_EXTERNAL);
+        com.ecom.external.model.FsFaculty faculty = data.faculty(990102L, email);
+        faculty.setIsActive("A");
+        faculty = faculties.save(faculty);
+        try {
+            UserDtls after = provisioner.provision(new KkuSsoClient.SsoToken("t", email, "imm", "ติด", "ภายนอก", null),
+                    faculty, Optional.empty());
+
+            assertThat(after.getId()).isEqualTo(stuck.getId());
+            assertThat(after.getRole()).isEqualTo("ROLE_USER");
+        } finally {
+            users.delete(users.findByEmailIgnoreCase(email));
+        }
+    }
+
+    @Autowired
+    private com.ecom.external.repository.FsFacultyRepository faculties;
 }

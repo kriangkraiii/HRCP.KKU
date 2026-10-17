@@ -150,4 +150,39 @@ class KkuDocumentParserTest {
         assertTrue(parser.parse("").isEmpty());
         assertTrue(parser.parse("   ").isEmpty());
     }
+
+    private KkuRegulationDoc parseOne(String title) {
+        return parser.parse("<div class=\"fusion_builder_column\"><h2>ประกาศมหาวิทยาลัยขอนแก่น</h2>"
+                + "<a href=\"https://hr2.kku.ac.th/wp-content/uploads/x.pdf\">" + title + "</a></div>").get(0);
+    }
+
+    @Test
+    void parse_plainTwoDigitNumberIsNotAYear() {
+        assertEquals(null, parseOne("แนวปฏิบัติการยื่นภายใน 60 วัน").getPublishedYear());
+        assertEquals("2566", parseOne("ประกาศ ปี 66 เรื่อง แบบฟอร์ม").getPublishedYear());
+    }
+
+    @Test
+    void parse_announcementNumberIsNotTheYear() {
+        assertEquals("2566", parseOne("ประกาศมหาวิทยาลัยขอนแก่น (ฉบับที่ 2541/2566)").getPublishedYear());
+        assertEquals("2565", parseOne("ประกาศ ที่ 2590/2566 แก้ไขประกาศ พ.ศ. 2565").getPublishedYear());
+    }
+
+    /** ตัดเฉพาะเครื่องหมาย NEW ที่เป็นคำเดี่ยว — คำอังกฤษที่มี NEW อยู่ข้างในต้องอยู่ครบ และไม่ได้ป้ายใหม่ */
+    @Test
+    void parse_newMarkerIsOnlyTheStandaloneWord() {
+        KkuRegulationDoc renewal = parseOne("RENEWAL OF CONTRACT FORM");
+        assertEquals("RENEWAL OF CONTRACT FORM", renewal.getTitle());
+        assertFalse(renewal.getIsNew());
+
+        KkuRegulationDoc marked = parseOne("แบบฟอร์มขอต่อสัญญา NEW");
+        assertEquals("แบบฟอร์มขอต่อสัญญา", marked.getTitle());
+        assertTrue(marked.getIsNew());
+    }
+
+    @Test
+    void folderQualifiedFileKey_keepsTheUploadFolder() {
+        assertEquals("2026/01/แบบฟอร์ม.pdf", KkuDocumentParser.folderQualifiedFileKey(
+                "https://hr2.kku.ac.th/wp-content/uploads/2026/01/%E0%B9%81%E0%B8%9A%E0%B8%9A%E0%B8%9F%E0%B8%AD%E0%B8%A3%E0%B9%8C%E0%B8%A1.pdf"));
+    }
 }

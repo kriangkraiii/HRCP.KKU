@@ -26,8 +26,12 @@ import com.ecom.external.model.KkuRegulationDoc;
 public class KkuDocumentParser {
 
     private static final Logger log = LoggerFactory.getLogger(KkuDocumentParser.class);
-    private static final Pattern YEAR_4DIGIT_PATTERN = Pattern.compile("25[0-9]{2}");
-    private static final Pattern YEAR_2DIGIT_PATTERN = Pattern.compile("(?:/|_|\\b)([567][0-9])\\b");
+    private static final Pattern YEAR_AFTER_BE_PATTERN = Pattern.compile("พ\\.ศ\\.?\\s*-?\\s*(25[0-9]{2})(?![0-9])");
+    /** ไม่นับเลขที่ประกาศ — "ที่ 2541/2566" ปีคือตัวหลังทับ */
+    private static final Pattern YEAR_4DIGIT_PATTERN = Pattern.compile("(?<![0-9])25[0-9]{2}(?![0-9])(?!\\s*/)");
+    /** ปีย่อเฉพาะที่มีตัวคั่นนำหน้า ("_69", "-66", "/60", "ปี 66") — เลขลอย ๆ อย่าง "60 วัน" ไม่ใช่ปี */
+    private static final Pattern YEAR_2DIGIT_PATTERN = Pattern.compile("(?:[/_-]|ปี\\s*)([567][0-9])(?![0-9])");
+    private static final Pattern NEW_MARKER_PATTERN = Pattern.compile("\\bNEW\\b");
 
     /** The page's own title heading — names who the page is for, not a section of documents */
     private static final java.util.Set<String> PAGE_TITLES = java.util.Set.of("พนักงานมหาวิทยาลัย", "ข้าราชการ");
@@ -115,7 +119,7 @@ public class KkuDocumentParser {
                     docEntity.setPublishedYear(year);
 
                     // If title contains 🆕, (ใหม่), or 2569+
-                    if (rawTitle.contains("🆕") || rawTitle.contains("NEW") || rawTitle.matches(".*\\(\\s*ใหม่\\s*\\).*")
+                    if (rawTitle.contains("🆕") || NEW_MARKER_PATTERN.matcher(rawTitle).find() || rawTitle.matches(".*\\(\\s*ใหม่\\s*\\).*")
                             || title.contains("2569") || isRecentYear(year)) {
                         docEntity.setIsNew(true);
                     }
@@ -139,7 +143,7 @@ public class KkuDocumentParser {
                         item.setCategoryIcon(getCategoryIcon(category));
                         item.setCategoryColor(getCategoryColor(category));
                         item.setPublishedYear(year);
-                        if (rawTitle.contains("🆕") || rawTitle.contains("NEW") || rawTitle.matches(".*\\(\\s*ใหม่\\s*\\).*")
+                        if (rawTitle.contains("🆕") || NEW_MARKER_PATTERN.matcher(rawTitle).find() || rawTitle.matches(".*\\(\\s*ใหม่\\s*\\).*")
                                 || title.contains("2569") || isRecentYear(year)) {
                             item.setIsNew(true);
                         }
@@ -166,7 +170,6 @@ public class KkuDocumentParser {
         if (h.contains("แนบท้าย")) return "เอกสารแนบท้ายข้อบังคับฯ";
         if (h.contains("ข้อบังคับ")) return "ข้อบังคับมหาวิทยาลัยขอนแก่น";
         if (h.contains("ประกาศ")) return "ประกาศมหาวิทยาลัยขอนแก่น";
-        if (h.contains("แนบท้าย")) return "เอกสารแนบท้ายข้อบังคับฯ";
         if (h.contains("กลุ่ม 4") || h.contains("เฉพาะด้าน")) return "คำจำกัดความฯ ผลงานทางวิชาการ (กลุ่ม 4 เฉพาะด้าน)";
         if (h.contains("คำจำกัดความ") || h.contains("กลุ่ม 1") || h.contains("กลุ่ม 2") || h.contains("กลุ่ม 3")) return "คำจำกัดความฯ ผลงานทางวิชาการ (กลุ่ม 1-3)";
         return h;
@@ -214,7 +217,7 @@ public class KkuDocumentParser {
 
     private String cleanTitle(String raw) {
         return raw.replace("🆕", "")
-                  .replace("NEW", "")
+                  .replaceAll(NEW_MARKER_PATTERN.pattern(), "")
                   .replaceAll("\\s*\\(\\s*ใหม่\\s*\\)\\s*$", "")
                   .replaceAll("\\s+", " ")
                   .trim();
@@ -230,21 +233,39 @@ public class KkuDocumentParser {
     }
 
     private String extractFileKey(String url) {
+        String path = decodedPath(url);
+        int lastSlash = path.lastIndexOf('/');
+        return lastSlash != -1 ? path.substring(lastSlash + 1).trim() : path;
+    }
+
+    /**
+     * Key that also names the upload folder ("2026/01/form.pdf") — for a second file that shares its name with
+     * another one ({@link #extractFileKey}) but lives at a different URL
+     */
+    public static String folderQualifiedFileKey(String url) {
+        String path = decodedPath(url);
+        int uploads = path.indexOf("/uploads/");
+        if (uploads != -1) {
+            return path.substring(uploads + "/uploads/".length()).trim();
+        }
+        int host = path.indexOf("://");
+        return (host != -1 ? path.substring(host + 3) : path).trim();
+    }
+
+    private static String decodedPath(String url) {
         try {
-            String decoded = URLDecoder.decode(url, StandardCharsets.UTF_8);
-            int lastSlash = decoded.lastIndexOf('/');
-            if (lastSlash != -1) {
-                return decoded.substring(lastSlash + 1).trim();
-            }
-            return decoded;
-        } catch (Exception e) {
-            int lastSlash = url.lastIndexOf('/');
-            return (lastSlash != -1) ? url.substring(lastSlash + 1) : url;
+            return URLDecoder.decode(url, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return url;
         }
     }
 
     private String extractYear(String text) {
         if (text == null) return null;
+        Matcher be = YEAR_AFTER_BE_PATTERN.matcher(text);
+        if (be.find()) {
+            return be.group(1);
+        }
         Matcher m4 = YEAR_4DIGIT_PATTERN.matcher(text);
         if (m4.find()) {
             return m4.group();

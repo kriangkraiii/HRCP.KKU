@@ -53,6 +53,11 @@ public class AcademicCommitteeController {
         List<AcademicCommitteeMember> members;
         if (keyword != null && !keyword.isBlank()) {
             members = committeeService.search(keyword);
+            if (type != null) {
+                members = members.stream()
+                        .filter(m -> m.getCommitteeType() == type)
+                        .toList();
+            }
         } else if (type != null) {
             members = committeeService.findByType(type);
         } else {

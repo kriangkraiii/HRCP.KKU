@@ -629,6 +629,27 @@ public class AdminController {
 	public String saveAdmin(@ModelAttribute UserDtls user, @RequestParam("img") MultipartFile file,
 			HttpSession session) throws IOException {
 
+		// Validate email format
+		if (user.getEmail() == null || !user.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+			session.setAttribute("errorMsg", "รูปแบบอีเมลไม่ถูกต้อง");
+			return "redirect:/admin/add-admin";
+		}
+
+		// Validate required fields
+		if ((user.getFirstName() == null || user.getFirstName().trim().isEmpty()
+				|| user.getLastName() == null || user.getLastName().trim().isEmpty())
+				&& (user.getName() == null || user.getName().trim().isEmpty())) {
+			session.setAttribute("errorMsg", "กรุณากรอกชื่อและนามสกุล");
+			return "redirect:/admin/add-admin";
+		}
+
+		// Validate file upload if provided
+		String fileValidationError = validateImageFile(file);
+		if (fileValidationError != null) {
+			session.setAttribute("errorMsg", fileValidationError);
+			return "redirect:/admin/add-admin";
+		}
+
 		// Check if email already exists
 		if (userService.existsEmail(user.getEmail())) {
 			session.setAttribute("errorMsg", "อีเมลนี้มีในระบบแล้ว");

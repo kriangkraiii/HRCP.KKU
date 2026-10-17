@@ -273,7 +273,7 @@
                         const values = {
                             exp_name_: (nameEn && nameEn !== nameTh) ? `${nameTh} (${nameEn})` : nameTh,
                             exp_major_: d.expert || '',
-                            exp_expert_: d.expertEn || d.position || '',
+                            exp_expert_: d.expertEn || '',
                             exp_info_: infoParts.join(' | ')
                         };
                         Object.entries(values).forEach(([prefix, value]) => {
@@ -647,18 +647,22 @@
                         const m = key.match(/^des_research(\d+)$/);
                         if (m) maxIdx = Math.max(maxIdx, parseInt(m[1]));
                     }
+                    let addedFromDoc6 = 0;
                     for (let i = 1; i <= maxIdx; i++) {
+                        const desVal = (doc6[`des_research${i}`] || '').trim();
+                        if (!desVal) continue;
                         // Map doc 6 fields → doc 8 fields
                         addResearchRow({
-                            des: doc6[`des_research${i}`] || '',
+                            des: desVal,
                             first: doc6[`chk_firstauthor${i}`],
                             corres: doc6[`chk_Corres${i}`],
                             essen: doc6[`essen${i}`],
                             impact: doc6[`impactfacttor${i}`] || '',
                             db: doc6[`data${i}`] || ''
                         });
+                        addedFromDoc6++;
                     }
-                    if (maxIdx === 0) addResearchRow(); // At least one empty row
+                    if (addedFromDoc6 === 0) addResearchRow(); // At least one empty row
                 } else {
                     // No data at all — create one empty row
                     addResearchRow();

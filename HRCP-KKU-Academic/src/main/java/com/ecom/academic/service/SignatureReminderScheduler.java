@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.model.SignatureRequest;
 import com.ecom.academic.model.SignatureRequestStatus;
@@ -47,14 +46,38 @@ public class SignatureReminderScheduler {
     @Value("${app.esign.reminder-after-days:3}")
     private int reminderAfterDays;
 
+    /**
+     * หนึ่ง transaction ต่อหนึ่งซอง — เดิมทั้งรอบเป็น transaction เดียว ซองเดียวที่ throw (เช่น {@code expire} ซึ่ง
+     * join transaction เดียวกัน) ทำให้ทั้งรอบถูก rollback ตอน commit ทั้งที่ catch ไว้แล้ว เวลาเตือนของทุกซองหาย
+     */
+    private final org.springframework.transaction.support.TransactionTemplate perEnvelope;
+
     public SignatureReminderScheduler(SignatureRequestRepository requestRepository,
             SignatureStepRepository stepRepository,
             SignatureNotifier notifier,
-            SignatureWorkflowService workflow) {
+            SignatureWorkflowService workflow,
+            org.springframework.transaction.PlatformTransactionManager transactionManager) {
         this.requestRepository = requestRepository;
         this.stepRepository = stepRepository;
         this.notifier = notifier;
         this.workflow = workflow;
+        this.perEnvelope = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        this.perEnvelope.setPropagationBehavior(
+                org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
+
+    /** งานของซองหนึ่งใน transaction ของมันเอง — ล้มแล้วซองอื่นไม่ถูกย้อนตาม */
+    private int inOwnTransaction(Long envelopeId, String what, java.util.function.Function<SignatureRequest, Integer> work) {
+        try {
+            Integer done = perEnvelope.execute(status -> requestRepository.findById(envelopeId)
+                    .filter(envelope -> envelope.getStatus() == SignatureRequestStatus.IN_PROGRESS)
+                    .map(work)
+                    .orElse(0));
+            return done == null ? 0 : done;
+        } catch (Exception e) {
+            log.warn("Could not process {} for envelope {}: {}", what, envelopeId, e.toString());
+            return 0;
+        }
     }
 
     /**
@@ -64,7 +87,6 @@ public class SignatureReminderScheduler {
      * compete for the mail server or arrive as one indistinguishable burst.
      */
     @Scheduled(cron = "${app.esign.reminder-cron:0 30 8 * * *}", zone = "Asia/Bangkok")
-    @Transactional
     public void run() {
         int reminded = sendReminders();
         Overdue overdue = handleOverdue();
@@ -79,9 +101,10 @@ public class SignatureReminderScheduler {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(Math.max(1, reminderAfterDays));
         int sent = 0;
 
-        for (SignatureRequest envelope : requestRepository
-                .findByStatusOrderByCreatedAtAsc(SignatureRequestStatus.IN_PROGRESS)) {
-            try {
+        for (Long envelopeId : idsOf(requestRepository
+                .findByStatusOrderByCreatedAtAsc(SignatureRequestStatus.IN_PROGRESS))) {
+            sent += inOwnTransaction(envelopeId, "reminders", envelope -> {
+                int nudged = 0;
                 for (SignatureStep step : stepRepository
                         .findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId())) {
 
@@ -102,13 +125,16 @@ public class SignatureReminderScheduler {
                     step.setRemindedAt(LocalDateTime.now());
                     stepRepository.save(step);
                     notifier.notifyReminder(workflow.reminderNoticeFor(envelope, step));
-                    sent++;
+                    nudged++;
                 }
-            } catch (Exception e) {
-                log.warn("Could not process reminders for envelope {}: {}", envelope.getId(), e.toString());
-            }
+                return nudged;
+            });
         }
         return sent;
+    }
+
+    private static List<Long> idsOf(List<SignatureRequest> envelopes) {
+        return envelopes.stream().map(SignatureRequest::getId).toList();
     }
 
     /**
@@ -126,22 +152,24 @@ public class SignatureReminderScheduler {
      * that signature.
      */
     private Overdue handleOverdue() {
-        List<SignatureRequest> overdue = requestRepository
-                .findByStatusAndDueAtBefore(SignatureRequestStatus.IN_PROGRESS, LocalDateTime.now());
+        List<Long> overdue = idsOf(requestRepository
+                .findByStatusAndDueAtBefore(SignatureRequestStatus.IN_PROGRESS, LocalDateTime.now()));
         int expired = 0;
         int nudged = 0;
 
-        for (SignatureRequest envelope : overdue) {
-            try {
+        for (Long envelopeId : overdue) {
+            // ค่าบวก = จำนวนที่ส่งเตือน, -1 = ปิดซองแล้ว
+            int outcome = inOwnTransaction(envelopeId, "overdue", envelope -> {
                 SignatureStep advisoryStep = advisoryStepOf(envelope);
                 if (advisoryStep != null) {
-                    nudged += nudgePastReminder(envelope, advisoryStep);
-                    continue;
+                    return nudgePastReminder(envelope, advisoryStep);
                 }
-                workflow.expire(envelope.getId());
+                return workflow.expire(envelope.getId()).ok() ? -1 : 0;
+            });
+            if (outcome > 0) {
+                nudged += outcome;
+            } else if (outcome < 0) {
                 expired++;
-            } catch (Exception e) {
-                log.warn("Could not expire envelope {}: {}", envelope.getId(), e.toString());
             }
         }
         return new Overdue(expired, nudged);

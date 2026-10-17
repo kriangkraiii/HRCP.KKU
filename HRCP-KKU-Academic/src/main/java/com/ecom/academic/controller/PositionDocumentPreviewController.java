@@ -59,18 +59,16 @@ public class PositionDocumentPreviewController {
             9, "ลักษณะการมีส่วนร่วมในผลงาน"
     );
 
-    private static boolean isApplicant(Authentication authentication) {
+    private static boolean isAdmin(Authentication authentication) {
         return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_USER".equals(authority.getAuthority()));
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 
     private static boolean mayView(PositionRequest request, Authentication authentication) {
         if (authentication == null) {
             return false;
         }
-        boolean admin = authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
-        return admin || (request.getApplicant() != null
+        return isAdmin(authentication) || (request.getApplicant() != null
                 && authentication.getName().equalsIgnoreCase(request.getApplicant().getEmail()));
     }
 
@@ -87,13 +85,13 @@ public class PositionDocumentPreviewController {
             @RequestBody Map<String, String> formData,
             Authentication authentication) {
         // ผู้ยื่นดูตัวอย่างได้เฉพาะเอกสารของตัวเอง ที่เหลือเป็นงานฝั่งเจ้าหน้าที่ (เหมือนเฟส 1)
-        if (isApplicant(authentication) && !PositionRequestService.isApplicantDocType(docType)) {
-            logger.warn("Applicant {} attempted to preview admin position document type {}",
-                    authentication.getName(), docType);
+        if (!isAdmin(authentication) && !PositionRequestService.isApplicantDocType(docType)) {
+            logger.warn("Non-admin {} attempted to preview admin position document type {}",
+                    authentication != null ? authentication.getName() : "anonymous", docType);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         // ผู้ยื่นได้เฉพาะ PDF — ปุ่ม Word ถูกซ่อนแล้ว แต่ยิง URL ตรงก็ต้องไม่ได้ไฟล์ Word
-        if (isApplicant(authentication)) {
+        if (!isAdmin(authentication)) {
             format = "pdf";
         }
         try {

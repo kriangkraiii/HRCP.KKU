@@ -202,6 +202,7 @@ public class SearchDocumentFactory {
         d.setStatus(m.getCommitteeType() != null ? m.getCommitteeType().name() : null);
         d.setBadge(Boolean.FALSE.equals(m.getIsActive()) ? "ไม่ใช้งาน" : "กรรมการ");
         d.setBadgeClass(Boolean.FALSE.equals(m.getIsActive()) ? "bg-secondary" : "bg-success");
+        d.setDeleted(Boolean.FALSE.equals(m.getIsActive()));
         d.setOccurredAt(firstNonNull(m.getUpdatedAt(), m.getCreatedAt()));
         d.setSourceUpdatedAt(m.getUpdatedAt());
         d.setVisibility(SearchVisibility.ADMIN);
@@ -221,6 +222,7 @@ public class SearchDocumentFactory {
         d.setStatus(s.getStaffRole());
         d.setBadge(Boolean.FALSE.equals(s.getIsActive()) ? "ไม่ใช้งาน" : "บุคลากร");
         d.setBadgeClass(Boolean.FALSE.equals(s.getIsActive()) ? "bg-secondary" : "bg-success");
+        d.setDeleted(Boolean.FALSE.equals(s.getIsActive()));
         d.setOccurredAt(firstNonNull(s.getUpdatedAt(), s.getCreatedAt()));
         d.setSourceUpdatedAt(s.getUpdatedAt());
         d.setVisibility(SearchVisibility.ADMIN);

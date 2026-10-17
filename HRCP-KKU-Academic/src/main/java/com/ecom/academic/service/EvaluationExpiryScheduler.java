@@ -32,6 +32,9 @@ public class EvaluationExpiryScheduler {
     private final JavaMailSender mailSender;
     private final com.ecom.service.NotificationService notificationService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ecom.academic.repository.PositionRequestRepository positionRequests;
+
     @org.springframework.beans.factory.annotation.Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
     private String senderEmail;
 
@@ -71,6 +74,12 @@ public class EvaluationExpiryScheduler {
                 continue;
             }
 
+            // ใช้ผลประเมินฉบับนี้ยื่นขอตำแหน่งไปแล้ว — วันหมดอายุไม่มีผลกับคำร้องที่ยื่นแล้ว อีเมลที่บอกให้
+            // "ยื่นขอตำแหน่งก่อนหมดอายุ" มีแต่ทำให้สับสน (แบบร่างยังเตือนต่อ เพราะยังต้องยื่นทันวันหมดอายุ)
+            if (submittedForPosition(user, request)) {
+                continue;
+            }
+
             // วันหมดอายุของคำร้องฉบับนี้เอง ตามลำดับเดียวกับแดชบอร์ด — เดิมใช้ของฉบับล่าสุดของผู้ใช้กับทุกฉบับ
             com.ecom.academic.dto.EvaluationSummary summary = academicService.summarize(request);
             LocalDateTime expiry = summary != null && summary.expiryAt() != null
@@ -87,6 +96,16 @@ public class EvaluationExpiryScheduler {
         }
 
         log.info("Evaluation expiry check completed.");
+    }
+
+    private boolean submittedForPosition(UserDtls user, AcademicRequest evaluation) {
+        if (positionRequests == null) {
+            return false;
+        }
+        return positionRequests.findLinkedByApplicant(user.getId()).stream()
+                .anyMatch(p -> p.getLinkedEvaluation() != null
+                        && evaluation.getId().equals(p.getLinkedEvaluation().getId())
+                        && p.getCurrentStatus() != null && !p.getCurrentStatus().isDraft());
     }
 
     /**

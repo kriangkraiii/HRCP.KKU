@@ -178,8 +178,13 @@ public class HomeController {
 		return "guest/first_login";
 	}
 
+	private static final int MAX_FIRST_LOGIN_OTP_ATTEMPTS = 5;
+
 	@PostMapping("/first-login")
 	public String processFirstLogin(@RequestParam String email, HttpSession session, Model m) {
+		session.removeAttribute("otpVerified");
+		session.removeAttribute("otpVerifiedEmail");
+		session.removeAttribute("firstLoginOtpAttempts");
 		try {
 			userService.generateAndSendOtp(email);
 			session.setAttribute("otpEmail", email);
@@ -214,11 +219,34 @@ public class HomeController {
 			return "redirect:/first-login";
 		}
 
+		Integer attempts = (Integer) session.getAttribute("firstLoginOtpAttempts");
+		int currentAttempts = attempts == null ? 0 : attempts;
+		if (currentAttempts >= MAX_FIRST_LOGIN_OTP_ATTEMPTS) {
+			session.removeAttribute("otpEmail");
+			session.removeAttribute("otpVerified");
+			session.removeAttribute("otpVerifiedEmail");
+			session.removeAttribute("firstLoginOtpAttempts");
+			session.setAttribute("errorMsg", "กรอกรหัส OTP ผิดเกินกำหนด กรุณาขอรหัสใหม่");
+			return "redirect:/first-login";
+		}
+
 		boolean valid = userService.verifyOtp(email, otp);
 		if (valid) {
 			session.setAttribute("otpVerified", true);
+			session.setAttribute("otpVerifiedEmail", email);
+			session.removeAttribute("firstLoginOtpAttempts");
 			return "redirect:/first-login/set-password";
 		} else {
+			currentAttempts++;
+			if (currentAttempts >= MAX_FIRST_LOGIN_OTP_ATTEMPTS) {
+				session.removeAttribute("otpEmail");
+				session.removeAttribute("otpVerified");
+				session.removeAttribute("otpVerifiedEmail");
+				session.removeAttribute("firstLoginOtpAttempts");
+				session.setAttribute("errorMsg", "กรอกรหัส OTP ผิดเกินกำหนด กรุณาขอรหัสใหม่");
+				return "redirect:/first-login";
+			}
+			session.setAttribute("firstLoginOtpAttempts", currentAttempts);
 			session.setAttribute("errorMsg", "รหัส OTP ไม่ถูกต้องหรือหมดอายุ");
 			return "redirect:/first-login/verify-otp";
 		}
@@ -228,7 +256,8 @@ public class HomeController {
 	public String showSetPassword(HttpSession session) {
 		String email = (String) session.getAttribute("otpEmail");
 		Boolean otpVerified = (Boolean) session.getAttribute("otpVerified");
-		if (email == null || otpVerified == null || !otpVerified) {
+		String verifiedEmail = (String) session.getAttribute("otpVerifiedEmail");
+		if (email == null || otpVerified == null || !otpVerified || !email.equals(verifiedEmail)) {
 			return "redirect:/first-login";
 		}
 		return "guest/set_password";
@@ -240,8 +269,9 @@ public class HomeController {
 			HttpSession session) {
 		String email = (String) session.getAttribute("otpEmail");
 		Boolean otpVerified = (Boolean) session.getAttribute("otpVerified");
+		String verifiedEmail = (String) session.getAttribute("otpVerifiedEmail");
 
-		if (email == null || otpVerified == null || !otpVerified) {
+		if (email == null || otpVerified == null || !otpVerified || !email.equals(verifiedEmail)) {
 			session.setAttribute("errorMsg", "เซสชันหมดอายุ กรุณาเริ่มใหม่");
 			return "redirect:/first-login";
 		}
@@ -257,7 +287,16 @@ public class HomeController {
 			return "redirect:/first-login/set-password";
 		}
 
-		userService.activateAccount(email, password);
+		try {
+			userService.activateAccount(email, password);
+		} catch (IllegalStateException e) {
+			session.removeAttribute("otpEmail");
+			session.removeAttribute("otpVerified");
+			session.removeAttribute("otpVerifiedEmail");
+			session.removeAttribute("firstLoginOtpAttempts");
+			session.setAttribute("errorMsg", e.getMessage());
+			return "redirect:/first-login";
+		}
 
 		// Log activity
 		try {
@@ -272,6 +311,8 @@ public class HomeController {
 		// Clear session OTP data
 		session.removeAttribute("otpEmail");
 		session.removeAttribute("otpVerified");
+		session.removeAttribute("otpVerifiedEmail");
+		session.removeAttribute("firstLoginOtpAttempts");
 
 		session.setAttribute("succMsg", "ตั้งรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบ");
 		return "redirect:/signin";

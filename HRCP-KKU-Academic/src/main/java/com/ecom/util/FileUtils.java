@@ -24,12 +24,23 @@ public final class FileUtils {
             return UUID.randomUUID().toString();
         }
 
-        // Strip all directory components (prevents ../../../etc/passwd)
-        String baseName = Path.of(originalFilename).getFileName().toString();
+        // NUL ก่อน — Path.of โยน InvalidPathException ถ้ายังมีอยู่
+        String withoutNul = originalFilename.replace("\0", "");
 
-        // Remove any remaining path separators or null bytes
-        baseName = baseName.replace("\0", "")
-                .replace("/", "")
+        // Strip all directory components (prevents ../../../etc/passwd)
+        // "/" ล้วน ๆ ไม่มีชื่อไฟล์ — getFileName() คืน null
+        String baseName;
+        try {
+            Path fileName = withoutNul.isBlank() ? null : Path.of(withoutNul).getFileName();
+            baseName = fileName == null ? "" : fileName.toString();
+        } catch (java.nio.file.InvalidPathException e) {
+            // อักขระที่ระบบไฟล์ไม่รับ (บน Windows เช่น : ? * |) — ตัดเอาส่วนหลังตัวคั่นสุดท้ายเอง
+            int cut = Math.max(withoutNul.lastIndexOf('/'), withoutNul.lastIndexOf('\\'));
+            baseName = withoutNul.substring(cut + 1).replaceAll("[:*?\"<>|]", "_");
+        }
+
+        // Remove any remaining path separators
+        baseName = baseName.replace("/", "")
                 .replace("\\", "");
 
         if (baseName.isBlank() || baseName.equals(".") || baseName.equals("..")) {

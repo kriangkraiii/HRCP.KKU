@@ -389,12 +389,21 @@
             return { type: parts[0], id: parts[1] };
         }
 
+        function escHtmlFm(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function softDelete(btn) {
             const fileId = btn.getAttribute('data-fileid');
-            const fileName = btn.getAttribute('data-filename');
+            const fileName = escHtmlFm(btn.getAttribute('data-filename'));
             const row = document.getElementById('row-' + fileId);
             const isActive = row && row.getAttribute('data-active') === 'true';
-            const statusLabel = row ? row.getAttribute('data-status') : '';
+            const statusLabel = escHtmlFm(row ? row.getAttribute('data-status') : '');
 
             let bodyMsg = 'ยืนยันการย้าย <strong>' + fileName + '</strong> ไปถังขยะ?<br><small class="text-muted">กู้คืนได้ภายหลัง</small>';
 
@@ -456,7 +465,7 @@
 
         function permanentDeleteFile(btn) {
             const fileId = btn.getAttribute('data-fileid');
-            const fileName = btn.getAttribute('data-filename');
+            const fileName = escHtmlFm(btn.getAttribute('data-filename'));
             showConfirm(
                 'ลบถาวร',
                 'ยืนยันการลบ <strong>' + fileName + '</strong> ถาวร?<br><small class="text-danger">กู้คืนไม่ได้</small>',

@@ -36,6 +36,8 @@ public class KkuDocumentFileService {
     private static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+    private static final byte[] PDF_MAGIC = "%PDF-".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+
     private final KkuRegulationDocRepository docRepo;
 
     /** ทั้งคลังราว 50 ไฟล์ ~20 MB — ใส่ได้หมด ไฟล์ที่ HR แก้ใหม่จะถูกดึงใหม่ภายในหนึ่งวัน */
@@ -75,6 +77,10 @@ public class KkuDocumentFileService {
         if (fetched.length > MAX_BYTES) {
             throw new IOException("ไฟล์ใหญ่เกิน " + MAX_BYTES + " ไบต์: " + url);
         }
+        // hr2 ตอบ 200 เป็นหน้า HTML ได้ (ปิดปรับปรุง, WAF) — ห้ามเก็บไว้ส่งต่อเป็น PDF ทั้งวัน
+        if (!looksLikePdf(fetched)) {
+            throw new IOException("ไม่ใช่ไฟล์ PDF: " + url);
+        }
         files.put(url, fetched);
         return fetched;
     }
@@ -88,6 +94,17 @@ public class KkuDocumentFileService {
                 .timeout(30000)
                 .execute();
         return response.bodyAsBytes();
+    }
+
+    /** หัว {@code %PDF-} อยู่ใน 1024 ไบต์แรก — ตัวอ่าน PDF ยอมให้มีขยะนำหน้าได้เท่านี้ */
+    static boolean looksLikePdf(byte[] bytes) {
+        int limit = Math.min(bytes.length, 1024) - PDF_MAGIC.length;
+        for (int i = 0; i <= limit; i++) {
+            if (java.util.Arrays.equals(bytes, i, i + PDF_MAGIC.length, PDF_MAGIC, 0, PDF_MAGIC.length)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isOnHrSite(String url) {
