@@ -270,7 +270,9 @@ class SignedPageCountTest {
 
         assertThat(pages(pdf)).isEqualTo(1);
         try (PDDocument doc = Loader.loadPDF(pdf)) {
-            assertThat(new PDFTextStripper().getText(doc)).contains("บันทึกข้อความ");
+            // The text survived, not its spacing: with Windows fallback fonts PDFBox splits Thai
+            // words at mark-positioning gaps ("บั นทึกข้อความ").
+            assertThat(new PDFTextStripper().getText(doc).replaceAll("\\s+", "")).contains("บันทึกข้อความ");
         }
     }
 }
