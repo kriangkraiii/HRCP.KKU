@@ -32,7 +32,8 @@ jobs:
       #    ขึ้นเป็น "Flakes" ในสรุปท้าย log ให้ตามแก้ต่อ
       - name: Build and Test with Maven
         working-directory: ${{ env.PROJECT_DIR }}
-        run: mvn clean package -DskipTests=false -Dsurefire.rerunFailingTestsCount=1
+        # ต้องมีเครื่องหมายคำพูด: PowerShell (shell ของ runner Windows) ตัด -Dx.y=z ที่จุดเป็นสอง argument
+        run: mvn clean package "-DskipTests=false" "-Dsurefire.rerunFailingTestsCount=1"
 
       # เทสพัง: เก็บผลเทสและ trace ของเบราว์เซอร์ (target/playwright/*.zip) ไว้เปิดดู
       # ล็อกของ runner แสดงภาษาไทยเป็น "?" และไม่มีภาพหน้าจอ ซึ่งไม่พอสำหรับบั๊กชั้น UI
