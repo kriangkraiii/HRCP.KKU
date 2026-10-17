@@ -822,11 +822,18 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         form.locator("select[name='status']").selectOption(status);
         // ข้อ 15 — นัดประชุมรอบพิจารณาฉบับแก้ไขต้องกรอกวันใหม่ (ปฏิทินไทย + ช่องเวลา 24 ชั่วโมง)
         if (form.locator(".meeting-fields[data-required]").count() > 0) {
+            // time_picker_24.js copies the hidden value into the visible box when it starts (and adds the
+            // clock button). Typing before that is wiped: start came back empty and the form refused to submit.
+            form.locator("[data-target='meetingEnd'] .time24-btn").waitFor();
             form.locator("[name='meetingDay']").evaluate("(el, v) => { el.value = v; el.dispatchEvent(new Event('change')); }",
                     java.time.LocalDate.now().plusDays(7).toString());
             form.locator("[data-target='meetingStart'] .time24-input").fill("09:00");
+            form.locator("[data-target='meetingStart'] .time24-input").blur();
             form.locator("[data-target='meetingEnd'] .time24-input").fill("12:00");
             form.locator("[data-target='meetingEnd'] .time24-input").blur();
+            assertThat(form.locator("[name='meetingStart']").inputValue() + "-" + form.locator("[name='meetingEnd']").inputValue())
+                    .as(who + ": ช่องเวลาประชุมต้องบันทึกค่าที่กรอก")
+                    .isEqualTo("09.00-12.00");
         }
         // ประกาศ มข. 1670/2569 ข้อ 6 — มติกรรมการประจำวิทยาลัยฯ ต้องระบุวันที่มีมติ
         if ("COLLEGE_APPROVED".equals(status)) {
